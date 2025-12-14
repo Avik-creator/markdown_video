@@ -239,3 +239,74 @@ export interface Template {
   thumbnail?: string
   markdown: string
 }
+
+// Video store types
+export interface HistoryState {
+  past: string[]
+  future: string[]
+}
+
+export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3"
+
+export type ZoomLevel = 50 | 75 | 100 | 125 | 150
+
+export type ThemePreset = "default" | "monokai" | "dracula" | "nord" | "github"
+
+export interface Marker {
+  id: string
+  time: number
+  label: string
+  color: string
+}
+
+export interface VideoStore {
+  // Core state
+  markdown: string
+  setMarkdown: (markdown: string, addToHistory?: boolean) => void
+  scenes: Scene[]
+  segments: TimelineSegment[]
+  totalDuration: number
+  isPlaying: boolean
+  currentTime: number
+  showGuide: boolean
+
+  history: HistoryState
+  undo: () => void
+  redo: () => void
+  canUndo: () => boolean
+  canRedo: () => boolean
+
+  aspectRatio: AspectRatio
+  setAspectRatio: (ratio: AspectRatio) => void
+  zoom: ZoomLevel
+  setZoom: (zoom: ZoomLevel) => void
+
+  theme: ThemePreset
+  setTheme: (theme: ThemePreset) => void
+
+  markers: Marker[]
+  addMarker: (time: number, label: string) => void
+  removeMarker: (id: string) => void
+
+  findText: string
+  replaceText: string
+  setFindText: (text: string) => void
+  setReplaceText: (text: string) => void
+  findNext: () => number
+  replaceNext: () => void
+  replaceAll: () => void
+
+  // Playback controls
+  play: () => void
+  pause: () => void
+  toggle: () => void
+  seekTo: (time: number) => void
+  toggleGuide: () => void
+  playbackSpeed: number
+  setPlaybackSpeed: (speed: number) => void
+
+  nextFrame: () => void
+  prevFrame: () => void
+  nextScene: () => void
+  prevScene: () => void
+}

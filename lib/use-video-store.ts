@@ -1,86 +1,16 @@
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { parseMarkdown, getTimelineSegments } from "./parser"
-import type { Scene } from "./types"
-
-interface TimelineSegment {
-  sceneId: string
-  startTime: number
-  endTime: number
-  duration: number
-  color: string
-  label: string
-  chapter?: string
-}
-
-interface HistoryState {
-  past: string[]
-  future: string[]
-}
-
-type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3"
-type ZoomLevel = 50 | 75 | 100 | 125 | 150
-
-type ThemePreset = "default" | "monokai" | "dracula" | "nord" | "github"
-
-interface Marker {
-  id: string
-  time: number
-  label: string
-  color: string
-}
-
-interface VideoStore {
-  // Core state
-  markdown: string
-  setMarkdown: (markdown: string, addToHistory?: boolean) => void
-  scenes: Scene[]
-  segments: TimelineSegment[]
-  totalDuration: number
-  isPlaying: boolean
-  currentTime: number
-  showGuide: boolean
-
-  history: HistoryState
-  undo: () => void
-  redo: () => void
-  canUndo: () => boolean
-  canRedo: () => boolean
-
-  aspectRatio: AspectRatio
-  setAspectRatio: (ratio: AspectRatio) => void
-  zoom: ZoomLevel
-  setZoom: (zoom: ZoomLevel) => void
-
-  theme: ThemePreset
-  setTheme: (theme: ThemePreset) => void
-
-  markers: Marker[]
-  addMarker: (time: number, label: string) => void
-  removeMarker: (id: string) => void
-
-  findText: string
-  replaceText: string
-  setFindText: (text: string) => void
-  setReplaceText: (text: string) => void
-  findNext: () => number
-  replaceNext: () => void
-  replaceAll: () => void
-
-  // Playback controls
-  play: () => void
-  pause: () => void
-  toggle: () => void
-  seekTo: (time: number) => void
-  toggleGuide: () => void
-  playbackSpeed: number
-  setPlaybackSpeed: (speed: number) => void
-
-  nextFrame: () => void
-  prevFrame: () => void
-  nextScene: () => void
-  prevScene: () => void
-}
+import type {
+  Scene,
+  TimelineSegment,
+  HistoryState,
+  AspectRatio,
+  ZoomLevel,
+  ThemePreset,
+  Marker,
+  VideoStore,
+} from "./types"
 
 const DEFAULT_MARKDOWN = `!var brandColor #3b82f6
 
