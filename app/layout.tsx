@@ -1,10 +1,12 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
-import { Inter, Geist_Mono } from "next/font/google"
+import { Inter, Geist_Mono, Playfair_Display } from "next/font/google"
 import "./globals.css"
+import { ThemeProvider } from "@/components/theme-provider"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
+const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" })
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://markdown-video.vercel.app"
 const siteName = "Markdown Video"
@@ -107,7 +109,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en">
       <head>
         <script
           type="application/ld+json"
@@ -137,7 +139,11 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} ${geistMono.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          {children}
+        </ThemeProvider>
+      </body>
     </html>
   )
 }

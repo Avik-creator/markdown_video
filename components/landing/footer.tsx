@@ -1,25 +1,23 @@
 import Link from "next/link"
 import { Github, Twitter } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export function Footer() {
   return (
-    <footer className="border-t border-zinc-800 py-12 px-6">
+    <footer className="border-t border-gray-200 dark:border-neutral-800 py-12 px-6">
       <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-2">
-          <div className="w-6 h-6 rounded bg-pink-500 flex items-center justify-center">
-            <span className="text-xs font-bold text-white">M</span>
-          </div>
-          <span className="font-semibold text-white">Markdown Video</span>
+          <span className="font-serif font-semibold text-gray-900 dark:text-neutral-100">Markdown Video</span>
         </div>
 
-        <div className="flex items-center gap-6 text-sm text-zinc-500">
-          <Link href="/editor" className="hover:text-white transition-colors">
+        <div className="flex items-center gap-6 text-sm text-gray-600 dark:text-neutral-500">
+          <Link href="/editor" className="hover:text-gray-900 dark:hover:text-neutral-100 transition-colors">
             Editor
           </Link>
-          <Link href="#features" className="hover:text-white transition-colors">
+          <Link href="#features" className="hover:text-gray-900 dark:hover:text-neutral-100 transition-colors">
             Features
           </Link>
-          <Link href="#syntax" className="hover:text-white transition-colors">
+          <Link href="#syntax" className="hover:text-gray-900 dark:hover:text-neutral-100 transition-colors">
             Docs
           </Link>
         </div>
@@ -29,7 +27,7 @@ export function Footer() {
             href="https://github.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-500 hover:text-white transition-colors"
+            className="text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 transition-colors"
           >
             <Github className="w-5 h-5" />
           </a>
@@ -37,14 +35,14 @@ export function Footer() {
             href="https://twitter.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-zinc-500 hover:text-white transition-colors"
+            className="text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 transition-colors"
           >
             <Twitter className="w-5 h-5" />
           </a>
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-zinc-800 text-center text-sm text-zinc-600">
+      <div className="max-w-6xl mx-auto mt-8 pt-8 border-t border-gray-200 dark:border-neutral-800 text-center text-sm text-gray-600 dark:text-neutral-500">
         <p>Built with Next.js, Tailwind CSS, and Framer Motion</p>
       </div>
     </footer>

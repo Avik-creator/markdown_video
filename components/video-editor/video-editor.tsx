@@ -31,6 +31,8 @@ import {
 import { useVideoStore } from "@/lib/use-video-store"
 import Link from "next/link"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import CornerMarkers from "@/components/CornerMarkers"
+import { cn } from "@/lib/utils"
 
 type RightPanel = "properties" | "guide" | "templates"
 
@@ -243,17 +245,14 @@ export function VideoEditor() {
   }
 
   return (
-    <div className="h-screen flex flex-col bg-zinc-950 text-white overflow-hidden">
+    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-gray-900 dark:text-neutral-100 overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 shrink-0">
+      <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800 shrink-0">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-pink-500 flex items-center justify-center">
-              <span className="text-xs font-bold">M</span>
-            </div>
-            <h1 className="text-sm font-semibold">Markdown Video</h1>
+          <Link href="/" className="flex items-center gap-2 group relative">
+            <CornerMarkers variant="static" />
+            <h1 className="text-sm font-serif font-semibold">Markdown Video</h1>
           </Link>
-          <span className="text-xs text-zinc-500 bg-zinc-800 px-2 py-0.5 rounded">Beta</span>
 
           <div className="w-px h-4 bg-zinc-700 mx-1" />
 
@@ -266,7 +265,7 @@ export function VideoEditor() {
             size="icon"
             onClick={undo}
             disabled={!canUndo()}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30"
+            className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
             title="Undo (Ctrl+Z)"
           >
             <Undo2 className="w-4 h-4" />
@@ -276,13 +275,13 @@ export function VideoEditor() {
             size="icon"
             onClick={redo}
             disabled={!canRedo()}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30"
+            className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
             title="Redo (Ctrl+Shift+Z)"
           >
             <Redo2 className="w-4 h-4" />
           </Button>
 
-          <div className="w-px h-4 bg-zinc-700 mx-2" />
+          <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
 
           <Button
             variant="ghost"
@@ -292,11 +291,11 @@ export function VideoEditor() {
               if (prev) setZoom(prev)
             }}
             disabled={zoom <= 50}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30"
+            className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           >
             <ZoomOut className="w-4 h-4" />
           </Button>
-          <span className="text-xs text-zinc-400 min-w-[40px] text-center">{zoom}%</span>
+          <span className="text-xs text-gray-600 dark:text-neutral-400 min-w-[40px] text-center">{zoom}%</span>
           <Button
             variant="ghost"
             size="icon"
@@ -305,26 +304,26 @@ export function VideoEditor() {
               if (next) setZoom(next)
             }}
             disabled={zoom >= 150}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800 disabled:opacity-30"
+            className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           >
             <ZoomIn className="w-4 h-4" />
           </Button>
 
-          <div className="w-px h-4 bg-zinc-700 mx-2" />
+          <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800">
+              <Button variant="ghost" size="sm" className="h-8 gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800">
                 <Monitor className="w-4 h-4" />
                 <span className="text-xs">{aspectRatio}</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent className="bg-zinc-900 border-zinc-800">
+            <DropdownMenuContent className="bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800">
               {Object.entries(ASPECT_RATIOS).map(([ratio, { label }]) => (
                 <DropdownMenuItem
                   key={ratio}
                   onClick={() => setAspectRatio(ratio as keyof typeof ASPECT_RATIOS)}
-                  className={`text-sm ${aspectRatio === ratio ? "text-pink-400" : "text-zinc-300"}`}
+                  className={`text-sm ${aspectRatio === ratio ? "text-gray-900 dark:text-neutral-100" : "text-gray-600 dark:text-neutral-400"}`}
                 >
                   {label}
                 </DropdownMenuItem>
@@ -334,13 +333,13 @@ export function VideoEditor() {
 
           <ThemeSelector />
 
-          <div className="w-px h-4 bg-zinc-700 mx-2" />
+          <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
 
           <Button
             variant="ghost"
             size="icon"
             onClick={() => setShowFind(!showFind)}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
             title="Find (Ctrl+F)"
           >
             <Search className="w-4 h-4" />
@@ -350,7 +349,7 @@ export function VideoEditor() {
             variant="ghost"
             size="icon"
             onClick={() => setShowShortcuts(true)}
-            className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
             title="Keyboard Shortcuts (K)"
           >
             <Keyboard className="w-4 h-4" />
@@ -362,7 +361,10 @@ export function VideoEditor() {
             variant="ghost"
             size="sm"
             onClick={() => togglePanel("templates")}
-            className={`gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800 ${rightPanel === "templates" ? "bg-zinc-800 text-pink-500" : ""}`}
+            className={cn(
+              "gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800",
+              rightPanel === "templates" && "bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100"
+            )}
           >
             <Sparkles className="w-4 h-4" />
             Templates
@@ -371,19 +373,22 @@ export function VideoEditor() {
             variant="ghost"
             size="sm"
             onClick={() => togglePanel("guide")}
-            className={`gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800 ${rightPanel === "guide" ? "bg-zinc-800 text-white" : ""}`}
+            className={cn(
+              "gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800",
+              rightPanel === "guide" && "bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100"
+            )}
           >
             <HelpCircle className="w-4 h-4" />
             Guide
           </Button>
 
-          <div className="w-px h-4 bg-zinc-700 mx-1" />
+          <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-1" />
 
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowShareModal(true)}
-            className="gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800"
+            className="gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           >
             <Share2 className="w-4 h-4" />
             Share
@@ -391,7 +396,7 @@ export function VideoEditor() {
           <Button
             size="sm"
             onClick={() => setShowExportModal(true)}
-            className="gap-2 bg-pink-500 hover:bg-pink-600 text-white border-0"
+            className="gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0"
           >
             <Download className="w-4 h-4" />
             Export

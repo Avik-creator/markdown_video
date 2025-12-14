@@ -66,24 +66,23 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-lg">
+      <DialogContent className="bg-white dark:bg-neutral-950 border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 max-w-lg">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Share2 className="w-5 h-5 text-pink-500" />
+          <DialogTitle className="flex items-center gap-2 font-serif font-semibold">
             Share Project
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-gray-600 dark:text-neutral-400">
             Share your project via link or embed it on your website
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="link" className="mt-4">
-          <TabsList className="bg-zinc-800 w-full">
-            <TabsTrigger value="link" className="flex-1 data-[state=active]:bg-zinc-700">
+          <TabsList className="bg-gray-100 dark:bg-neutral-900 w-full">
+            <TabsTrigger value="link" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-neutral-100">
               <Link className="w-4 h-4 mr-2" />
               Share Link
             </TabsTrigger>
-            <TabsTrigger value="embed" className="flex-1 data-[state=active]:bg-zinc-700">
+            <TabsTrigger value="embed" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-neutral-100">
               <Code className="w-4 h-4 mr-2" />
               Embed Code
             </TabsTrigger>
@@ -91,19 +90,19 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
           <TabsContent value="link" className="mt-4 space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm text-zinc-400">Project Link</Label>
+              <Label className="text-sm text-gray-600 dark:text-neutral-400">Project Link</Label>
               <div className="flex gap-2">
                 <Input
                   value={shareLink}
                   readOnly
-                  className="bg-zinc-800 border-zinc-700 text-sm font-mono text-zinc-300"
+                  className="bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-sm font-mono text-gray-900 dark:text-neutral-100"
                 />
                 <Button
                   onClick={() => handleCopy(shareLink, "link")}
                   variant="outline"
-                  className="border-zinc-700 bg-zinc-800 hover:bg-zinc-700 shrink-0"
+                  className="border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 shrink-0"
                 >
-                  {copied === "link" ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                  {copied === "link" ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                 </Button>
               </div>
             </div>
@@ -111,14 +110,14 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
             {typeof navigator !== "undefined" && navigator.share && (
               <Button
                 onClick={handleNativeShare}
-                className="w-full gap-2 bg-pink-500 hover:bg-pink-600 text-white border-0"
+                className="w-full gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0"
               >
                 <Share2 className="w-4 h-4" />
                 Share via...
               </Button>
             )}
 
-            <div className="bg-zinc-800/50 rounded-lg p-4 text-sm text-zinc-400">
+            <div className="bg-gray-50 dark:bg-neutral-900/50 rounded-lg p-4 text-sm text-gray-600 dark:text-neutral-400">
               <p>
                 Note: This creates a temporary link. For permanent sharing, export your project and host it yourself.
               </p>
@@ -127,7 +126,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
           <TabsContent value="embed" className="mt-4 space-y-4">
             <div className="space-y-2">
-              <Label className="text-sm text-zinc-400">Embed Size</Label>
+              <Label className="text-sm text-gray-600 dark:text-neutral-400">Embed Size</Label>
               <div className="flex gap-2">
                 {(Object.keys(embedSizes) as Array<keyof typeof embedSizes>).map((key) => (
                   <Button
@@ -137,8 +136,8 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                     onClick={() => setEmbedSize(key)}
                     className={
                       embedSize === key
-                        ? "bg-pink-500 text-white"
-                        : "bg-zinc-800 border-zinc-700 text-zinc-300 hover:bg-zinc-700"
+                        ? "bg-gray-900 dark:bg-neutral-100 text-white dark:text-gray-900"
+                        : "bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800"
                     }
                   >
                     {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -151,9 +150,9 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm text-zinc-400">Embed Code</Label>
+              <Label className="text-sm text-gray-600 dark:text-neutral-400">Embed Code</Label>
               <div className="relative overflow-hidden min-w-0">
-                <pre className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 pr-12 text-xs font-mono text-zinc-300 break-all whitespace-pre-wrap w-full overflow-x-auto max-w-full">
+                <pre className="bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg p-3 pr-12 text-xs font-mono text-gray-900 dark:text-neutral-100 break-all whitespace-pre-wrap w-full overflow-x-auto max-w-full">
                   {getEmbedCode(embedSizes[embedSize].width, embedSizes[embedSize].height)}
                 </pre>
                 <Button
@@ -161,23 +160,23 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                     handleCopy(getEmbedCode(embedSizes[embedSize].width, embedSizes[embedSize].height), "embed")
                   }
                   size="sm"
-                  className="absolute top-2 right-2 h-7 bg-zinc-700 hover:bg-zinc-600 z-10"
+                  className="absolute top-2 right-2 h-7 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 z-10"
                 >
-                  {copied === "embed" ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                  {copied === "embed" ? <Check className="w-3 h-3 text-green-600 dark:text-green-400" /> : <Copy className="w-3 h-3" />}
                 </Button>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm text-zinc-400">Preview</Label>
+              <Label className="text-sm text-gray-600 dark:text-neutral-400">Preview</Label>
               <div
-                className="bg-zinc-800 border border-zinc-700 rounded-lg flex items-center justify-center"
+                className="bg-gray-50 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg flex items-center justify-center"
                 style={{
                   aspectRatio: `${embedSizes[embedSize].width}/${embedSizes[embedSize].height}`,
                   maxHeight: 200,
                 }}
               >
-                <span className="text-zinc-500 text-sm">Embed Preview</span>
+                <span className="text-gray-500 dark:text-neutral-500 text-sm">Embed Preview</span>
               </div>
             </div>
           </TabsContent>
