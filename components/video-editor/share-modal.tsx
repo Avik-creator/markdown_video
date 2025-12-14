@@ -152,8 +152,8 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
             <div className="space-y-2">
               <Label className="text-sm text-zinc-400">Embed Code</Label>
-              <div className="relative">
-                <pre className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 text-xs font-mono text-zinc-300 overflow-x-auto whitespace-pre-wrap">
+              <div className="relative overflow-hidden min-w-0">
+                <pre className="bg-zinc-800 border border-zinc-700 rounded-lg p-3 pr-12 text-xs font-mono text-zinc-300 break-all whitespace-pre-wrap w-full overflow-x-auto max-w-full">
                   {getEmbedCode(embedSizes[embedSize].width, embedSizes[embedSize].height)}
                 </pre>
                 <Button
@@ -161,7 +161,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                     handleCopy(getEmbedCode(embedSizes[embedSize].width, embedSizes[embedSize].height), "embed")
                   }
                   size="sm"
-                  className="absolute top-2 right-2 h-7 bg-zinc-700 hover:bg-zinc-600"
+                  className="absolute top-2 right-2 h-7 bg-zinc-700 hover:bg-zinc-600 z-10"
                 >
                   {copied === "embed" ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
                 </Button>
