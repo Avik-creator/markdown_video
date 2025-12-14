@@ -149,38 +149,49 @@ export default function FfmpegRender({
         await new Promise((resolve) => requestAnimationFrame(resolve));
 
         try {
-          // Get the computed style to check for transforms
-          const computedStyle = window.getComputedStyle(previewElement);
-          const transform = computedStyle.transform;
-
-          // Temporarily remove transform for capture
-          const originalTransform = previewElement.style.transform;
-          previewElement.style.transform = 'none';
-
-          // Capture the frame using html2canvas with scale 1 to get actual size
+          // Capture the frame using html2canvas with onclone to resize exactly to target resolution
           const capturedCanvas = await html2canvas(previewElement, {
             backgroundColor: null,
-            scale: 1, // Use scale 1 to capture at actual element size
+            scale: 1,
+            width: dimensions.width,
+            height: dimensions.height,
             logging: false,
             useCORS: true,
             allowTaint: true,
-            removeContainer: true,
+            removeContainer: true, // Important to prevent some offset issues
             imageTimeout: 0,
+            onclone: (clonedDoc) => {
+              const clonedElement = clonedDoc.querySelector('[data-scene-preview="true"]') as HTMLElement;
+              if (clonedElement) {
+                // Force the cloned element to the exact output resolution
+                // This ensures high quality text and proper layout without L-shapes
+                clonedElement.style.transform = 'none';
+                clonedElement.style.width = `${dimensions.width}px`;
+                clonedElement.style.height = `${dimensions.height}px`;
+                clonedElement.style.maxWidth = 'none';
+                clonedElement.style.maxHeight = 'none';
+                clonedElement.style.borderRadius = '0'; // Clean edges for video
+                clonedElement.style.boxShadow = 'none'; // Remove shadows for flat video
+
+                // Also ensure all children fit
+                const wrapper = clonedElement.querySelector('div');
+                if (wrapper) {
+                  wrapper.style.width = '100%';
+                  wrapper.style.height = '100%';
+                }
+              }
+            }
           });
 
-          // Restore original transform
-          previewElement.style.transform = originalTransform;
-
-          // Create output canvas with target resolution
+          // Create output canvas
           const outputCanvas = document.createElement("canvas");
           outputCanvas.width = dimensions.width;
           outputCanvas.height = dimensions.height;
           const ctx = outputCanvas.getContext("2d");
 
           if (ctx) {
-            // Draw the captured frame stretched to fill the entire output canvas
-            // This avoids any letterboxing/L-shaped patterns
-            ctx.drawImage(capturedCanvas, 0, 0, dimensions.width, dimensions.height);
+            // Draw the captured frame directly - it should match dimensions now
+            ctx.drawImage(capturedCanvas, 0, 0);
 
             // Convert to PNG data
             const blob = await new Promise<Blob>((resolve, reject) => {
