@@ -4,7 +4,7 @@ import type React from "react"
 import { useVideoStore } from "@/lib/use-video-store"
 import { useEffect, useRef, useState, useCallback } from "react"
 import { Bookmark, Trash2 } from "lucide-react"
-import { motion, Reorder, useDragControls } from "framer-motion"
+import { Reorder, useDragControls } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 interface TimelineSegmentProps {
@@ -226,14 +226,13 @@ export function Timeline() {
         </Reorder.Group>
 
         {/* Playhead */}
-        <motion.div
-          className="absolute top-0 bottom-0 w-0.5 bg-gray-900 dark:bg-neutral-100 z-20 pointer-events-none"
-          style={{ left: `${playheadPosition}%` }}
-          layoutId="playhead"
+        <div
+          className="absolute top-0 bottom-0 w-0.5 bg-gray-900 dark:bg-neutral-100 z-20 pointer-events-none transition-none"
+          style={{ left: `${playheadPosition}%`, willChange: "left" }}
         >
           <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900 dark:bg-neutral-100 rounded-full" />
           <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-neutral-100 rounded-full" />
-        </motion.div>
+        </div>
       </div>
 
       {/* Timeline info */}

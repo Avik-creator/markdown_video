@@ -56,6 +56,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
 
   const isPlaying = useVideoStore((state) => state.isPlaying)
   const toggle = useVideoStore((state) => state.toggle)
+  const pause = useVideoStore((state) => state.pause)
   const seekTo = useVideoStore((state) => state.seekTo)
   const currentTime = useVideoStore((state) => state.currentTime)
   const totalDuration = useVideoStore((state) => state.totalDuration)
@@ -109,8 +110,9 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const isEditing = e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLInputElement
+      const isInputFocused = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement || e.target instanceof HTMLButtonElement
 
-      // Global shortcuts
+      // Global shortcuts (work even when editing)
       if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault()
         undo()
@@ -149,15 +151,22 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
         return
       }
 
-      if (isEditing) return
+      // Don't handle playback shortcuts when editing text or focused on inputs
+      if (isEditing || isInputFocused) return
 
       switch (e.key) {
         case " ":
+          // Prevent space from scrolling the page
           e.preventDefault()
+          e.stopPropagation()
           toggle()
           break
         case "ArrowLeft":
           e.preventDefault()
+          // Pause when navigating frames
+          if (isPlaying) {
+            pause()
+          }
           if (e.shiftKey) {
             prevScene()
           } else {
@@ -166,6 +175,10 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
           break
         case "ArrowRight":
           e.preventDefault()
+          // Pause when navigating frames
+          if (isPlaying) {
+            pause()
+          }
           if (e.shiftKey) {
             nextScene()
           } else {
@@ -174,11 +187,37 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
           break
         case "Home":
           e.preventDefault()
+          if (isPlaying) {
+            pause()
+          }
           seekTo(0)
           break
         case "End":
           e.preventDefault()
+          if (isPlaying) {
+            pause()
+          }
           seekTo(totalDuration)
+          break
+        case "[":
+          e.preventDefault()
+          // Decrease playback speed
+          const store = useVideoStore.getState()
+          const speeds = [0.5, 0.75, 1, 1.25, 1.5, 2]
+          const currentIndex = speeds.findIndex(s => Math.abs(s - store.playbackSpeed) < 0.01) || speeds.indexOf(1)
+          if (currentIndex > 0) {
+            store.setPlaybackSpeed(speeds[currentIndex - 1])
+          }
+          break
+        case "]":
+          e.preventDefault()
+          // Increase playback speed
+          const store2 = useVideoStore.getState()
+          const speeds2 = [0.5, 0.75, 1, 1.25, 1.5, 2]
+          const currentIndex2 = speeds2.findIndex(s => Math.abs(s - store2.playbackSpeed) < 0.01) || speeds2.indexOf(1)
+          if (currentIndex2 < speeds2.length - 1) {
+            store2.setPlaybackSpeed(speeds2[currentIndex2 + 1])
+          }
           break
         case "?":
           e.preventDefault()
@@ -227,10 +266,12 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
       }
     }
 
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
+    window.addEventListener("keydown", handleKeyDown, true) // Use capture phase to catch before default behavior
+    return () => window.removeEventListener("keydown", handleKeyDown, true)
   }, [
     toggle,
+    pause,
+    isPlaying,
     seekTo,
     currentTime,
     totalDuration,

@@ -73,6 +73,8 @@ interface VideoStore {
   toggle: () => void
   seekTo: (time: number) => void
   toggleGuide: () => void
+  playbackSpeed: number
+  setPlaybackSpeed: (speed: number) => void
 
   nextFrame: () => void
   prevFrame: () => void
@@ -189,6 +191,7 @@ export const useVideoStore = create<VideoStore>()(
         isPlaying: false,
         currentTime: 0,
         showGuide: false,
+        playbackSpeed: 1,
 
         history: { past: [], future: [] },
 
@@ -214,9 +217,9 @@ export const useVideoStore = create<VideoStore>()(
             currentTime: Math.min(state.currentTime, totalDuration),
             history: addToHistory
               ? {
-                  past: [...state.history.past.slice(-50), currentMarkdown],
-                  future: [],
-                }
+                past: [...state.history.past.slice(-50), currentMarkdown],
+                future: [],
+              }
               : state.history,
           }))
         },
@@ -316,15 +319,16 @@ export const useVideoStore = create<VideoStore>()(
         toggle: () => set((state) => ({ isPlaying: !state.isPlaying })),
         seekTo: (time) => set({ currentTime: Math.max(0, Math.min(time, get().totalDuration)) }),
         toggleGuide: () => set((state) => ({ showGuide: !state.showGuide })),
+        setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
         nextFrame: () => {
           const { currentTime, totalDuration } = get()
-          set({ currentTime: Math.min(currentTime + 1 / 30, totalDuration) })
+          set({ currentTime: Math.min(currentTime + 1, totalDuration) })
         },
 
         prevFrame: () => {
           const { currentTime } = get()
-          set({ currentTime: Math.max(currentTime - 1 / 30, 0) })
+          set({ currentTime: Math.max(currentTime - 1, 0) })
         },
 
         nextScene: () => {

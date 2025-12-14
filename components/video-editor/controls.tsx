@@ -18,8 +18,8 @@ export function Controls() {
   const totalDuration = useVideoStore((state) => state.totalDuration)
   const toggle = useVideoStore((state) => state.toggle)
   const seekTo = useVideoStore((state) => state.seekTo)
-
-  const [playbackSpeed, setPlaybackSpeed] = useState(1)
+  const playbackSpeed = useVideoStore((state) => state.playbackSpeed)
+  const setPlaybackSpeed = useVideoStore((state) => state.setPlaybackSpeed)
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
