@@ -45,7 +45,7 @@ const ASPECT_RATIOS = {
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150] as const
 
-export function VideoEditor({ initialMarkdown }: { initialMarkdown?: string }) {
+export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkdown?: string; isEmbed?: boolean }) {
   const [rightPanel, setRightPanel] = useState<RightPanel>("properties")
   const [showExportModal, setShowExportModal] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -250,6 +250,19 @@ export function VideoEditor({ initialMarkdown }: { initialMarkdown?: string }) {
 
   const togglePanel = (panel: RightPanel) => {
     setRightPanel((prev) => (prev === panel ? "properties" : panel))
+  }
+
+  if (isEmbed) {
+    return (
+      <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-gray-900 dark:text-neutral-100 overflow-hidden">
+        <div className="flex-1 flex overflow-hidden min-h-0 relative">
+          <div className="flex-1 flex flex-col min-w-0">
+            <ScenePreview ref={previewRef} />
+          </div>
+        </div>
+        <Controls />
+      </div>
+    )
   }
 
   return (

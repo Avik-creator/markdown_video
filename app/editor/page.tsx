@@ -19,10 +19,11 @@ export const metadata: Metadata = {
 export default async function EditorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ md?: string; project?: string }>
+  searchParams: Promise<{ md?: string; project?: string; embed?: string }>
 }) {
   const params = await searchParams;
   let initialMarkdown = "";
+  const isEmbed = params.embed === "true";
 
   // Handle base64 encoded markdown
   if (params.md) {
@@ -46,5 +47,5 @@ export default async function EditorPage({
     }
   }
 
-  return <VideoEditor initialMarkdown={initialMarkdown} />
+  return <VideoEditor initialMarkdown={initialMarkdown} isEmbed={isEmbed} />
 }

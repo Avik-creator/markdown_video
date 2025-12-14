@@ -139,7 +139,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`}>
+      <body className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`} suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
         </ThemeProvider>
