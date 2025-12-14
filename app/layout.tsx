@@ -8,7 +8,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
 const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
 const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" })
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://markdown-video.vercel.app"
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://markdowneditor.avikmukherjee.me"
 const siteName = "Markdown Video"
 const title = "Markdown Video - Create Stunning Videos with Markdown"
 const description =
@@ -21,7 +21,6 @@ export const metadata: Metadata = {
     template: `%s | ${siteName}`,
   },
   description,
-  generator: "v0.dev",
   applicationName: siteName,
   keywords: [
     "markdown",
