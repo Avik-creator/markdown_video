@@ -1,6 +1,6 @@
-import { create } from "zustand"
-import { persist } from "zustand/middleware"
-import { parseMarkdown, getTimelineSegments } from "./parser"
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import { parseMarkdown, getTimelineSegments } from "./parser";
 import type {
   Scene,
   TimelineSegment,
@@ -10,7 +10,8 @@ import type {
   ThemePreset,
   Marker,
   VideoStore,
-} from "./types"
+  ExportSettings,
+} from "./types";
 
 const DEFAULT_MARKDOWN = `!var brandColor #3b82f6
 
@@ -96,22 +97,22 @@ size: xl
 !camera zoom:1.2 duration:2s
 !duration 4s
 !background #ec4899
-!transition zoom`
+!transition zoom`;
 
 function parseAndComputeSegments(markdown: string) {
-  const scenes = parseMarkdown(markdown)
-  const { segments, totalDuration } = getTimelineSegments(scenes)
-  return { scenes, segments, totalDuration }
+  const scenes = parseMarkdown(markdown);
+  const { segments, totalDuration } = getTimelineSegments(scenes);
+  return { scenes, segments, totalDuration };
 }
 
 function generateId(): string {
-  return Math.random().toString(36).substring(2, 9)
+  return Math.random().toString(36).substring(2, 9);
 }
 
 export const useVideoStore = create<VideoStore>()(
   persist(
     (set, get) => {
-      const initial = parseAndComputeSegments(DEFAULT_MARKDOWN)
+      const initial = parseAndComputeSegments(DEFAULT_MARKDOWN);
 
       return {
         markdown: DEFAULT_MARKDOWN,
@@ -135,9 +136,16 @@ export const useVideoStore = create<VideoStore>()(
         findText: "",
         replaceText: "",
 
+        exportSettings: {
+          resolution: "1080p",
+          quality: "high",
+          speed: "balanced",
+        },
+
         setMarkdown: (markdown, addToHistory = true) => {
-          const { scenes, segments, totalDuration } = parseAndComputeSegments(markdown)
-          const currentMarkdown = get().markdown
+          const { scenes, segments, totalDuration } =
+            parseAndComputeSegments(markdown);
+          const currentMarkdown = get().markdown;
 
           set((state) => ({
             markdown,
@@ -147,21 +155,22 @@ export const useVideoStore = create<VideoStore>()(
             currentTime: Math.min(state.currentTime, totalDuration),
             history: addToHistory
               ? {
-                past: [...state.history.past.slice(-50), currentMarkdown],
-                future: [],
-              }
+                  past: [...state.history.past.slice(-50), currentMarkdown],
+                  future: [],
+                }
               : state.history,
-          }))
+          }));
         },
 
         undo: () => {
-          const { history, markdown } = get()
-          if (history.past.length === 0) return
+          const { history, markdown } = get();
+          if (history.past.length === 0) return;
 
-          const previous = history.past[history.past.length - 1]
-          const newPast = history.past.slice(0, -1)
+          const previous = history.past[history.past.length - 1];
+          const newPast = history.past.slice(0, -1);
 
-          const { scenes, segments, totalDuration } = parseAndComputeSegments(previous)
+          const { scenes, segments, totalDuration } =
+            parseAndComputeSegments(previous);
 
           set({
             markdown: previous,
@@ -172,17 +181,18 @@ export const useVideoStore = create<VideoStore>()(
               past: newPast,
               future: [markdown, ...get().history.future.slice(0, 50)],
             },
-          })
+          });
         },
 
         redo: () => {
-          const { history, markdown } = get()
-          if (history.future.length === 0) return
+          const { history, markdown } = get();
+          if (history.future.length === 0) return;
 
-          const next = history.future[0]
-          const newFuture = history.future.slice(1)
+          const next = history.future[0];
+          const newFuture = history.future.slice(1);
 
-          const { scenes, segments, totalDuration } = parseAndComputeSegments(next)
+          const { scenes, segments, totalDuration } =
+            parseAndComputeSegments(next);
 
           set({
             markdown: next,
@@ -193,7 +203,7 @@ export const useVideoStore = create<VideoStore>()(
               past: [...get().history.past, markdown],
               future: newFuture,
             },
-          })
+          });
         },
 
         canUndo: () => get().history.past.length > 0,
@@ -211,75 +221,93 @@ export const useVideoStore = create<VideoStore>()(
             time,
             label,
             color: "#ec4899",
-          }
-          set((state) => ({ markers: [...state.markers, marker] }))
+          };
+          set((state) => ({ markers: [...state.markers, marker] }));
         },
 
         removeMarker: (id) => {
-          set((state) => ({ markers: state.markers.filter((m) => m.id !== id) }))
+          set((state) => ({
+            markers: state.markers.filter((m) => m.id !== id),
+          }));
         },
 
         setFindText: (text) => set({ findText: text }),
         setReplaceText: (text) => set({ replaceText: text }),
 
         findNext: () => {
-          const { markdown, findText } = get()
-          if (!findText) return -1
-          return markdown.indexOf(findText)
+          const { markdown, findText } = get();
+          if (!findText) return -1;
+          return markdown.indexOf(findText);
         },
 
         replaceNext: () => {
-          const { markdown, findText, replaceText, setMarkdown } = get()
-          if (!findText) return
-          const index = markdown.indexOf(findText)
-          if (index === -1) return
-          const newMarkdown = markdown.slice(0, index) + replaceText + markdown.slice(index + findText.length)
-          setMarkdown(newMarkdown)
+          const { markdown, findText, replaceText, setMarkdown } = get();
+          if (!findText) return;
+          const index = markdown.indexOf(findText);
+          if (index === -1) return;
+          const newMarkdown =
+            markdown.slice(0, index) +
+            replaceText +
+            markdown.slice(index + findText.length);
+          setMarkdown(newMarkdown);
         },
 
         replaceAll: () => {
-          const { markdown, findText, replaceText, setMarkdown } = get()
-          if (!findText) return
-          const newMarkdown = markdown.split(findText).join(replaceText)
-          setMarkdown(newMarkdown)
+          const { markdown, findText, replaceText, setMarkdown } = get();
+          if (!findText) return;
+          const newMarkdown = markdown.split(findText).join(replaceText);
+          setMarkdown(newMarkdown);
         },
 
         play: () => set({ isPlaying: true }),
         pause: () => set({ isPlaying: false }),
         toggle: () => set((state) => ({ isPlaying: !state.isPlaying })),
-        seekTo: (time) => set({ currentTime: Math.max(0, Math.min(time, get().totalDuration)) }),
+        seekTo: (time) =>
+          set({
+            currentTime: Math.max(0, Math.min(time, get().totalDuration)),
+          }),
         toggleGuide: () => set((state) => ({ showGuide: !state.showGuide })),
         setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
         nextFrame: () => {
-          const { currentTime, totalDuration } = get()
-          set({ currentTime: Math.min(currentTime + 1, totalDuration) })
+          const { currentTime, totalDuration } = get();
+          set({ currentTime: Math.min(currentTime + 1, totalDuration) });
         },
 
         prevFrame: () => {
-          const { currentTime } = get()
-          set({ currentTime: Math.max(currentTime - 1, 0) })
+          const { currentTime } = get();
+          set({ currentTime: Math.max(currentTime - 1, 0) });
         },
 
         nextScene: () => {
-          const { currentTime, segments, totalDuration } = get()
-          const currentSegment = segments.find((s) => currentTime >= s.startTime && currentTime < s.endTime)
+          const { currentTime, segments, totalDuration } = get();
+          const currentSegment = segments.find(
+            (s) => currentTime >= s.startTime && currentTime < s.endTime
+          );
           if (currentSegment) {
-            const nextTime = currentSegment.endTime
-            set({ currentTime: Math.min(nextTime, totalDuration) })
+            const nextTime = currentSegment.endTime;
+            set({ currentTime: Math.min(nextTime, totalDuration) });
           }
         },
 
         prevScene: () => {
-          const { currentTime, segments } = get()
-          const currentIndex = segments.findIndex((s) => currentTime >= s.startTime && currentTime < s.endTime)
+          const { currentTime, segments } = get();
+          const currentIndex = segments.findIndex(
+            (s) => currentTime >= s.startTime && currentTime < s.endTime
+          );
           if (currentIndex > 0) {
-            set({ currentTime: segments[currentIndex - 1].startTime })
+            set({ currentTime: segments[currentIndex - 1].startTime });
           } else {
-            set({ currentTime: 0 })
+            set({ currentTime: 0 });
           }
         },
-      }
+
+        setExportSettings: (settings) => {
+          set((state) => ({
+            exportSettings: { ...state.exportSettings, ...settings },
+          }));
+        },
+      };
     },
     {
       name: "markdown-video-storage",
@@ -289,6 +317,6 @@ export const useVideoStore = create<VideoStore>()(
         theme: state.theme,
         markers: state.markers,
       }),
-    },
-  ),
-)
+    }
+  )
+);

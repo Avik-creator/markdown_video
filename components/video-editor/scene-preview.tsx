@@ -105,6 +105,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(function ScenePre
     )}>
       <div
         ref={ref}
+        data-scene-preview="true"
         className={cn(
           "relative w-full rounded-lg overflow-hidden shadow-2xl transition-transform",
           aspectRatioClass,
