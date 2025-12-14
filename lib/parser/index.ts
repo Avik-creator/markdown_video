@@ -1,308 +1,29 @@
-// Markdown-to-Video Parser
+// Main markdown parser
 // Parses custom markdown syntax into scene objects
 
 import type {
   Scene,
   TransitionType,
   AnimationType,
-  CodeHighlight,
-  CodeAnnotation,
   TerminalCommand,
-  DiffLine,
-  ChartDataItem,
+  ChartType,
   ParticleType,
   DeviceType,
   CameraEffect,
   PresenterPosition,
-  ChartType,
   Chapter,
   VideoVariables,
-} from "./types"
-
-const SCENE_COLORS = [
-  "#ef4444", // red
-  "#f97316", // orange
-  "#eab308", // yellow
-  "#22c55e", // green
-  "#06b6d4", // cyan
-  "#3b82f6", // blue
-  "#8b5cf6", // violet
-  "#ec4899", // pink
-]
-
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 9)
-}
-
-// Keyword aliases - allows alternative keywords to avoid conflicts
-const KEYWORD_ALIASES: Record<string, string> = {
-  // Scene aliases
-  'slide': 'scene',
-  'frame': 'scene',
-  'section': 'scene',
-  'page': 'scene',
-  
-  // Text aliases
-  'heading': 'text',
-  'title': 'text',
-  'h1': 'text',
-  'h2': 'text',
-  'h3': 'text',
-  'paragraph': 'text',
-  'p': 'text',
-  
-  // Code aliases
-  'snippet': 'code',
-  'block': 'code',
-  'codeblock': 'code',
-  'syntax': 'code',
-  
-  // Terminal aliases
-  'shell': 'terminal',
-  'cli': 'terminal',
-  'console': 'terminal',
-  'cmd': 'terminal',
-  'bash': 'terminal',
-  
-  // Chart aliases
-  'graph': 'chart',
-  'plot': 'chart',
-  'data': 'chart',
-  
-  // Mockup aliases
-  'device': 'mockup',
-  'screen': 'mockup',
-  'preview': 'mockup',
-  
-  // Image aliases
-  'img': 'image',
-  'photo': 'image',
-  'picture': 'image',
-  
-  // Layout/Split aliases
-  'split': 'layout',
-  'two-column': 'layout',
-  'columns': 'layout',
-  
-  // Duration aliases
-  'time': 'duration',
-  'length': 'duration',
-  'dur': 'duration',
-  
-  // Background aliases
-  'bg': 'background',
-  'color': 'background',
-  'fill': 'background',
-  
-  // Transition aliases
-  'trans': 'transition',
-  'effect': 'transition',
-  'animation': 'transition',
-  
-  // Chapter aliases
-  'section-title': 'chapter',
-  'heading-title': 'chapter',
-  'section-heading': 'chapter',
-  
-  // Particles aliases
-  'effects': 'particles',
-  'fx': 'particles',
-  'sparkles': 'particles',
-  
-  // Camera aliases
-  'zoom': 'camera',
-  'pan': 'camera',
-  'move': 'camera',
-  
-  // Presenter aliases
-  'avatar': 'presenter',
-  'person': 'presenter',
-  'speaker': 'presenter',
-  
-  // Callout aliases
-  'note': 'callout',
-  'tip': 'callout',
-  'info': 'callout',
-  'annotation': 'callout',
-  
-  // Variable aliases
-  'variable': 'var',
-  'v': 'var',
-  'const': 'var',
-}
-
-// Normalize directive name - converts aliases to canonical names
-function normalizeDirective(directive: string): string {
-  const lower = directive.toLowerCase()
-  return KEYWORD_ALIASES[lower] || lower
-}
-
-function parseKeyValue(line: string): { key: string; value: string } | null {
-  const match = line.match(/^(\w+):\s*(.+)$/)
-  if (match) {
-    return { key: match[1].toLowerCase(), value: match[2].trim() }
-  }
-  return null
-}
-
-function parseCodeBlock(lines: string[], startIndex: number): { code: string; language: string; endIndex: number } {
-  const firstLine = lines[startIndex]
-  const langMatch = firstLine.match(/^```(\w+)?/)
-  const language = langMatch?.[1] || "text"
-
-  let endIndex = startIndex + 1
-  const codeLines: string[] = []
-
-  while (endIndex < lines.length && !lines[endIndex].startsWith("```")) {
-    codeLines.push(lines[endIndex])
-    endIndex++
-  }
-
-  return {
-    code: codeLines.join("\n"),
-    language,
-    endIndex: endIndex + 1,
-  }
-}
-
-function parseHighlights(value: string): CodeHighlight {
-  const lines: number[] = []
-  const parts = value.split(",")
-
-  for (const part of parts) {
-    const trimmed = part.trim()
-    if (trimmed.includes("-")) {
-      const [start, end] = trimmed.split("-").map((n) => Number.parseInt(n, 10))
-      for (let i = start; i <= end; i++) {
-        lines.push(i)
-      }
-    } else {
-      lines.push(Number.parseInt(trimmed, 10))
-    }
-  }
-
-  return { lines }
-}
-
-function parseAnnotations(lines: string[], startIndex: number): { annotations: CodeAnnotation[]; endIndex: number } {
-  const annotations: CodeAnnotation[] = []
-  let i = startIndex
-
-  while (i < lines.length && lines[i].trim().startsWith("-")) {
-    const match = lines[i].match(/-\s*(\d+):\s*(.+)/)
-    if (match) {
-      annotations.push({
-        line: Number.parseInt(match[1], 10),
-        text: match[2].trim(),
-      })
-    }
-    i++
-  }
-
-  return { annotations, endIndex: i }
-}
-
-function parseTerminalBlock(lines: string[], startIndex: number): { commands: TerminalCommand[]; endIndex: number } {
-  const commands: TerminalCommand[] = []
-  let i = startIndex
-
-  while (i < lines.length) {
-    const line = lines[i].trim()
-
-    if (line.startsWith("!") || line === "---" || line.startsWith("```")) {
-      break
-    }
-
-    if (line.startsWith("$") || line.startsWith(">")) {
-      const prompt = line[0]
-      const command = line.substring(1).trim()
-      const outputLines: string[] = []
-      i++
-
-      // Collect output until next command or end
-      while (i < lines.length) {
-        const outputLine = lines[i]
-        if (
-          outputLine.trim().startsWith("$") ||
-          outputLine.trim().startsWith(">") ||
-          outputLine.trim().startsWith("!") ||
-          outputLine.trim() === "---"
-        ) {
-          break
-        }
-        if (outputLine.trim()) {
-          outputLines.push(outputLine)
-        }
-        i++
-      }
-
-      commands.push({
-        prompt,
-        command,
-        output: outputLines.join("\n") || undefined,
-      })
-    } else {
-      i++
-    }
-  }
-
-  return { commands, endIndex: i }
-}
-
-function parseDiffBlock(lines: string[], startIndex: number): { changes: DiffLine[]; endIndex: number } {
-  const changes: DiffLine[] = []
-  let i = startIndex
-
-  while (i < lines.length) {
-    const line = lines[i]
-
-    if (line.trim().startsWith("!") || line.trim() === "---") {
-      break
-    }
-
-    if (line.startsWith("+")) {
-      changes.push({ type: "add", content: line.substring(1) })
-    } else if (line.startsWith("-")) {
-      changes.push({ type: "remove", content: line.substring(1) })
-    } else if (line.trim()) {
-      changes.push({ type: "context", content: line })
-    }
-    i++
-  }
-
-  return { changes, endIndex: i }
-}
-
-function parseChartData(lines: string[], startIndex: number): { data: ChartDataItem[]; endIndex: number } {
-  const data: ChartDataItem[] = []
-  let i = startIndex
-
-  while (i < lines.length) {
-    const line = lines[i].trim()
-
-    if (line.startsWith("!") || line === "---") {
-      break
-    }
-
-    const match = line.match(/^(.+?):\s*(\d+)(?:\s+(.+))?$/)
-    if (match) {
-      data.push({
-        label: match[1].trim(),
-        value: Number.parseInt(match[2], 10),
-        color: match[3]?.trim(),
-      })
-    }
-    i++
-  }
-
-  return { data, endIndex: i }
-}
-
-function substituteVariables(text: string, variables: VideoVariables): string {
-  return text.replace(/\$(\w+)/g, (match, varName) => {
-    return variables[varName] || match
-  })
-}
+} from "../types"
+import { SCENE_COLORS, SCENE_DIRECTIVES } from "./constants"
+import { generateId, normalizeDirective, parseKeyValue, substituteVariables } from "./utils"
+import {
+  parseCodeBlock,
+  parseHighlights,
+  parseAnnotations,
+  parseTerminalBlock,
+  parseDiffBlock,
+  parseChartData,
+} from "./parsers"
 
 export interface ParseResult {
   scenes: Scene[]
@@ -339,9 +60,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
     line = substituteVariables(line, variables)
 
     // Check for scene directive (with aliases)
-    const sceneDirectives = ['scene', 'slide', 'frame', 'section', 'page']
-    const isSceneDirective = sceneDirectives.some(dir => line.startsWith(`!${dir}`))
-    
+    const isSceneDirective = SCENE_DIRECTIVES.some((dir) => line.startsWith(`!${dir}`))
+
     if (isSceneDirective) {
       const scene: Scene = {
         id: generateId(),
@@ -357,7 +77,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
         const currentLine = substituteVariables(lines[i].trim(), variables)
 
         // End of scene or next scene (check for all scene aliases)
-        const isNextScene = sceneDirectives.some(dir => currentLine.startsWith(`!${dir}`))
+        const isNextScene = SCENE_DIRECTIVES.some((dir) => currentLine.startsWith(`!${dir}`))
         if (isNextScene || currentLine === "---") {
           break
         }
@@ -439,8 +159,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             case "code": {
               scene.type = "code"
               i++
-              let highlights: CodeHighlight | undefined
-              let annotations: CodeAnnotation[] = []
+              let highlights: { lines: number[] } | undefined
+              let annotations: Array<{ line: number; text: string }> = []
               let typing = false
               let typingSpeed = 50
 
@@ -740,71 +460,5 @@ export function parseMarkdownFull(markdown: string): ParseResult {
   return { scenes, chapters, variables }
 }
 
-export function getTimelineSegments(scenes: Scene[]): {
-  segments: {
-    sceneId: string
-    startTime: number
-    endTime: number
-    duration: number
-    color: string
-    label: string
-    chapter?: string
-  }[]
-  totalDuration: number
-} {
-  const segments: {
-    sceneId: string
-    startTime: number
-    endTime: number
-    duration: number
-    color: string
-    label: string
-    chapter?: string
-  }[] = []
-  let currentTime = 0
-
-  scenes.forEach((scene, index) => {
-    segments.push({
-      sceneId: scene.id,
-      startTime: currentTime,
-      endTime: currentTime + scene.duration,
-      duration: scene.duration,
-      color: scene.background || SCENE_COLORS[index % SCENE_COLORS.length],
-      label: `${scene.duration}s`,
-      chapter: scene.chapter,
-    })
-    currentTime += scene.duration
-  })
-
-  return { segments, totalDuration: currentTime }
-}
-
-export function getSceneAtTime(
-  scenes: Scene[],
-  time: number,
-): { scene: Scene; index: number; sceneTime: number } | null {
-  let currentTime = 0
-
-  for (let i = 0; i < scenes.length; i++) {
-    const scene = scenes[i]
-    if (time >= currentTime && time < currentTime + scene.duration) {
-      return {
-        scene,
-        index: i,
-        sceneTime: time - currentTime,
-      }
-    }
-    currentTime += scene.duration
-  }
-
-  if (scenes.length > 0) {
-    const lastScene = scenes[scenes.length - 1]
-    return {
-      scene: lastScene,
-      index: scenes.length - 1,
-      sceneTime: lastScene.duration,
-    }
-  }
-
-  return null
-}
+// Re-export timeline functions
+export { getTimelineSegments, getSceneAtTime } from "./timeline"

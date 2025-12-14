@@ -1,6 +1,5 @@
 import Link from "next/link"
-import { Github, Twitter } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { Github, X } from "lucide-react"
 
 export function Footer() {
   return (
@@ -24,7 +23,7 @@ export function Footer() {
 
         <div className="flex items-center gap-4">
           <a
-            href="https://github.com"
+            href="https://github.com/Avik-creator/markdown_video"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 transition-colors"
@@ -32,12 +31,12 @@ export function Footer() {
             <Github className="w-5 h-5" />
           </a>
           <a
-            href="https://twitter.com"
+            href="https://x.com/avikm744"
             target="_blank"
             rel="noopener noreferrer"
             className="text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 transition-colors"
           >
-            <Twitter className="w-5 h-5" />
+            <X className="w-5 h-5" />
           </a>
         </div>
       </div>
