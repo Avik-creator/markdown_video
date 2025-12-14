@@ -108,37 +108,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
-      <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify({
-              "@context": "https://schema.org",
-              "@type": "WebApplication",
-              name: siteName,
-              url: siteUrl,
-              description,
-              applicationCategory: "MultimediaApplication",
-              operatingSystem: "Web",
-              offers: {
-                "@type": "Offer",
-                price: "0",
-                priceCurrency: "USD",
-              },
-              featureList: [
-                "Markdown to video conversion",
-                "Code syntax highlighting",
-                "Terminal animations",
-                "Device mockups",
-                "Chart animations",
-                "Multiple export formats",
-              ],
-            }),
-          }}
-        />
-      </head>
-      <body className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`} suppressHydrationWarning>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
         </ThemeProvider>

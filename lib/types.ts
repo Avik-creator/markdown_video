@@ -13,6 +13,7 @@ export type SceneType =
   | "qr"
   | "countdown"
   | "progress"
+  | "emoji"
 
 export type TransitionType = "fade" | "slide" | "wipe" | "zoom" | "magic" | "none"
 

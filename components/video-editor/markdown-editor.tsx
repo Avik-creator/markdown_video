@@ -195,10 +195,9 @@ export function MarkdownEditor() {
       </div>
 
       {/* Footer hint */}
-      <div className="p-2 border-t border-gray-200 dark:border-neutral-800 bg-gray-50/50 dark:bg-neutral-900/50 shrink-0">
-        <p className="text-xs text-gray-500 dark:text-neutral-500">
-          Press <kbd className="bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded text-xs font-mono text-gray-700 dark:text-neutral-300">?</kbd> for syntax
-          guide
+      <div className="p-3 border-t border-gray-200 dark:border-neutral-800 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-950/20 dark:to-purple-950/20 shrink-0">
+        <p className="text-xs text-gray-600 dark:text-neutral-400 text-center">
+          Press <kbd className="bg-white dark:bg-neutral-800 px-2 py-1 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-900 shadow-sm mx-1">?</kbd> or click <span className="text-pink-600 dark:text-pink-400 font-medium">Guide</span> in header for syntax help
         </p>
       </div>
     </div>

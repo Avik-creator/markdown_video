@@ -62,15 +62,15 @@ export function SyntaxDemo() {
             </p>
 
             <div className="space-y-6">
-              <div>
+                <div>
                 <h4 className="font-medium text-gray-800 dark:text-neutral-200 mb-1">Define scenes with !scene</h4>
                 <p className="text-sm text-gray-600 dark:text-neutral-400">Each scene is separated by --- dividers</p>
-              </div>
-              <div>
+                </div>
+                <div>
                 <h4 className="font-medium text-gray-800 dark:text-neutral-200 mb-1">Add content and effects</h4>
                 <p className="text-sm text-gray-600 dark:text-neutral-400">Text, code, charts, terminal - all with simple directives</p>
-              </div>
-              <div>
+                </div>
+                <div>
                 <h4 className="font-medium text-gray-800 dark:text-neutral-200 mb-1">Export and share</h4>
                 <p className="text-sm text-gray-600 dark:text-neutral-400">One click to export as WebM or MP4 video</p>
               </div>

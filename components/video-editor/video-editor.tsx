@@ -388,19 +388,22 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
             )}
           >
             <Sparkles className="w-4 h-4" />
-            Templates
+            <span className="hidden sm:inline">Templates</span>
           </Button>
           <Button
-            variant="ghost"
             size="sm"
             onClick={() => togglePanel("guide")}
             className={cn(
-              "gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800",
-              rightPanel === "guide" && "bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100"
+              "gap-2 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 border border-pink-500/30",
+              rightPanel === "guide" && "bg-pink-500/20 border-pink-500/50"
             )}
+            title="Syntax Guide (Press ?)"
           >
             <HelpCircle className="w-4 h-4" />
-            Guide
+            <span className="font-medium">Guide</span>
+            <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-xs font-mono bg-white/20 dark:bg-black/20 rounded border border-pink-500/30">
+              ?
+            </kbd>
           </Button>
 
           <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-1" />
@@ -412,7 +415,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
             className="gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           >
             <Share2 className="w-4 h-4" />
-            Share
+            <span className="hidden sm:inline">Share</span>
           </Button>
           <Button
             size="sm"
@@ -420,7 +423,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
             className="gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0"
           >
             <Download className="w-4 h-4" />
-            Export
+            <span className="hidden sm:inline">Export</span>
           </Button>
         </div>
       </header>
@@ -428,7 +431,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden min-h-0 relative">
         <MarkdownEditor />
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 relative">
           <ScenePreview ref={previewRef} />
         </div>
         {rightPanel === "guide" && <SyntaxGuide onClose={() => setRightPanel("properties")} />}

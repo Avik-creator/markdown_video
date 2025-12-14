@@ -44,8 +44,9 @@ const animationVariants = {
   },
   bounceIn: {
     initial: { opacity: 0, scale: 0.3 },
-    animate: { opacity: 1, scale: 1, transition: { type: "spring", stiffness: 300, damping: 20 } },
+    animate: { opacity: 1, scale: 1 },
     exit: { opacity: 0, scale: 0.3 },
+    transition: { type: "spring" as const, stiffness: 300, damping: 20 },
   },
   typewriter: {
     initial: { opacity: 1 },
@@ -422,11 +423,18 @@ function CalloutOverlay({ callout }: { callout: SceneCallout }) {
   )
 }
 
-// Particle effects
+// Particle effects - client-only to avoid hydration errors
 function ParticleEffect({ type, intensity = "medium" }: { type: string; intensity?: "low" | "medium" | "high" }) {
+  const [mounted, setMounted] = useState(false)
   const count = { low: 20, medium: 50, high: 100 }[intensity]
 
-  const particles = useMemo(() => {
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
+  // Always call all hooks in the same order - compute all particle types upfront
+  const baseParticles = useMemo(() => {
+    if (!mounted) return []
     return Array.from({ length: count }, (_, i) => ({
       id: i,
       x: Math.random() * 100,
@@ -434,13 +442,32 @@ function ParticleEffect({ type, intensity = "medium" }: { type: string; intensit
       duration: 2 + Math.random() * 3,
       size: 4 + Math.random() * 8,
     }))
-  }, [count])
+  }, [count, mounted])
+
+  const snowParticles = useMemo(() => {
+    if (!mounted) return []
+    return baseParticles.map((p) => ({
+      ...p,
+      top: 20 + Math.random() * 60,
+    }))
+  }, [baseParticles, mounted])
+
+  const sparkleParticles = useMemo(() => {
+    if (!mounted) return []
+    return baseParticles.map((p) => ({
+      ...p,
+      top: 20 + Math.random() * 60,
+      repeatDelay: Math.random() * 2,
+    }))
+  }, [baseParticles, mounted])
+
+  if (!mounted) return null
 
   if (type === "confetti") {
     const colors = ["#f43f5e", "#3b82f6", "#22c55e", "#eab308", "#8b5cf6", "#ec4899"]
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((p) => (
+        {baseParticles.map((p) => (
           <motion.div
             key={p.id}
             className="absolute"
@@ -455,7 +482,7 @@ function ParticleEffect({ type, intensity = "medium" }: { type: string; intensit
             initial={{ y: -20, rotate: 0, opacity: 1 }}
             animate={{
               y: "120vh",
-              rotate: 360 * (Math.random() > 0.5 ? 1 : -1),
+              rotate: 360 * (p.id % 2 === 0 ? 1 : -1),
               opacity: [1, 1, 0],
             }}
             transition={{
@@ -473,13 +500,13 @@ function ParticleEffect({ type, intensity = "medium" }: { type: string; intensit
   if (type === "snow") {
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((p) => (
+        {snowParticles.map((p) => (
           <motion.div
             key={p.id}
             className="absolute rounded-full bg-white"
             style={{
               left: `${p.x}%`,
-              top: `${20 + Math.random() * 60}%`,
+              top: `${p.top}%`,
               opacity: 0.8,
             }}
             animate={{
@@ -501,13 +528,13 @@ function ParticleEffect({ type, intensity = "medium" }: { type: string; intensit
   if (type === "sparkles") {
     return (
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        {particles.map((p) => (
+        {sparkleParticles.map((p) => (
           <motion.div
             key={p.id}
             className="absolute"
             style={{
               left: `${p.x}%`,
-              top: `${20 + Math.random() * 60}%`,
+              top: `${p.top}%`,
             }}
             initial={{ scale: 0, opacity: 0 }}
             animate={{
@@ -518,7 +545,7 @@ function ParticleEffect({ type, intensity = "medium" }: { type: string; intensit
               duration: 1.5,
               delay: p.delay,
               repeat: Number.POSITIVE_INFINITY,
-              repeatDelay: Math.random() * 2,
+              repeatDelay: p.repeatDelay,
             }}
           >
             <svg width={p.size * 2} height={p.size * 2} viewBox="0 0 24 24" fill="none">
@@ -775,13 +802,17 @@ function TextScene({ scene }: { scene: Scene }) {
 
   const content = animation === "typewriter" ? displayedText : scene.text?.content
 
+  const transition = animation === "bounceIn"
+    ? { type: "spring" as const, stiffness: 300, damping: 20 }
+    : { duration: 0.5 }
+
   return (
     <motion.div
       className="flex items-center justify-center h-full p-8"
       initial={variants.initial}
       animate={variants.animate}
       exit={variants.exit}
-      transition={{ duration: 0.5 }}
+      transition={transition}
     >
       <h1
         className={cn(
@@ -914,7 +945,7 @@ function EmojiScene({ scene }: { scene: Scene }) {
     },
     spin: {
       animate: { rotate: 360 },
-      transition: { repeat: Number.POSITIVE_INFINITY, duration: 2, ease: "linear" },
+      transition: { repeat: Number.POSITIVE_INFINITY, duration: 2, ease: "linear" as const },
     },
     pulse: {
       animate: { scale: [1, 1.2, 1] },

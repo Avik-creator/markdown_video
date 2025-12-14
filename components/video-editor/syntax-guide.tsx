@@ -4,7 +4,7 @@ import type React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { X, Copy, Check, Code, Type, Wand2 } from "lucide-react"
+import { X, Copy, Check, Code, Type, Wand2, HelpCircle } from "lucide-react"
 import { useState } from "react"
 
 interface SyntaxGuideProps {
@@ -21,19 +21,19 @@ function CodeExample({ code, title }: { code: string; title: string }) {
   }
 
   return (
-    <div className="rounded-lg bg-[#1e1e2e] overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-white/5 border-b border-white/10">
-        <span className="text-xs font-medium text-muted-foreground">{title}</span>
+    <div className="rounded-lg bg-gray-50 dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800">
+        <span className="text-xs font-medium text-gray-600 dark:text-neutral-400">{title}</span>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-white"
+          className="h-6 w-6 text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white"
           onClick={handleCopy}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
         </Button>
       </div>
-      <pre className="p-3 text-xs font-mono text-gray-300 overflow-x-auto">
+      <pre className="p-3 text-xs font-mono text-gray-900 dark:text-neutral-100 overflow-x-auto bg-gray-50 dark:bg-neutral-900">
         <code>{code}</code>
       </pre>
     </div>
@@ -43,7 +43,7 @@ function CodeExample({ code, title }: { code: string; title: string }) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-white">{title}</h3>
+      <h3 className="text-sm font-semibold text-gray-900 dark:text-white border-b border-gray-200 dark:border-neutral-800 pb-2">{title}</h3>
       {children}
     </div>
   )
@@ -60,12 +60,12 @@ function DirectiveDoc({
 }) {
   return (
     <div className="space-y-1">
-      <code className="text-xs bg-white/10 px-1.5 py-0.5 rounded text-pink-400">{directive}</code>
-      <p className="text-xs text-muted-foreground">{description}</p>
+      <code className="text-xs bg-pink-500/10 dark:bg-pink-500/20 px-2 py-1 rounded text-pink-600 dark:text-pink-400 font-mono border border-pink-500/20">{directive}</code>
+      <p className="text-xs text-gray-600 dark:text-neutral-400 leading-relaxed">{description}</p>
       {options && (
-        <div className="flex flex-wrap gap-1 mt-1">
+        <div className="flex flex-wrap gap-1.5 mt-2">
           {options.map((opt) => (
-            <span key={opt} className="text-xs bg-white/5 px-1.5 py-0.5 rounded text-cyan-400">
+            <span key={opt} className="text-xs bg-gray-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-cyan-600 dark:text-cyan-400 border border-gray-200 dark:border-neutral-700 font-mono">
               {opt}
             </span>
           ))}
@@ -77,43 +77,50 @@ function DirectiveDoc({
 
 export function SyntaxGuide({ onClose }: SyntaxGuideProps) {
   return (
-    <div className="w-[420px] bg-[#0f0f14] border-l border-white/10 flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
-        <h2 className="font-semibold text-white">Syntax Guide</h2>
+    <div className="w-[500px] bg-white dark:bg-neutral-950 border-l border-gray-200 dark:border-neutral-800 flex flex-col h-full shadow-xl">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800 shrink-0 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-950/20 dark:to-purple-950/20">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-lg bg-pink-500/10 dark:bg-pink-500/20 flex items-center justify-center">
+            <HelpCircle className="w-4 h-4 text-pink-600 dark:text-pink-400" />
+          </div>
+          <h2 className="font-semibold text-gray-900 dark:text-white">Syntax Guide</h2>
+        </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 text-muted-foreground hover:text-white"
+          className="h-8 w-8 text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-neutral-800"
         >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       <Tabs defaultValue="basics" className="flex-1 flex flex-col min-h-0">
-        <TabsList className="mx-4 mt-2 bg-white/5 p-1 shrink-0">
-          <TabsTrigger value="basics" className="text-xs gap-1.5">
-            <Type className="w-3 h-3" /> Basics
+        <TabsList className="mx-4 mt-3 bg-gray-100 dark:bg-neutral-900 p-1 shrink-0 border border-gray-200 dark:border-neutral-800">
+          <TabsTrigger value="basics" className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:dark:bg-neutral-800 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white">
+            <Type className="w-3.5 h-3.5" /> Basics
           </TabsTrigger>
-          <TabsTrigger value="advanced" className="text-xs gap-1.5">
-            <Code className="w-3 h-3" /> Advanced
+          <TabsTrigger value="advanced" className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:dark:bg-neutral-800 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white">
+            <Code className="w-3.5 h-3.5" /> Advanced
           </TabsTrigger>
-          <TabsTrigger value="effects" className="text-xs gap-1.5">
-            <Wand2 className="w-3 h-3" /> Effects
+          <TabsTrigger value="effects" className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:dark:bg-neutral-800 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white">
+            <Wand2 className="w-3.5 h-3.5" /> Effects
           </TabsTrigger>
         </TabsList>
 
-        <div className="flex-1 min-h-0 overflow-y-auto">
-          <TabsContent value="basics" className="p-4 space-y-6 mt-0 data-[state=inactive]:hidden">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-white dark:bg-neutral-950">
+          <TabsContent value="basics" className="p-5 space-y-6 mt-0 data-[state=inactive]:hidden">
             {/* Overview */}
             <Section title="Overview">
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                Create video scenes using markdown-like syntax. Each scene starts with{" "}
-                <code className="text-pink-400">!scene</code> (or <code className="text-pink-400">!slide</code>, <code className="text-pink-400">!frame</code>) and can contain text, code, terminal, charts, and more.
-              </p>
-              <p className="text-xs text-muted-foreground leading-relaxed mt-2">
-                <strong>Tip:</strong> Alternative keywords are available to avoid conflicts with other markdown parsers. Use <code className="text-cyan-400">!slide</code> instead of <code className="text-cyan-400">!scene</code>, <code className="text-cyan-400">!heading</code> instead of <code className="text-cyan-400">!text</code>, etc.
-              </p>
+              <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3 space-y-2">
+                <p className="text-xs text-gray-700 dark:text-neutral-300 leading-relaxed">
+                  Create video scenes using markdown-like syntax. Each scene starts with{" "}
+                  <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">!scene</code> (or <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">!slide</code>, <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">!frame</code>) and can contain text, code, terminal, charts, and more.
+                </p>
+                <p className="text-xs text-gray-600 dark:text-neutral-400 leading-relaxed">
+                  <strong className="text-gray-900 dark:text-white">Tip:</strong> Alternative keywords are available to avoid conflicts with other markdown parsers. Use <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!slide</code> instead of <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!scene</code>, <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!heading</code> instead of <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!text</code>, etc.
+                </p>
+              </div>
             </Section>
 
             {/* Basic Scene */}
@@ -137,9 +144,9 @@ size: lg
             {/* Scene Directives */}
             <Section title="Core Directives">
               <div className="space-y-3">
-                <DirectiveDoc 
-                  directive="!scene" 
-                  description="Starts a new scene block" 
+                <DirectiveDoc
+                  directive="!scene"
+                  description="Starts a new scene block"
                   options={["!scene", "!slide", "!frame", "!section", "!page"]}
                 />
                 <DirectiveDoc directive="!duration Xs" description="Scene duration in seconds" options={["!duration", "!time", "!length"]} />
@@ -203,9 +210,9 @@ console.log(msg)
 !background #1e1e2e`}
               />
               <div className="space-y-2 mt-3">
-                <DirectiveDoc 
-                  directive="!code" 
-                  description="Code block directive" 
+                <DirectiveDoc
+                  directive="!code"
+                  description="Code block directive"
                   options={["!code", "!snippet", "!block", "!codeblock", "!syntax"]}
                 />
                 <DirectiveDoc directive="highlight:" description="Lines to highlight" options={["2", "1-3", "1,3,5"]} />
@@ -215,7 +222,7 @@ console.log(msg)
             </Section>
           </TabsContent>
 
-          <TabsContent value="advanced" className="p-4 space-y-6 mt-0 data-[state=inactive]:hidden">
+          <TabsContent value="advanced" className="p-5 space-y-6 mt-0 data-[state=inactive]:hidden">
             {/* Terminal */}
             <Section title="Terminal Scene">
               <CodeExample
@@ -232,9 +239,9 @@ $ npm run dev
 !background #0d0d0d`}
               />
               <div className="space-y-2 mt-3">
-                <DirectiveDoc 
-                  directive="!terminal" 
-                  description="Terminal/CLI scene" 
+                <DirectiveDoc
+                  directive="!terminal"
+                  description="Terminal/CLI scene"
                   options={["!terminal", "!shell", "!cli", "!console", "!cmd", "!bash"]}
                 />
               </div>
@@ -329,7 +336,7 @@ animation: fadeIn
             </Section>
           </TabsContent>
 
-          <TabsContent value="effects" className="p-4 space-y-6 mt-0 data-[state=inactive]:hidden">
+          <TabsContent value="effects" className="p-5 space-y-6 mt-0 data-[state=inactive]:hidden">
             {/* Particles */}
             <Section title="Particle Effects">
               <CodeExample
