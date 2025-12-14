@@ -3,6 +3,7 @@ import { useVideoStore } from "@/lib/use-video-store"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { FileText } from "lucide-react"
 import { cn } from "@/lib/utils"
+import CornerMarkers from "@components/CornerMarkers"
 
 const EXAMPLE_TEMPLATES = {
   intro: `!scene
@@ -142,18 +143,20 @@ export function MarkdownEditor() {
       </div>
 
       {/* Quick insert buttons */}
-      <div className="p-2 border-b border-gray-200 dark:border-neutral-800 flex gap-1 flex-wrap shrink-0 bg-gray-50/50 dark:bg-neutral-900/50">
+      <div className="p-2 border-b border-gray-200 dark:border-neutral-800 flex gap-2 flex-wrap shrink-0 bg-gray-50/50 dark:bg-neutral-900/50">
         {Object.entries(EXAMPLE_TEMPLATES).map(([key]) => (
           <button
             key={key}
             onClick={() => insertTemplate(key as keyof typeof EXAMPLE_TEMPLATES)}
             className={cn(
-              "text-xs h-7 px-2 rounded text-gray-600 dark:text-neutral-400",
-              "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800",
-              "transition-colors"
+              "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+              "hover:translate-x-[-2px]"
             )}
           >
-            {key.charAt(0).toUpperCase() + key.slice(1)}
+            <CornerMarkers />
+            <span className="text-sm font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+              {key.charAt(0).toUpperCase() + key.slice(1)}
+            </span>
           </button>
         ))}
       </div>

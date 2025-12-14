@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Button } from "@components/ui/button"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
 import {
-  HelpCircle,
-  Download,
-  Sparkles,
   Undo2,
   Redo2,
   Keyboard,
@@ -14,7 +11,6 @@ import {
   ZoomIn,
   ZoomOut,
   Monitor,
-  Share2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import CornerMarkers from "@components/CornerMarkers"
@@ -147,7 +143,7 @@ export function EditorHeader({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setShowFind(!showFind)}
+          onClick={() => setShowFind(true)}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           title="Find (Ctrl+F)"
         >
@@ -165,54 +161,62 @@ export function EditorHeader({
         </Button>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="sm"
+      <div className="flex items-center gap-4">
+        <button
           onClick={() => togglePanel("templates")}
           className={cn(
-            "gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800",
-            rightPanel === "templates" && "bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100"
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-[-2px]"
           )}
         >
-          <Sparkles className="w-4 h-4" />
-          <span className="hidden sm:inline">Templates</span>
-        </Button>
-        <Button
-          size="sm"
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            <span className="hidden sm:inline">Templates</span>
+            <span className="sm:hidden">Templates</span>
+          </span>
+        </button>
+        <button
           onClick={() => togglePanel("guide")}
           className={cn(
-            "gap-2 bg-pink-500/10 hover:bg-pink-500/20 text-pink-600 dark:text-pink-400 border border-pink-500/30",
-            rightPanel === "guide" && "bg-pink-500/20 border-pink-500/50"
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-[-2px]"
           )}
           title="Syntax Guide (Press ?)"
         >
-          <HelpCircle className="w-4 h-4" />
-          <span className="font-medium">Guide</span>
-          <kbd className="hidden lg:inline-flex items-center px-1.5 py-0.5 text-xs font-mono bg-white/20 dark:bg-black/20 rounded border border-pink-500/30">
-            ?
-          </kbd>
-        </Button>
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            Guide
+          </span>
+        </button>
 
-        <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-1" />
+        <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
 
-        <Button
-          variant="ghost"
-          size="sm"
+        <button
           onClick={() => setShowShareModal(true)}
-          className="gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
+          className={cn(
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-[-2px]"
+          )}
         >
-          <Share2 className="w-4 h-4" />
-          <span className="hidden sm:inline">Share</span>
-        </Button>
-        <Button
-          size="sm"
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            <span className="hidden sm:inline">Share</span>
+            <span className="sm:hidden">Share</span>
+          </span>
+        </button>
+        <button
           onClick={() => setShowExportModal(true)}
-          className="gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0"
+          className={cn(
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-[-2px]"
+          )}
         >
-          <Download className="w-4 h-4" />
-          <span className="hidden sm:inline">Export</span>
-        </Button>
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            <span className="hidden sm:inline">Export</span>
+            <span className="sm:hidden">Export</span>
+          </span>
+        </button>
       </div>
     </header>
   )

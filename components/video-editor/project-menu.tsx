@@ -9,7 +9,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
-import { Button } from "@components/ui/button"
+import { cn } from "@/lib/utils"
+import CornerMarkers from "@components/CornerMarkers"
 import { FileText, FolderOpen, Save, FilePlus, Trash2 } from "lucide-react"
 
 const DEFAULT_MARKDOWN = `!scene
@@ -65,10 +66,17 @@ export function ProjectMenu() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800">
-          <FileText className="w-4 h-4" />
-          <span className="text-xs">Project</span>
-        </Button>
+        <button
+          className={cn(
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-[-2px]"
+          )}
+        >
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            Project
+          </span>
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-zinc-900 border-zinc-800 w-48">
         <DropdownMenuItem onClick={handleNew} className="text-zinc-300 hover:text-white hover:bg-zinc-800">
