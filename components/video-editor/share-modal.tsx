@@ -56,15 +56,18 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
   // Generate share link when modal opens
   useEffect(() => {
-    if (open) {
+    if (open && typeof window !== "undefined") {
       setIsGenerating(true)
       generateShareLink().then((link) => {
         setShareLink(link)
         setIsGenerating(false)
       }).catch(() => {
-        setShareLink(`${typeof window !== "undefined" ? window.location.origin : ""}/editor`)
+        setShareLink(`${window.location.origin}/editor`)
         setIsGenerating(false)
       })
+    } else if (!open) {
+      // Reset when modal closes
+      setShareLink("")
     }
   }, [open, markdown])
 
@@ -137,15 +140,14 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
               </div>
             </div>
 
-            {typeof navigator !== "undefined" && navigator.share && (
-              <Button
-                onClick={handleNativeShare}
-                className="w-full gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0"
-              >
-                <Share2 className="w-4 h-4" />
-                Share via...
-              </Button>
-            )}
+            <Button
+              onClick={handleNativeShare}
+              disabled={typeof window === "undefined" || !navigator.share}
+              className="w-full gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Share2 className="w-4 h-4" />
+              Share via...
+            </Button>
 
             <div className="bg-gray-50 dark:bg-neutral-900/50 rounded-lg p-4 text-sm text-gray-600 dark:text-neutral-400">
               <p>
@@ -200,13 +202,26 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
             <div className="space-y-2">
               <Label className="text-sm text-gray-600 dark:text-neutral-400">Preview</Label>
               <div
-                className="bg-gray-50 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg flex items-center justify-center"
+                className="bg-gray-50 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg overflow-hidden"
                 style={{
                   aspectRatio: `${embedSizes[embedSize].width}/${embedSizes[embedSize].height}`,
                   maxHeight: 200,
                 }}
               >
-                <span className="text-gray-500 dark:text-neutral-500 text-sm">Embed Preview</span>
+                {shareLink ? (
+                  <iframe
+                    src={`${shareLink}&embed=true`}
+                    width="100%"
+                    height="100%"
+                    className="border-0"
+                    style={{ minHeight: 200 }}
+                    title="Embed Preview"
+                  />
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <span className="text-gray-500 dark:text-neutral-500 text-sm">Loading preview...</span>
+                  </div>
+                )}
               </div>
             </div>
           </TabsContent>
