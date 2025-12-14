@@ -2,6 +2,7 @@
 
 import { useEffect } from "react"
 import { useVideoStore } from "@/lib/use-video-store"
+import { ZoomLevel } from "@/lib/types"
 import { ZOOM_LEVELS } from "../utils/constants"
 
 interface UseKeyboardShortcutsOptions {
@@ -18,8 +19,8 @@ interface UseKeyboardShortcutsOptions {
   nextScene: () => void
   prevScene: () => void
   addMarker: (time: number, label: string) => void
-  zoom: number
-  setZoom: (zoom: number) => void
+  zoom: ZoomLevel
+  setZoom: (zoom: ZoomLevel) => void
   rightPanel: "properties" | "guide" | "templates"
   setRightPanel: (panel: "properties" | "guide" | "templates") => void
   setShowFind: (show: boolean) => void

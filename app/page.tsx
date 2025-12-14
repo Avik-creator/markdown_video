@@ -4,11 +4,14 @@ import { Features } from "@components/landing/features"
 import { SyntaxDemo } from "@components/landing/syntax-demo"
 import { CTA } from "@components/landing/cta"
 import { Footer } from "@components/landing/footer"
+import { getGitHubStars } from "@/lib/github"
 
-export default function Page() {
+export default async function Page() {
+  const stargazersCount = await getGitHubStars("Avik-creator/markdown_video")
+
   return (
     <main className="min-h-screen bg-white dark:bg-neutral-950">
-      <Navbar />
+      <Navbar stargazersCount={stargazersCount} />
       <Hero />
       <Features />
       <SyntaxDemo />
@@ -17,3 +20,4 @@ export default function Page() {
     </main>
   )
 }
+

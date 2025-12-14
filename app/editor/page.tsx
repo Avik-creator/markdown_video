@@ -1,6 +1,8 @@
 import type { Metadata } from "next"
 import { VideoEditor } from "@components/video-editor/video-editor"
 import { redis } from "@/lib/redis"
+import { getGitHubStars } from "@/lib/github"
+
 
 export const metadata: Metadata = {
   title: "Editor",
@@ -47,5 +49,8 @@ export default async function EditorPage({
     }
   }
 
-  return <VideoEditor initialMarkdown={initialMarkdown} isEmbed={isEmbed} />
+  const stargazersCount = await getGitHubStars("Avik-creator/markdown_video");
+
+  return <VideoEditor initialMarkdown={initialMarkdown} isEmbed={isEmbed} stargazersCount={stargazersCount} />
 }
+

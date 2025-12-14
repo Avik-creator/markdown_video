@@ -17,14 +17,15 @@ import CornerMarkers from "@components/CornerMarkers"
 import { ProjectMenu } from "../../project-menu"
 import { ThemeSelector } from "../../theme-selector"
 import { ASPECT_RATIOS, ZOOM_LEVELS } from "../utils/constants"
+import { ZoomLevel } from "@/lib/types"
 
 interface EditorHeaderProps {
   undo: () => void
   redo: () => void
   canUndo: () => boolean
   canRedo: () => boolean
-  zoom: number
-  setZoom: (zoom: number) => void
+  zoom: ZoomLevel
+  setZoom: (zoom: ZoomLevel) => void
   aspectRatio: keyof typeof ASPECT_RATIOS
   setAspectRatio: (ratio: keyof typeof ASPECT_RATIOS) => void
   rightPanel: "properties" | "guide" | "templates"
@@ -33,7 +34,9 @@ interface EditorHeaderProps {
   setShowShortcuts: (show: boolean) => void
   setShowShareModal: (show: boolean) => void
   setShowExportModal: (show: boolean) => void
+  stargazersCount?: number
 }
+
 
 export function EditorHeader({
   undo,
