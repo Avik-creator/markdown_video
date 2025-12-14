@@ -57,8 +57,8 @@ export function ExportPresets({
               <div
                 key={preset.id}
                 className={`group flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors ${selectedPreset === preset.id
-                    ? "bg-pink-500/20 text-pink-400 border border-pink-500/50"
-                    : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-zinc-600"
+                  ? "bg-pink-500/20 text-pink-400 border border-pink-500/50"
+                  : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-zinc-600"
                   }`}
                 onClick={() => onLoadPreset(preset.id)}
               >
