@@ -34,6 +34,109 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9)
 }
 
+// Keyword aliases - allows alternative keywords to avoid conflicts
+const KEYWORD_ALIASES: Record<string, string> = {
+  // Scene aliases
+  'slide': 'scene',
+  'frame': 'scene',
+  'section': 'scene',
+  'page': 'scene',
+  
+  // Text aliases
+  'heading': 'text',
+  'title': 'text',
+  'h1': 'text',
+  'h2': 'text',
+  'h3': 'text',
+  'paragraph': 'text',
+  'p': 'text',
+  
+  // Code aliases
+  'snippet': 'code',
+  'block': 'code',
+  'codeblock': 'code',
+  'syntax': 'code',
+  
+  // Terminal aliases
+  'shell': 'terminal',
+  'cli': 'terminal',
+  'console': 'terminal',
+  'cmd': 'terminal',
+  'bash': 'terminal',
+  
+  // Chart aliases
+  'graph': 'chart',
+  'plot': 'chart',
+  'data': 'chart',
+  
+  // Mockup aliases
+  'device': 'mockup',
+  'screen': 'mockup',
+  'preview': 'mockup',
+  
+  // Image aliases
+  'img': 'image',
+  'photo': 'image',
+  'picture': 'image',
+  
+  // Layout/Split aliases
+  'split': 'layout',
+  'two-column': 'layout',
+  'columns': 'layout',
+  
+  // Duration aliases
+  'time': 'duration',
+  'length': 'duration',
+  'dur': 'duration',
+  
+  // Background aliases
+  'bg': 'background',
+  'color': 'background',
+  'fill': 'background',
+  
+  // Transition aliases
+  'trans': 'transition',
+  'effect': 'transition',
+  'animation': 'transition',
+  
+  // Chapter aliases
+  'section-title': 'chapter',
+  'heading-title': 'chapter',
+  'section-heading': 'chapter',
+  
+  // Particles aliases
+  'effects': 'particles',
+  'fx': 'particles',
+  'sparkles': 'particles',
+  
+  // Camera aliases
+  'zoom': 'camera',
+  'pan': 'camera',
+  'move': 'camera',
+  
+  // Presenter aliases
+  'avatar': 'presenter',
+  'person': 'presenter',
+  'speaker': 'presenter',
+  
+  // Callout aliases
+  'note': 'callout',
+  'tip': 'callout',
+  'info': 'callout',
+  'annotation': 'callout',
+  
+  // Variable aliases
+  'variable': 'var',
+  'v': 'var',
+  'const': 'var',
+}
+
+// Normalize directive name - converts aliases to canonical names
+function normalizeDirective(directive: string): string {
+  const lower = directive.toLowerCase()
+  return KEYWORD_ALIASES[lower] || lower
+}
+
 function parseKeyValue(line: string): { key: string; value: string } | null {
   const match = line.match(/^(\w+):\s*(.+)$/)
   if (match) {
@@ -235,8 +338,11 @@ export function parseMarkdownFull(markdown: string): ParseResult {
     // Variable substitution
     line = substituteVariables(line, variables)
 
-    // Check for scene directive
-    if (line.startsWith("!scene")) {
+    // Check for scene directive (with aliases)
+    const sceneDirectives = ['scene', 'slide', 'frame', 'section', 'page']
+    const isSceneDirective = sceneDirectives.some(dir => line.startsWith(`!${dir}`))
+    
+    if (isSceneDirective) {
       const scene: Scene = {
         id: generateId(),
         type: "text",
@@ -250,15 +356,17 @@ export function parseMarkdownFull(markdown: string): ParseResult {
       while (i < lines.length) {
         const currentLine = substituteVariables(lines[i].trim(), variables)
 
-        // End of scene or next scene
-        if (currentLine.startsWith("!scene") || currentLine === "---") {
+        // End of scene or next scene (check for all scene aliases)
+        const isNextScene = sceneDirectives.some(dir => currentLine.startsWith(`!${dir}`))
+        if (isNextScene || currentLine === "---") {
           break
         }
 
         // Parse directives
         if (currentLine.startsWith("!")) {
           const directiveMatch = currentLine.match(/^!(\w+)/)
-          const directive = directiveMatch ? directiveMatch[1] : ""
+          const rawDirective = directiveMatch ? directiveMatch[1] : ""
+          const directive = normalizeDirective(rawDirective)
 
           switch (directive) {
             case "chapter": {

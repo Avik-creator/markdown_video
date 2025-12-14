@@ -109,7 +109,10 @@ export function SyntaxGuide({ onClose }: SyntaxGuideProps) {
             <Section title="Overview">
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Create video scenes using markdown-like syntax. Each scene starts with{" "}
-                <code className="text-pink-400">!scene</code> and can contain text, code, terminal, charts, and more.
+                <code className="text-pink-400">!scene</code> (or <code className="text-pink-400">!slide</code>, <code className="text-pink-400">!frame</code>) and can contain text, code, terminal, charts, and more.
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed mt-2">
+                <strong>Tip:</strong> Alternative keywords are available to avoid conflicts with other markdown parsers. Use <code className="text-cyan-400">!slide</code> instead of <code className="text-cyan-400">!scene</code>, <code className="text-cyan-400">!heading</code> instead of <code className="text-cyan-400">!text</code>, etc.
               </p>
             </Section>
 
@@ -134,17 +137,21 @@ size: lg
             {/* Scene Directives */}
             <Section title="Core Directives">
               <div className="space-y-3">
-                <DirectiveDoc directive="!scene" description="Starts a new scene block" />
-                <DirectiveDoc directive="!duration Xs" description="Scene duration in seconds" />
+                <DirectiveDoc 
+                  directive="!scene" 
+                  description="Starts a new scene block" 
+                  options={["!scene", "!slide", "!frame", "!section", "!page"]}
+                />
+                <DirectiveDoc directive="!duration Xs" description="Scene duration in seconds" options={["!duration", "!time", "!length"]} />
                 <DirectiveDoc
                   directive="!background"
                   description="Background color or gradient"
-                  options={["#3b82f6", "linear-gradient(...)"]}
+                  options={["!background", "!bg", "!color", "#3b82f6", "linear-gradient(...)"]}
                 />
                 <DirectiveDoc
                   directive="!transition"
                   description="Transition effect"
-                  options={["fade", "slide", "wipe", "zoom", "magic", "none"]}
+                  options={["!transition", "!trans", "!effect", "fade", "slide", "wipe", "zoom", "magic", "none"]}
                 />
                 <DirectiveDoc directive="!chapter" description='Chapter marker: !chapter "Introduction"' />
               </div>
@@ -164,6 +171,11 @@ size: 2xl
 !background #8b5cf6`}
               />
               <div className="space-y-2 mt-3">
+                <DirectiveDoc
+                  directive="!text"
+                  description="Text content directive"
+                  options={["!text", "!heading", "!title", "!h1", "!h2", "!paragraph", "!p"]}
+                />
                 <DirectiveDoc
                   directive="animation:"
                   description="Text animation"
@@ -191,6 +203,11 @@ console.log(msg)
 !background #1e1e2e`}
               />
               <div className="space-y-2 mt-3">
+                <DirectiveDoc 
+                  directive="!code" 
+                  description="Code block directive" 
+                  options={["!code", "!snippet", "!block", "!codeblock", "!syntax"]}
+                />
                 <DirectiveDoc directive="highlight:" description="Lines to highlight" options={["2", "1-3", "1,3,5"]} />
                 <DirectiveDoc directive="typing: true" description="Enable typing animation" />
                 <DirectiveDoc directive="speed: 40" description="Typing speed (chars/sec)" />
@@ -214,6 +231,13 @@ $ npm run dev
 !duration 5s
 !background #0d0d0d`}
               />
+              <div className="space-y-2 mt-3">
+                <DirectiveDoc 
+                  directive="!terminal" 
+                  description="Terminal/CLI scene" 
+                  options={["!terminal", "!shell", "!cli", "!console", "!cmd", "!bash"]}
+                />
+              </div>
             </Section>
 
             {/* Diff */}
