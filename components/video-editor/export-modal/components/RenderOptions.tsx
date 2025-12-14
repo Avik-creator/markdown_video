@@ -84,15 +84,6 @@ export default function RenderOptions() {
         </Select>
       </div>
 
-      {/* Summary info */}
-      <div className="flex items-center justify-between text-sm bg-zinc-800/50 rounded-lg p-3 border border-zinc-700/50">
-        <div className="flex items-center gap-2 text-zinc-400">
-          <span>Duration: {totalDuration.toFixed(1)}s</span>
-        </div>
-        <span className="text-zinc-500">
-          {exportSettings.resolution} • {exportSettings.quality} quality
-        </span>
-      </div>
     </div>
   );
 }

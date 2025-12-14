@@ -178,38 +178,9 @@ export default function FfmpegRender({
           const ctx = outputCanvas.getContext("2d");
 
           if (ctx) {
-            // Get the scene's actual background color from the preview element
-            const bgStyle = window.getComputedStyle(previewElement);
-            const bgColor = bgStyle.backgroundColor || "#09090b";
-
-            // Fill with the scene's background color to avoid L-shaped dark patterns
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, dimensions.width, dimensions.height);
-
-            // Calculate scaling to fit captured content into output while maintaining aspect ratio
-            const sourceAspect = capturedCanvas.width / capturedCanvas.height;
-            const targetAspect = dimensions.width / dimensions.height;
-
-            let drawWidth: number;
-            let drawHeight: number;
-            let drawX: number;
-            let drawY: number;
-
-            if (sourceAspect > targetAspect) {
-              // Source is wider - fit to width
-              drawWidth = dimensions.width;
-              drawHeight = dimensions.width / sourceAspect;
-              drawX = 0;
-              drawY = (dimensions.height - drawHeight) / 2;
-            } else {
-              // Source is taller - fit to height
-              drawHeight = dimensions.height;
-              drawWidth = dimensions.height * sourceAspect;
-              drawX = (dimensions.width - drawWidth) / 2;
-              drawY = 0;
-            }
-
-            ctx.drawImage(capturedCanvas, drawX, drawY, drawWidth, drawHeight);
+            // Draw the captured frame stretched to fill the entire output canvas
+            // This avoids any letterboxing/L-shaped patterns
+            ctx.drawImage(capturedCanvas, 0, 0, dimensions.width, dimensions.height);
 
             // Convert to PNG data
             const blob = await new Promise<Blob>((resolve, reject) => {
