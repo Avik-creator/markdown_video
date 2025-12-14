@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@components/ui/dialog"
+import { Input } from "@components/ui/input"
+import { Label } from "@components/ui/label"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 import { Copy, Check, Link, Code, Share2 } from "lucide-react"
 import { useVideoStore } from "@/lib/use-video-store"
 
@@ -140,14 +140,14 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
               </div>
             </div>
 
-              <Button
-                onClick={handleNativeShare}
+            <Button
+              onClick={handleNativeShare}
               disabled={typeof window === "undefined" || !navigator.share}
               className="w-full gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <Share2 className="w-4 h-4" />
-                Share via...
-              </Button>
+            >
+              <Share2 className="w-4 h-4" />
+              Share via...
+            </Button>
 
             <div className="bg-gray-50 dark:bg-neutral-900/50 rounded-lg p-4 text-sm text-gray-600 dark:text-neutral-400">
               <p>

@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { VideoEditor } from "@/components/video-editor/video-editor"
+import { VideoEditor } from "@components/video-editor/video-editor"
 import { redis } from "@/lib/redis"
 
 export const metadata: Metadata = {

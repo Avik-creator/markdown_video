@@ -2,7 +2,7 @@
 
 import { Code, Terminal, BarChart3, Smartphone, Sparkles, Video, Wand2, Zap } from "lucide-react"
 import { cn } from "@/lib/utils"
-import CornerMarkers from "@/components/CornerMarkers"
+import CornerMarkers from "@components/CornerMarkers"
 
 const features = [
   {

@@ -2,7 +2,7 @@
 
 import { useVideoStore } from "@/lib/use-video-store"
 import { useMemo } from "react"
-import { Label } from "@/components/ui/label"
+import { Label } from "@components/ui/label"
 import { Layers, Type, Code, ImageIcon, Clock, Palette, Sparkles, Terminal, BarChart3, Smartphone } from "lucide-react"
 
 export function SceneProperties() {

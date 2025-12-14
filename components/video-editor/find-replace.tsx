@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react"
 import { useVideoStore } from "@/lib/use-video-store"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { Button } from "@components/ui/button"
+import { Input } from "@components/ui/input"
 import { X, ChevronDown, ChevronUp, Replace } from "lucide-react"
 
 interface FindReplaceProps {

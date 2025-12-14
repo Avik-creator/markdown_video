@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { cn } from "@/lib/utils"
-import CornerMarkers from "@/components/CornerMarkers"
+import CornerMarkers from "@components/CornerMarkers"
 
 export function Hero() {
   return (
@@ -34,8 +34,8 @@ export function Hero() {
           <h2 className="grow text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Start Creating
           </h2>
-          </Link>
-        </div>
+        </Link>
+      </div>
     </section>
   )
 }

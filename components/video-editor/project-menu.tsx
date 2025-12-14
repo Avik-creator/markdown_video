@@ -8,8 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
+} from "@components/ui/dropdown-menu"
+import { Button } from "@components/ui/button"
 import { FileText, FolderOpen, Save, FilePlus, Trash2 } from "lucide-react"
 
 const DEFAULT_MARKDOWN = `!scene

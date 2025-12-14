@@ -3,12 +3,12 @@
 import type React from "react"
 
 import { useState, useRef, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Progress } from "@/components/ui/progress"
+import { Button } from "@components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@components/ui/dialog"
+import { Label } from "@components/ui/label"
+import { Input } from "@components/ui/input"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@components/ui/select"
+import { Progress } from "@components/ui/progress"
 import { Download, Settings, Loader2, CheckCircle2, AlertCircle, Film, Zap, Save, Trash2, Star } from "lucide-react"
 import { useVideoStore } from "@/lib/use-video-store"
 
@@ -420,11 +420,10 @@ export function ExportModal({ open, onOpenChange, previewRef }: ExportModalProps
                   {presets.map((preset) => (
                     <div
                       key={preset.id}
-                      className={`group flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors ${
-                        selectedPreset === preset.id
+                      className={`group flex items-center gap-1 px-2 py-1 rounded text-xs cursor-pointer transition-colors ${selectedPreset === preset.id
                           ? "bg-pink-500/20 text-pink-400 border border-pink-500/50"
                           : "bg-zinc-800 text-zinc-300 border border-zinc-700 hover:border-zinc-600"
-                      }`}
+                        }`}
                       onClick={() => handleLoadPreset(preset.id)}
                     >
                       <span>{preset.name}</span>

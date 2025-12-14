@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "@components/ui/button"
 import { X, Play, Sparkles, Code, Monitor, LogOut, Settings } from "lucide-react"
 import { TEMPLATES } from "@/lib/templates"
 import type { Template } from "@/lib/types"

@@ -14,7 +14,7 @@ import { FindReplace } from "./find-replace"
 import { ThemeSelector } from "./theme-selector"
 import { ShareModal } from "./share-modal"
 import { ProjectMenu } from "./project-menu"
-import { Button } from "@/components/ui/button"
+import { Button } from "@components/ui/button"
 import {
   HelpCircle,
   Download,
@@ -30,8 +30,8 @@ import {
 } from "lucide-react"
 import { useVideoStore } from "@/lib/use-video-store"
 import Link from "next/link"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import CornerMarkers from "@/components/CornerMarkers"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@components/ui/dropdown-menu"
+import CornerMarkers from "@components/CornerMarkers"
 import { cn } from "@/lib/utils"
 
 type RightPanel = "properties" | "guide" | "templates"
