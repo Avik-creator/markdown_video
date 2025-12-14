@@ -95,18 +95,25 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(function ScenePre
     )
   }
 
+  // Check if we're in an iframe (embed mode)
+  const isEmbedded = typeof window !== "undefined" && window.self !== window.top
+
   return (
-    <div className="flex-1 flex items-center justify-center p-4 bg-[#0d0d12] overflow-hidden">
+    <div className={cn(
+      "flex-1 flex items-center justify-center bg-[#0d0d12]",
+      isEmbedded ? "p-2 overflow-auto" : "p-4 overflow-hidden"
+    )}>
       <div
         ref={ref}
         className={cn(
-          "relative w-full max-w-4xl rounded-lg overflow-hidden shadow-2xl transition-transform",
+          "relative w-full rounded-lg overflow-hidden shadow-2xl transition-transform",
           aspectRatioClass,
+          isEmbedded ? "max-w-full" : "max-w-4xl"
         )}
         style={{
           background: currentScene.background || "#1a1a24",
-          transform: `scale(${zoom / 100})`,
-          maxHeight: aspectRatio === "9:16" ? "80vh" : undefined,
+          transform: isEmbedded ? "scale(1)" : `scale(${zoom / 100})`,
+          maxHeight: aspectRatio === "9:16" ? (isEmbedded ? "100%" : "80vh") : (isEmbedded ? "100%" : undefined),
           width: aspectRatio === "9:16" ? "auto" : undefined,
         }}
       >

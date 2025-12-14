@@ -201,27 +201,34 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
             <div className="space-y-2">
               <Label className="text-sm text-gray-600 dark:text-neutral-400">Preview</Label>
-              <div
-                className="bg-gray-50 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg overflow-hidden"
-                style={{
-                  aspectRatio: `${embedSizes[embedSize].width}/${embedSizes[embedSize].height}`,
-                  maxHeight: 200,
-                }}
-              >
-                {shareLink ? (
-                  <iframe
-                    src={`${shareLink}&embed=true`}
-                    width="100%"
-                    height="100%"
-                    className="border-0"
-                    style={{ minHeight: 200 }}
-                    title="Embed Preview"
-                  />
-                ) : (
-                  <div className="flex items-center justify-center h-full">
-                    <span className="text-gray-500 dark:text-neutral-500 text-sm">Loading preview...</span>
-                  </div>
-                )}
+              <div className="bg-gray-50 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg overflow-hidden w-full">
+                <div
+                  className="relative w-full"
+                  style={{
+                    aspectRatio: `${embedSizes[embedSize].width}/${embedSizes[embedSize].height}`,
+                    maxHeight: 400,
+                    maxWidth: '100%',
+                    width: '100%',
+                  }}
+                >
+                  {shareLink ? (
+                    <iframe
+                      src={`${shareLink}&embed=true`}
+                      className="border-0 absolute inset-0"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'block',
+                      }}
+                      title="Embed Preview"
+                      scrolling="no"
+                    />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-gray-500 dark:text-neutral-500 text-sm">Loading preview...</span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </TabsContent>
