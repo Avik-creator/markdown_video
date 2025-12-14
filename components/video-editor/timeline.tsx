@@ -3,30 +3,9 @@
 import type React from "react"
 import { useVideoStore } from "@/lib/use-video-store"
 import { useEffect, useRef, useState, useCallback } from "react"
-import {
-  Bookmark,
-  GripVertical,
-  Trash2,
-  Type,
-  Code,
-  Terminal,
-  BarChart3,
-  Smartphone,
-  ImageIcon,
-  Hash,
-} from "lucide-react"
+import { Bookmark, Trash2 } from "lucide-react"
 import { motion, Reorder, useDragControls } from "framer-motion"
 import { cn } from "@/lib/utils"
-
-const sceneTypeIcons: Record<string, React.ReactNode> = {
-  text: <Type className="w-3 h-3" />,
-  code: <Code className="w-3 h-3" />,
-  terminal: <Terminal className="w-3 h-3" />,
-  chart: <BarChart3 className="w-3 h-3" />,
-  mockup: <Smartphone className="w-3 h-3" />,
-  image: <ImageIcon className="w-3 h-3" />,
-  qr: <Hash className="w-3 h-3" />,
-}
 
 interface TimelineSegmentProps {
   segment: {
@@ -64,30 +43,17 @@ function TimelineSegment({ segment, scene, isActive, widthPercent, onClick }: Ti
       dragListener={false}
       dragControls={dragControls}
       className={cn(
-        "relative h-full flex items-center justify-center text-white text-sm font-medium border-r border-black/30 last:border-r-0 transition-all cursor-pointer group",
-        isActive && "ring-2 ring-white ring-inset",
+        "relative h-full flex items-center justify-center text-white text-sm font-medium border-r border-black/20 last:border-r-0 transition-all cursor-pointer group",
+        isActive && "ring-1 ring-gray-900 dark:ring-neutral-100 ring-inset",
       )}
       style={{
         width: `${widthPercent}%`,
         backgroundColor: segment.color,
-        opacity: isActive ? 1 : 0.8,
+        opacity: isActive ? 1 : 0.85,
       }}
       onClick={onClick}
       whileHover={{ opacity: 1 }}
     >
-      {/* Drag handle */}
-      <div
-        className="absolute left-0 top-0 bottom-0 w-6 flex items-center justify-center opacity-0 group-hover:opacity-100 cursor-grab active:cursor-grabbing bg-black/20"
-        onPointerDown={(e) => dragControls.start(e)}
-      >
-        <GripVertical className="w-3 h-3" />
-      </div>
-
-      {/* Scene type icon */}
-      <div className="absolute top-1 left-7 opacity-60">
-        {sceneTypeIcons[scene.type] || <Type className="w-3 h-3" />}
-      </div>
-
       {/* Chapter marker */}
       {segment.chapter && (
         <div className="absolute top-1 right-1">
@@ -100,10 +66,6 @@ function TimelineSegment({ segment, scene, isActive, widthPercent, onClick }: Ti
         <span className="text-xs font-mono opacity-90">{segment.label}</span>
         {widthPercent > 8 && <span className="text-[10px] opacity-60 truncate max-w-full">{getPreviewText()}</span>}
       </div>
-
-      {/* Resize handles */}
-      <div className="absolute left-0 top-0 bottom-0 w-1 bg-white/30 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-white/50" />
-      <div className="absolute right-0 top-0 bottom-0 w-1 bg-white/30 cursor-ew-resize opacity-0 group-hover:opacity-100 hover:bg-white/50" />
     </Reorder.Item>
   )
 }
@@ -175,13 +137,13 @@ export function Timeline() {
   const playheadPosition = totalDuration > 0 ? (currentTime / totalDuration) * 100 : 0
 
   return (
-    <div className="w-full bg-zinc-950 border-t border-zinc-800 p-4">
+    <div className="w-full bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800 p-4">
       {/* Time markers and chapters */}
       <div className="relative h-6 mb-2">
         {timeMarkers.map((time) => (
           <div
             key={time}
-            className="absolute text-xs text-zinc-500 font-mono"
+            className="absolute text-xs text-gray-500 dark:text-neutral-500 font-mono"
             style={{ left: `${totalDuration > 0 ? (time / totalDuration) * 100 : 0}%` }}
           >
             {time}s
@@ -196,8 +158,8 @@ export function Timeline() {
             style={{ left: `${totalDuration > 0 ? (segment.startTime / totalDuration) * 100 : 0}%` }}
             onClick={() => seekTo(segment.startTime)}
           >
-            <Bookmark className="w-3 h-3 text-pink-400 group-hover:text-pink-300" />
-            <span className="text-xs text-pink-400/80 group-hover:text-pink-300 hidden group-hover:inline bg-zinc-900 px-1 rounded">
+            <Bookmark className="w-3 h-3 text-gray-600 dark:text-neutral-400 group-hover:text-gray-900 dark:group-hover:text-neutral-100" />
+            <span className="text-xs text-gray-600 dark:text-neutral-400 group-hover:text-gray-900 dark:group-hover:text-neutral-100 hidden group-hover:inline bg-white dark:bg-neutral-900 px-1 rounded border border-gray-200 dark:border-neutral-800">
               {segment.chapter}
             </span>
           </div>
@@ -211,15 +173,15 @@ export function Timeline() {
             style={{ left: `${totalDuration > 0 ? (marker.time / totalDuration) * 100 : 0}%` }}
             onClick={() => seekTo(marker.time)}
           >
-            <div className="w-2 h-2 rounded-full bg-amber-400 group-hover:scale-125 transition-transform" />
-            <div className="hidden group-hover:flex items-center gap-1 ml-1 bg-zinc-800 rounded px-2 py-0.5">
-              <span className="text-xs text-amber-400">{marker.label}</span>
+            <div className="w-2 h-2 rounded-full bg-gray-600 dark:bg-neutral-400 group-hover:scale-125 transition-transform" />
+            <div className="hidden group-hover:flex items-center gap-1 ml-1 bg-white dark:bg-neutral-900 rounded px-2 py-0.5 border border-gray-200 dark:border-neutral-800">
+              <span className="text-xs text-gray-700 dark:text-neutral-300">{marker.label}</span>
               <button
                 onClick={(e) => {
                   e.stopPropagation()
                   removeMarker(marker.id)
                 }}
-                className="text-zinc-500 hover:text-red-400"
+                className="text-gray-500 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -231,7 +193,7 @@ export function Timeline() {
       {/* Timeline track */}
       <div
         ref={timelineRef}
-        className="relative h-16 bg-zinc-900 rounded-lg overflow-hidden cursor-pointer"
+        className="relative h-16 bg-gray-100 dark:bg-neutral-900 rounded-lg overflow-hidden cursor-pointer border border-gray-200 dark:border-neutral-800"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -265,17 +227,17 @@ export function Timeline() {
 
         {/* Playhead */}
         <motion.div
-          className="absolute top-0 bottom-0 w-0.5 bg-white z-20 pointer-events-none shadow-lg"
+          className="absolute top-0 bottom-0 w-0.5 bg-gray-900 dark:bg-neutral-100 z-20 pointer-events-none"
           style={{ left: `${playheadPosition}%` }}
           layoutId="playhead"
         >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-white rounded-full shadow-lg" />
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-white rounded-full" />
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900 dark:bg-neutral-100 rounded-full" />
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-neutral-100 rounded-full" />
         </motion.div>
       </div>
 
       {/* Timeline info */}
-      <div className="flex items-center justify-between mt-2 text-xs text-zinc-500">
+      <div className="flex items-center justify-between mt-2 text-xs text-gray-500 dark:text-neutral-500">
         <span>
           {scenes.length} scene{scenes.length !== 1 ? "s" : ""} | {markers.length} marker
           {markers.length !== 1 ? "s" : ""}

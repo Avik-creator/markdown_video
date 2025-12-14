@@ -2,16 +2,14 @@
 
 import { useVideoStore } from "@/lib/use-video-store"
 import { useEffect, useRef } from "react"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Play, Pause, Volume2, VolumeX, Maximize2, SkipBack, SkipForward } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward } from "lucide-react"
 import { useState } from "react"
+import { cn } from "@/lib/utils"
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
-  const frames = Math.floor((seconds % 1) * 30)
-  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}:${frames.toString().padStart(2, "0")}`
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
 }
 
 export function Controls() {
@@ -21,8 +19,6 @@ export function Controls() {
   const toggle = useVideoStore((state) => state.toggle)
   const seekTo = useVideoStore((state) => state.seekTo)
 
-  const [volume, setVolume] = useState(80)
-  const [isMuted, setIsMuted] = useState(false)
   const [playbackSpeed, setPlaybackSpeed] = useState(1)
 
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
@@ -55,77 +51,53 @@ export function Controls() {
   }, [isPlaying, playbackSpeed])
 
   const handleSkipBack = () => {
-    // Go to previous scene or start
     seekTo(Math.max(0, currentTime - 3))
   }
 
   const handleSkipForward = () => {
-    // Go to next scene or end
     seekTo(Math.min(totalDuration, currentTime + 3))
   }
 
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen()
-    } else {
-      document.exitFullscreen()
-    }
-  }
-
   return (
-    <div className="flex items-center gap-4 px-4 py-3 bg-[#0a0a0f] border-t border-white/10">
+    <div className="flex items-center gap-4 px-4 py-3 bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800">
       {/* Playback controls */}
       <div className="flex items-center gap-1">
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={handleSkipBack}
-          className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10"
+          className={cn(
+            "h-8 w-8 flex items-center justify-center text-gray-600 dark:text-neutral-400",
+            "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+          )}
         >
           <SkipBack className="w-4 h-4" />
-        </Button>
+        </button>
 
-        <Button variant="ghost" size="icon" onClick={toggle} className="h-10 w-10 text-white hover:bg-white/10">
+        <button
+          onClick={toggle}
+          className={cn(
+            "h-10 w-10 flex items-center justify-center text-gray-900 dark:text-neutral-100",
+            "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+          )}
+        >
           {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
-        </Button>
+        </button>
 
-        <Button
-          variant="ghost"
-          size="icon"
+        <button
           onClick={handleSkipForward}
-          className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10"
+          className={cn(
+            "h-8 w-8 flex items-center justify-center text-gray-600 dark:text-neutral-400",
+            "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+          )}
         >
           <SkipForward className="w-4 h-4" />
-        </Button>
+        </button>
       </div>
 
       {/* Time display */}
-      <div className="font-mono text-sm text-white min-w-[140px]">
-        <span className="text-white">{formatTime(currentTime)}</span>
-        <span className="text-muted-foreground">/</span>
-        <span className="text-muted-foreground">{formatTime(totalDuration)}</span>
-      </div>
-
-      {/* Volume control */}
-      <div className="flex items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setIsMuted(!isMuted)}
-          className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10"
-        >
-          {isMuted || volume === 0 ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-        </Button>
-        <Slider
-          value={[isMuted ? 0 : volume]}
-          onValueChange={([v]) => {
-            setVolume(v)
-            if (v > 0) setIsMuted(false)
-          }}
-          max={100}
-          step={1}
-          className="w-20"
-        />
+      <div className="font-mono text-sm text-gray-900 dark:text-neutral-100 min-w-[100px]">
+        <span>{formatTime(currentTime)}</span>
+        <span className="text-gray-500 dark:text-neutral-500">/</span>
+        <span className="text-gray-500 dark:text-neutral-500">{formatTime(totalDuration)}</span>
       </div>
 
       {/* Spacer */}
@@ -133,11 +105,15 @@ export function Controls() {
 
       {/* Playback speed */}
       <div className="flex items-center gap-2">
-        <span className="text-xs text-muted-foreground">Speed</span>
+        <span className="text-xs text-gray-600 dark:text-neutral-400">Speed</span>
         <select
           value={playbackSpeed}
           onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
-          className="bg-white/10 text-white text-xs rounded px-2 py-1 border border-white/10 focus:outline-none focus:ring-1 focus:ring-white/20"
+          className={cn(
+            "bg-white dark:bg-neutral-900 text-gray-900 dark:text-neutral-100 text-xs rounded px-2 py-1",
+            "border border-gray-300 dark:border-neutral-700",
+            "focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-neutral-600"
+          )}
         >
           <option value={0.5}>0.5x</option>
           <option value={0.75}>0.75x</option>
@@ -147,16 +123,6 @@ export function Controls() {
           <option value={2}>2x</option>
         </select>
       </div>
-
-      {/* Fullscreen */}
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={toggleFullscreen}
-        className="h-8 w-8 text-muted-foreground hover:text-white hover:bg-white/10"
-      >
-        <Maximize2 className="w-4 h-4" />
-      </Button>
     </div>
   )
 }

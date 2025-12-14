@@ -45,7 +45,7 @@ const ASPECT_RATIOS = {
 
 const ZOOM_LEVELS = [50, 75, 100, 125, 150] as const
 
-export function VideoEditor() {
+export function VideoEditor({ initialMarkdown }: { initialMarkdown?: string }) {
   const [rightPanel, setRightPanel] = useState<RightPanel>("properties")
   const [showExportModal, setShowExportModal] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -73,6 +73,14 @@ export function VideoEditor() {
   const prevScene = useVideoStore((state) => state.prevScene)
   const addMarker = useVideoStore((state) => state.addMarker)
   const markdown = useVideoStore((state) => state.markdown)
+  const setMarkdown = useVideoStore((state) => state.setMarkdown)
+
+  // Set initial markdown if provided
+  useEffect(() => {
+    if (initialMarkdown) {
+      setMarkdown(initialMarkdown)
+    }
+  }, [initialMarkdown, setMarkdown])
 
   const saveProject = useCallback(() => {
     const blob = new Blob([markdown], { type: "text/markdown" })

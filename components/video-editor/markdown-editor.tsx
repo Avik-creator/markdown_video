@@ -1,8 +1,8 @@
 "use client"
 import { useVideoStore } from "@/lib/use-video-store"
 import { useEffect, useState, useRef, useCallback } from "react"
-import { FileText, Wand2, Terminal, BarChart3, Smartphone, Sparkles } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { FileText } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const EXAMPLE_TEMPLATES = {
   intro: `!scene
@@ -77,7 +77,7 @@ function getLineClassName(line: string): string {
   const trimmed = line.trim()
 
   if (trimmed === "---") return "text-orange-400"
-  if (trimmed.startsWith("//")) return "text-gray-500"
+  if (trimmed.startsWith("//")) return "text-gray-500 dark:text-neutral-500"
   if (trimmed.startsWith("+") && !trimmed.startsWith("++")) return "text-green-400"
   if (trimmed.startsWith("-") && !trimmed.startsWith("--") && !trimmed.startsWith("---")) return "text-red-400"
   if (trimmed.startsWith("!")) return "text-pink-400"
@@ -85,7 +85,7 @@ function getLineClassName(line: string): string {
   if (trimmed.startsWith("$") || trimmed.startsWith(">")) return "text-cyan-400"
   if (trimmed.includes(":")) return "text-purple-400"
 
-  return "text-gray-400"
+  return "text-gray-400 dark:text-neutral-500"
 }
 
 export function MarkdownEditor() {
@@ -131,93 +131,45 @@ export function MarkdownEditor() {
   const lineCount = lines.length
 
   return (
-    <div className="w-80 bg-zinc-950 border-r border-zinc-800 flex flex-col h-full overflow-hidden">
+    <div className="w-80 bg-white dark:bg-neutral-950 border-r border-gray-200 dark:border-neutral-800 flex flex-col h-full overflow-hidden">
       {/* Header */}
-      <div className="p-3 border-b border-zinc-800 flex items-center justify-between shrink-0">
+      <div className="p-3 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-pink-500" />
-          <h2 className="text-sm font-medium text-white">Editor</h2>
+          <FileText className="w-4 h-4 text-gray-600 dark:text-neutral-400" />
+          <h2 className="text-sm font-medium text-gray-900 dark:text-neutral-100">Editor</h2>
         </div>
-        <span className="text-xs text-zinc-500 bg-zinc-900 px-2 py-0.5 rounded">{lineCount} lines</span>
+        <span className="text-xs text-gray-500 dark:text-neutral-500 bg-gray-50 dark:bg-neutral-900 px-2 py-0.5 rounded">{lineCount} lines</span>
       </div>
 
       {/* Quick insert buttons */}
-      <div className="p-2 border-b border-zinc-800 flex gap-1 flex-wrap shrink-0 bg-zinc-900/50">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("intro")}
-          className="text-xs h-7 text-pink-400 hover:text-pink-300 hover:bg-pink-500/10"
-        >
-          <Wand2 className="w-3 h-3 mr-1" />
-          Intro
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("text")}
-          className="text-xs h-7 text-purple-400 hover:text-purple-300 hover:bg-purple-500/10"
-        >
-          Text
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("code")}
-          className="text-xs h-7 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10"
-        >
-          Code
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("terminal")}
-          className="text-xs h-7 text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10"
-        >
-          <Terminal className="w-3 h-3 mr-1" />
-          Term
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("chart")}
-          className="text-xs h-7 text-blue-400 hover:text-blue-300 hover:bg-blue-500/10"
-        >
-          <BarChart3 className="w-3 h-3 mr-1" />
-          Chart
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("mockup")}
-          className="text-xs h-7 text-amber-400 hover:text-amber-300 hover:bg-amber-500/10"
-        >
-          <Smartphone className="w-3 h-3 mr-1" />
-          Device
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => insertTemplate("particles")}
-          className="text-xs h-7 text-rose-400 hover:text-rose-300 hover:bg-rose-500/10"
-        >
-          <Sparkles className="w-3 h-3 mr-1" />
-          FX
-        </Button>
+      <div className="p-2 border-b border-gray-200 dark:border-neutral-800 flex gap-1 flex-wrap shrink-0 bg-gray-50/50 dark:bg-neutral-900/50">
+        {Object.entries(EXAMPLE_TEMPLATES).map(([key]) => (
+          <button
+            key={key}
+            onClick={() => insertTemplate(key as keyof typeof EXAMPLE_TEMPLATES)}
+            className={cn(
+              "text-xs h-7 px-2 rounded text-gray-600 dark:text-neutral-400",
+              "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800",
+              "transition-colors"
+            )}
+          >
+            {key.charAt(0).toUpperCase() + key.slice(1)}
+          </button>
+        ))}
       </div>
 
       <div className="flex-1 flex min-h-0 overflow-hidden">
         {/* Line numbers */}
         <div
           ref={lineNumbersRef}
-          className="w-10 bg-zinc-900 border-r border-zinc-800 overflow-hidden shrink-0 select-none"
+          className="w-10 bg-gray-50 dark:bg-neutral-900 border-r border-gray-200 dark:border-neutral-800 overflow-hidden shrink-0 select-none"
           style={{ scrollbarWidth: "none" }}
         >
           <div className="py-3">
             {lines.map((_, i) => (
               <div
                 key={i}
-                className="text-xs text-zinc-600 font-mono text-right pr-2"
+                className="text-xs text-gray-400 dark:text-neutral-600 font-mono text-right pr-2"
                 style={{ height: "20px", lineHeight: "20px" }}
               >
                 {i + 1}
@@ -231,7 +183,7 @@ export function MarkdownEditor() {
           value={localMarkdown}
           onChange={(e) => setLocalMarkdown(e.target.value)}
           onScroll={handleScroll}
-          className="flex-1 resize-none bg-zinc-950 border-0 text-sm font-mono text-zinc-300 focus:outline-none focus-visible:ring-0 p-3 overflow-auto"
+          className="flex-1 resize-none bg-white dark:bg-neutral-950 border-0 text-sm font-mono text-gray-900 dark:text-neutral-100 focus:outline-none focus-visible:ring-0 p-3 overflow-auto"
           placeholder="Enter your scene markdown..."
           spellCheck={false}
           style={{
@@ -243,9 +195,9 @@ export function MarkdownEditor() {
       </div>
 
       {/* Footer hint */}
-      <div className="p-2 border-t border-zinc-800 bg-zinc-900/50 shrink-0">
-        <p className="text-xs text-zinc-500">
-          Press <kbd className="bg-zinc-800 px-1.5 py-0.5 rounded text-xs font-mono text-pink-400">?</kbd> for syntax
+      <div className="p-2 border-t border-gray-200 dark:border-neutral-800 bg-gray-50/50 dark:bg-neutral-900/50 shrink-0">
+        <p className="text-xs text-gray-500 dark:text-neutral-500">
+          Press <kbd className="bg-white dark:bg-neutral-800 px-1.5 py-0.5 rounded text-xs font-mono text-gray-700 dark:text-neutral-300">?</kbd> for syntax
           guide
         </p>
       </div>

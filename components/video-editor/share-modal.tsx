@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -17,6 +17,8 @@ interface ShareModalProps {
 export function ShareModal({ open, onOpenChange }: ShareModalProps) {
   const [copied, setCopied] = useState<string | null>(null)
   const [embedSize, setEmbedSize] = useState<"small" | "medium" | "large">("medium")
+  const [shareLink, setShareLink] = useState<string>("")
+  const [isGenerating, setIsGenerating] = useState(false)
   const markdown = useVideoStore((state) => state.markdown)
 
   const embedSizes = {
@@ -25,11 +27,25 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
     large: { width: 1280, height: 720 },
   }
 
-  // Generate a shareable link - encode markdown as base64
-  const generateShareLink = () => {
+  // Generate a shareable link - encode markdown as base64 or use Redis
+  const generateShareLink = async () => {
     try {
       const encoded = btoa(encodeURIComponent(markdown))
       if (encoded.length > 2000) {
+        // Store in Redis for large projects
+        try {
+          const response = await fetch("/api/projects", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ markdown }),
+          })
+          if (response.ok) {
+            const { projectId } = await response.json()
+            return `${typeof window !== "undefined" ? window.location.origin : ""}/editor?project=${projectId}`
+          }
+        } catch (error) {
+          console.error("Failed to store in Redis:", error)
+        }
         return `${typeof window !== "undefined" ? window.location.origin : ""}/editor?project=too-large`
       }
       return `${typeof window !== "undefined" ? window.location.origin : ""}/editor?md=${encoded.slice(0, 500)}`
@@ -38,7 +54,19 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
     }
   }
 
-  const shareLink = generateShareLink()
+  // Generate share link when modal opens
+  useEffect(() => {
+    if (open) {
+      setIsGenerating(true)
+      generateShareLink().then((link) => {
+        setShareLink(link)
+        setIsGenerating(false)
+      }).catch(() => {
+        setShareLink(`${typeof window !== "undefined" ? window.location.origin : ""}/editor`)
+        setIsGenerating(false)
+      })
+    }
+  }, [open, markdown])
 
   const getEmbedCode = (width: number, height: number) => {
     return `<iframe src="${shareLink}&embed=true" width="${width}" height="${height}" frameborder="0" allow="autoplay; fullscreen" allowfullscreen></iframe>`
@@ -93,13 +121,15 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
               <Label className="text-sm text-gray-600 dark:text-neutral-400">Project Link</Label>
               <div className="flex gap-2">
                 <Input
-                  value={shareLink}
+                  value={isGenerating ? "Generating..." : shareLink}
                   readOnly
+                  disabled={isGenerating}
                   className="bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-sm font-mono text-gray-900 dark:text-neutral-100"
                 />
                 <Button
                   onClick={() => handleCopy(shareLink, "link")}
                   variant="outline"
+                  disabled={isGenerating || !shareLink}
                   className="border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 shrink-0"
                 >
                   {copied === "link" ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
