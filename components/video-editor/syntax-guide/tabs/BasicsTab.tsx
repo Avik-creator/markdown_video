@@ -275,6 +275,73 @@ function createVideo(markdown) {
         </div>
       </Section>
 
+      {/* In-Scene Timelines */}
+      <Section title="In-Scene Timelines">
+        <CodeExample
+          title="timeline-elements.md"
+          code={`!scene
+!text "First line" at:0s duration:1.5s
+!text "Second line" at:1.2s duration:2s
+!emoji 🎯 at:2.5s duration:1s
+
+!duration 4s
+!background #3b82f6`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="at:"
+            description="Element start time in seconds"
+            options={["0s", "1.5s", "2.2s"]}
+          />
+          <DirectiveDoc
+            directive="duration:"
+            description="Element duration in seconds"
+            options={["1s", "1.5s", "2s"]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Timeline Control:</strong> Use{" "}
+          <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+            at:
+          </code>{" "}
+          and{" "}
+          <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+            duration:
+          </code>{" "}
+          to precisely control when elements appear and disappear within a
+          scene.
+        </p>
+      </Section>
+
+      {/* Staggered Animations */}
+      <Section title="Staggered Animations">
+        <CodeExample
+          title="stagger-animation.md"
+          code={`!scene
+!text
+Line 1
+Line 2
+Line 3
+animation: slideUp
+stagger: 0.3s
+
+!duration 3s
+!background #8b5cf6`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="stagger:"
+            description="Delay between animated lines"
+            options={["0.2s", "0.3s", "0.5s"]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Sequential Animation:</strong> Each line animates with a
+          delay, creating a cascading effect. Perfect for lists and multi-line
+          text.
+        </p>
+      </Section>
+
       {/* Image Scenes */}
       <Section title="Image Scenes">
         <CodeExample

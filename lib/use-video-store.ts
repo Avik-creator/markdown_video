@@ -11,6 +11,7 @@ import type {
   Marker,
   VideoStore,
   ExportSettings,
+  LocalizationStrings,
 } from "./types";
 
 const DEFAULT_MARKDOWN = `!var brandColor #3b82f6
@@ -140,7 +141,14 @@ export const useVideoStore = create<VideoStore>()(
           resolution: "1080p",
           quality: "high",
           speed: "balanced",
+          format: "mp4",
+          fps: 30,
+          captureWaitTime: 500,
         },
+
+        // Localization
+        currentLocale: "en",
+        localizationStrings: {},
 
         setMarkdown: (markdown, addToHistory = true) => {
           const { scenes, segments, totalDuration } =
@@ -306,6 +314,36 @@ export const useVideoStore = create<VideoStore>()(
           set((state) => ({
             exportSettings: { ...state.exportSettings, ...settings },
           }));
+        },
+
+        // Localization methods
+        setCurrentLocale: (locale) => set({ currentLocale: locale }),
+
+        setLocalizationStrings: (strings) =>
+          set({ localizationStrings: strings }),
+
+        addLocale: (locale) => {
+          // Add locale to all existing strings with empty values
+          const { localizationStrings } = get();
+          const updated = { ...localizationStrings };
+          for (const key of Object.keys(updated)) {
+            if (!updated[key][locale]) {
+              updated[key][locale] = "";
+            }
+          }
+          set({ localizationStrings: updated });
+        },
+
+        removeLocale: (locale) => {
+          const { localizationStrings, currentLocale } = get();
+          const updated = { ...localizationStrings };
+          for (const key of Object.keys(updated)) {
+            delete updated[key][locale];
+          }
+          set({
+            localizationStrings: updated,
+            currentLocale: currentLocale === locale ? "en" : currentLocale,
+          });
         },
       };
     },

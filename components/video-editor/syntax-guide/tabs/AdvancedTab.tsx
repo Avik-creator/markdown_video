@@ -269,6 +269,190 @@ animation: fadeIn
         </p>
       </Section>
 
+      {/* Camera Timeline */}
+      <Section title="Camera Timeline (Cinematic Control)">
+        <CodeExample
+          title="camera-keyframes.md"
+          code={`!scene
+!text
+Cinematic Motion
+animation: fadeIn
+size: 2xl
+
+!camera
+- at:0s zoom:1
+- at:2s zoom:1.4 pan:right
+- at:4s zoom:1 shake:true shakeIntensity:medium
+
+!duration 5s
+!background #1e1e2e`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="!camera"
+            description="Camera keyframe timeline"
+          />
+          <DirectiveDoc
+            directive="at:"
+            description="Keyframe time in seconds"
+          />
+          <DirectiveDoc
+            directive="zoom:"
+            description="Zoom level (1 = normal, 1.5 = 150%)"
+            options={["1", "1.2", "1.5", "2"]}
+          />
+          <DirectiveDoc
+            directive="pan:"
+            description="Pan direction"
+            options={["left", "right", "up", "down"]}
+          />
+          <DirectiveDoc
+            directive="shake:"
+            description="Enable camera shake"
+            options={["true", "false"]}
+          />
+          <DirectiveDoc
+            directive="shakeIntensity:"
+            description="Shake intensity"
+            options={["low", "medium", "high"]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Cinematic Motion:</strong> Create smooth camera movements with
+          keyframe-based animation. Matches After Effects-style thinking for
+          professional video production.
+        </p>
+      </Section>
+
+      {/* Export Formats */}
+      <Section title="Export Formats & Targets">
+        <CodeExample
+          title="export-config.md"
+          code={`!export
+format: reels
+aspectRatio: 9:16
+safeArea: true
+quality: high
+resolution: 1080p
+
+!export
+format: shorts
+aspectRatio: 9:16
+safeArea: true
+
+!export
+format: slides
+quality: high
+includeSubtitles: true`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="format:"
+            description="Export target format"
+            options={["mp4", "reels", "shorts", "slides", "gif"]}
+          />
+          <DirectiveDoc
+            directive="aspectRatio:"
+            description="Video aspect ratio"
+            options={["16:9", "9:16", "1:1", "4:3"]}
+          />
+          <DirectiveDoc
+            directive="safeArea:"
+            description="Enable safe area for mobile"
+            options={["true", "false"]}
+          />
+          <DirectiveDoc
+            directive="quality:"
+            description="Export quality"
+            options={["low", "medium", "high", "ultra"]}
+          />
+          <DirectiveDoc
+            directive="resolution:"
+            description="Video resolution"
+            options={["720p", "1080p", "1440p", "4k"]}
+          />
+          <DirectiveDoc
+            directive="includeSubtitles:"
+            description="Include subtitle track"
+            options={["true", "false"]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Multi-Platform Export:</strong> Export to different formats
+          optimized for Instagram Reels, YouTube Shorts, PDF slides, and more.
+          One markdown → multiple platforms.
+        </p>
+      </Section>
+
+      {/* Localization */}
+      <Section title="Localization & i18n">
+        <CodeExample
+          title="localization-basic.md"
+          code={`!locale en
+!scene
+!text
+Welcome to our video
+animation: fadeIn
+
+!duration 3s
+
+---
+
+!locale es
+!scene
+!text
+Bienvenido a nuestro video
+animation: fadeIn
+
+!duration 3s`}
+        />
+        <CodeExample
+          title="localization-keys.md"
+          code={`!locales en es fr de
+
+!scene
+!text i18n:welcome
+animation: fadeIn
+
+!duration 3s
+
+---
+
+!strings
+welcome:
+  en: "Welcome"
+  es: "Bienvenido"
+  fr: "Bienvenue"
+  de: "Willkommen"`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="!locale"
+            description="Set scene locale"
+            options={["en", "es", "fr", "de", "ja", "zh"]}
+          />
+          <DirectiveDoc
+            directive="!locales"
+            description="Define supported locales"
+            options={["en es fr", "en es fr de ja"]}
+          />
+          <DirectiveDoc
+            directive="i18n:"
+            description="Reference localization key"
+            options={["welcome", "greeting", "title"]}
+          />
+          <DirectiveDoc
+            directive="!strings"
+            description="Define localization strings"
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Global Reach:</strong> One markdown file → 10 languages.
+          Define locales and strings once, export in any language. Perfect for
+          enterprise and global creators.
+        </p>
+      </Section>
+
       {/* Editor Features */}
       <Section title="Editor Features">
         <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 rounded-lg p-3 space-y-3">

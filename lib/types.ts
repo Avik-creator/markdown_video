@@ -54,6 +54,12 @@ export type PresenterPosition =
   | "bottom-left"
   | "bottom-right";
 
+export type PanDirection = "left" | "right" | "up" | "down";
+
+export type ExportFormat = "mp4" | "reels" | "shorts" | "slides" | "gif";
+
+export type AspectRatioType = "16:9" | "9:16" | "1:1" | "4:3";
+
 export interface CodeHighlight {
   lines: number[];
   color?: string;
@@ -73,6 +79,8 @@ export interface SceneText {
   delay?: number;
   color?: string;
   fontFamily?: "serif" | "sans" | "mono" | "display";
+  i18nKey?: string; // Localization key
+  stagger?: number; // Stagger delay between lines in seconds
 }
 
 export interface SceneCode {
@@ -143,10 +151,31 @@ export interface SceneCallout {
   style?: "info" | "warning" | "error" | "success";
 }
 
+export interface TimelineElement {
+  id: string;
+  type: "text" | "emoji" | "image" | "code" | "custom";
+  content: string;
+  at: number; // Start time in seconds
+  duration: number; // Duration in seconds
+  animation?: AnimationType;
+  stagger?: number; // Stagger delay between lines (in seconds)
+  delay?: number;
+}
+
+export interface CameraKeyframe {
+  at: number; // Time in seconds
+  zoom?: number; // Zoom level (1 = normal, 1.5 = 150%)
+  pan?: PanDirection;
+  panAmount?: number; // Pan distance
+  shake?: boolean;
+  shakeIntensity?: "low" | "medium" | "high";
+}
+
 export interface SceneCamera {
   effect: CameraEffect;
   value?: number; // zoom level, pan amount
   duration?: number;
+  keyframes?: CameraKeyframe[]; // Timeline-based camera control
 }
 
 export interface SceneParticles {
@@ -236,6 +265,27 @@ export interface Scene {
   qr?: SceneQR;
   countdown?: SceneCountdown;
   progress?: SceneProgress;
+  timelineElements?: TimelineElement[]; // In-scene timeline elements
+  locale?: string; // Scene-specific locale override
+}
+
+export interface LocalizationStrings {
+  [key: string]: {
+    [locale: string]: string;
+  };
+}
+
+export interface ExportSettings {
+  resolution: string;
+  quality: string;
+  speed: string;
+  format?: ExportFormat;
+  aspectRatio?: AspectRatioType;
+  safeArea?: boolean; // For reels/shorts
+  includeSubtitles?: boolean;
+  locale?: string; // Export in specific language
+  fps?: number; // Output FPS (5-60)
+  captureWaitTime?: number; // Wait time between captures in ms (50-1000)
 }
 
 export interface VideoProject {
@@ -246,6 +296,10 @@ export interface VideoProject {
   currentSceneIndex: number;
   chapters: Chapter[]; // Added chapters
   variables: VideoVariables; // Added variables
+  locales?: string[]; // Supported locales (e.g., ["en", "es", "fr"])
+  localizationStrings?: LocalizationStrings; // i18n strings
+  defaultLocale?: string; // Default locale
+  exportSettings?: ExportSettings; // Export configuration
 }
 
 export interface TimelineSegment {
@@ -284,12 +338,6 @@ export interface Marker {
   time: number;
   label: string;
   color: string;
-}
-
-export interface ExportSettings {
-  resolution: string;
-  quality: string;
-  speed: string;
 }
 
 export interface VideoStore {
@@ -346,4 +394,12 @@ export interface VideoStore {
   // Export settings
   exportSettings: ExportSettings;
   setExportSettings: (settings: Partial<ExportSettings>) => void;
+
+  // Localization
+  currentLocale: string;
+  setCurrentLocale: (locale: string) => void;
+  localizationStrings: LocalizationStrings;
+  setLocalizationStrings: (strings: LocalizationStrings) => void;
+  addLocale: (locale: string) => void;
+  removeLocale: (locale: string) => void;
 }

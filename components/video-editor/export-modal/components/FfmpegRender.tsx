@@ -1,7 +1,7 @@
 "use client";
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   Loader2,
   CheckCircle2,
@@ -19,7 +19,6 @@ interface FileUploaderProps {
   loadFunction: () => Promise<void>;
   loadFfmpeg: boolean;
   ffmpeg: FFmpeg;
-  logMessages: string;
 }
 
 type RenderStatus =
@@ -80,13 +79,13 @@ export default function FfmpegRender({
   loadFunction,
   loadFfmpeg,
   ffmpeg,
-  logMessages,
 }: FileUploaderProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [outputFileName, setOutputFileName] = useState("video.mp4");
   const [errorMessage, setErrorMessage] = useState("");
   const cancelledRef = useRef(false);
 
@@ -94,7 +93,6 @@ export default function FfmpegRender({
   const exportSettings = useVideoStore((state) => state.exportSettings);
   const seekTo = useVideoStore((state) => state.seekTo);
   const pause = useVideoStore((state) => state.pause);
-  const projectName = "My Video";
 
   const handleReset = async () => {
     cancelledRef.current = true;
@@ -142,9 +140,11 @@ export default function FfmpegRender({
         exportSettings.speed
       );
 
-      // Frame rate for capture
-      const fps = 15;
-      const totalFrameCount = Math.ceil(totalDuration * fps);
+      // Capture timing: use user-selected settings
+      // This gives smooth playback while allowing animations to complete
+      const captureWaitTime = exportSettings.captureWaitTime || 500; // ms between captures
+      const outputFps = exportSettings.fps || 30; // Output video FPS
+      const totalFrameCount = Math.ceil(totalDuration * outputFps);
       setTotalFrames(totalFrameCount);
 
       // Pause playback and seek to start
@@ -157,19 +157,17 @@ export default function FfmpegRender({
       for (let frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
         if (cancelledRef.current) break;
 
-        const currentTime = frameIndex / fps;
+        const currentTime = frameIndex / outputFps;
         seekTo(Math.min(currentTime, totalDuration));
 
-        // Wait for DOM to update
-        await new Promise((resolve) => setTimeout(resolve, 80));
+        // Wait for animations to render
+        // 500ms gives Framer Motion animations time to update between frames
+        await new Promise((resolve) => setTimeout(resolve, captureWaitTime));
+        await new Promise((resolve) => requestAnimationFrame(resolve));
         await new Promise((resolve) => requestAnimationFrame(resolve));
         await new Promise((resolve) => requestAnimationFrame(resolve));
 
         try {
-          // Get the computed style to check for transforms
-          const computedStyle = window.getComputedStyle(previewElement);
-          const transform = computedStyle.transform;
-
           // Temporarily remove transform for capture
           const originalTransform = previewElement.style.transform;
           previewElement.style.transform = "none";
@@ -193,6 +191,26 @@ export default function FfmpegRender({
             imageTimeout: 0,
             width: rect.width,
             height: rect.height,
+            onclone: (clonedDoc) => {
+              // Ensure all animations are captured in their current state
+              const clonedElement = clonedDoc.querySelector(
+                '[data-scene-preview="true"]'
+              );
+              if (clonedElement) {
+                // Force all transforms to be applied
+                const allElements = clonedElement.querySelectorAll("*");
+                allElements.forEach((el) => {
+                  const htmlEl = el as HTMLElement;
+                  const style = window.getComputedStyle(el);
+                  if (style.transform && style.transform !== "none") {
+                    htmlEl.style.transform = style.transform;
+                  }
+                  if (style.opacity) {
+                    htmlEl.style.opacity = style.opacity;
+                  }
+                });
+              }
+            },
           });
 
           // Restore original transform
@@ -248,32 +266,78 @@ export default function FfmpegRender({
       setStatus("encoding");
       setProgress(0);
 
-      // Use FFmpeg to encode frames to MP4
-      const ffmpegArgs = [
-        "-framerate",
-        String(fps),
-        "-i",
-        "frame%05d.png",
-        "-c:v",
-        "libx264",
-        "-preset",
-        params.preset,
-        "-crf",
-        String(params.crf),
-        "-pix_fmt",
-        "yuv420p",
-        "-t",
-        totalDuration.toFixed(3),
-        "output.mp4",
-      ];
+      const format = exportSettings.format || "mp4";
+      let outputBlob: Blob;
+      let outputFileName: string;
 
-      await ffmpeg.exec(ffmpegArgs);
+      if (format === "gif") {
+        // Reduce FPS for GIF to keep file size small (max 10fps for GIFs)
+        const gifFps = Math.min(outputFps, 10);
 
-      // Read the output file
-      const outputData = await ffmpeg.readFile("output.mp4");
-      const outputBlob = new Blob([outputData as BlobPart], {
-        type: "video/mp4",
-      });
+        // Generate palette first for better compression
+        const paletteArgs = [
+          "-framerate",
+          String(outputFps),
+          "-i",
+          "frame%05d.png",
+          "-vf",
+          `fps=${gifFps},scale=${dimensions.width}:${dimensions.height}:flags=lanczos,palettegen=max_colors=64`,
+          "-y",
+          "palette.png",
+        ];
+
+        await ffmpeg.exec(paletteArgs);
+
+        // Encode GIF using the palette with aggressive dithering
+        const gifArgs = [
+          "-framerate",
+          String(outputFps),
+          "-i",
+          "frame%05d.png",
+          "-i",
+          "palette.png",
+          "-lavfi",
+          `fps=${gifFps},scale=${dimensions.width}:${dimensions.height}:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=2`,
+          "-loop",
+          "0",
+          "-y",
+          "output.gif",
+        ];
+
+        await ffmpeg.exec(gifArgs);
+        const gifData = await ffmpeg.readFile("output.gif");
+        outputBlob = new Blob([gifData as BlobPart], { type: "image/gif" });
+        outputFileName = "video.gif";
+
+        // Clean up palette
+        try {
+          await ffmpeg.deleteFile("palette.png");
+        } catch {}
+      } else {
+        // Default to MP4
+        const mp4Args = [
+          "-framerate",
+          String(outputFps),
+          "-i",
+          "frame%05d.png",
+          "-c:v",
+          "libx264",
+          "-preset",
+          params.preset,
+          "-crf",
+          String(params.crf),
+          "-pix_fmt",
+          "yuv420p",
+          "-t",
+          totalDuration.toFixed(3),
+          "output.mp4",
+        ];
+
+        await ffmpeg.exec(mp4Args);
+        const mp4Data = await ffmpeg.readFile("output.mp4");
+        outputBlob = new Blob([mp4Data as BlobPart], { type: "video/mp4" });
+        outputFileName = "video.mp4";
+      }
 
       // Clean up frame files
       for (let frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
@@ -285,9 +349,18 @@ export default function FfmpegRender({
         }
       }
 
+      // Clean up output files
+      try {
+        await ffmpeg.deleteFile("output.mp4");
+      } catch {}
+      try {
+        await ffmpeg.deleteFile("output.gif");
+      } catch {}
+
       setPreviewUrl(URL.createObjectURL(outputBlob));
+      setOutputFileName(outputFileName);
       setStatus("complete");
-      toast.success("Video rendered successfully!");
+      toast.success(`${format.toUpperCase()} exported successfully!`);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to render video";
@@ -384,14 +457,23 @@ export default function FfmpegRender({
           </div>
         </div>
 
-        {/* Video preview */}
+        {/* Preview based on format */}
         <div className="rounded-lg overflow-hidden border border-zinc-700">
-          <video
-            src={previewUrl}
-            controls
-            className="w-full"
-            style={{ maxHeight: "300px" }}
-          />
+          {exportSettings.format === "gif" ? (
+            <img
+              src={previewUrl}
+              alt="GIF Preview"
+              className="w-full"
+              style={{ maxHeight: "300px" }}
+            />
+          ) : (
+            <video
+              src={previewUrl}
+              controls
+              className="w-full"
+              style={{ maxHeight: "300px" }}
+            />
+          )}
         </div>
 
         <div className="flex gap-3">
@@ -399,9 +481,9 @@ export default function FfmpegRender({
             asChild
             className="flex-1 gap-2 bg-pink-500 hover:bg-pink-600 text-white"
           >
-            <a href={previewUrl} download={`${projectName}.mp4`}>
+            <a href={previewUrl} download={outputFileName}>
               <Download className="w-4 h-4" />
-              Download Video
+              Download {exportSettings.format === "gif" ? "GIF" : "Video"}
             </a>
           </Button>
           <Button

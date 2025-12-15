@@ -141,6 +141,46 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               let animation: AnimationType = "fadeIn";
               let size: "sm" | "md" | "lg" | "xl" | "2xl" = "lg";
               let color: string | undefined;
+              let fontFamily: "serif" | "sans" | "mono" | "display" | undefined;
+              let stagger: number | undefined;
+              let at: number | undefined;
+              let duration: number | undefined;
+              let i18nKey: string | undefined;
+
+              // Check for inline format: !text "content" at:0s duration:1.5s
+              const inlineMatch = currentLine.match(/!text\s+"([^"]+)"(.*)$/);
+              if (inlineMatch) {
+                const inlineContent = inlineMatch[1];
+                const inlineParams = inlineMatch[2];
+                const atMatch = inlineParams.match(/at:([\d.]+)s?/);
+                const durationMatch = inlineParams.match(/duration:([\d.]+)s?/);
+                const animMatch = inlineParams.match(/animation:(\w+)/);
+
+                if (atMatch && durationMatch) {
+                  if (!scene.timelineElements) {
+                    scene.timelineElements = [];
+                  }
+                  scene.timelineElements.push({
+                    id: generateId(),
+                    type: "text",
+                    content: inlineContent,
+                    at: Number.parseFloat(atMatch[1]),
+                    duration: Number.parseFloat(durationMatch[1]),
+                    animation: animMatch
+                      ? (animMatch[1] as AnimationType)
+                      : "fadeIn",
+                  });
+                  i++;
+                  break;
+                }
+              }
+
+              // Check for i18n key format: !text i18n:welcome
+              const i18nMatch = currentLine.match(/!text\s+i18n:(\w+)/);
+              if (i18nMatch) {
+                i18nKey = i18nMatch[1];
+              }
+
               i++;
 
               while (i < lines.length) {
@@ -159,6 +199,19 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   if (kv.key === "size")
                     size = kv.value as "sm" | "md" | "lg" | "xl" | "2xl";
                   if (kv.key === "color") color = kv.value;
+                  if (kv.key === "fontFamily")
+                    fontFamily = kv.value as
+                      | "serif"
+                      | "sans"
+                      | "mono"
+                      | "display";
+                  if (kv.key === "stagger")
+                    stagger = Number.parseFloat(kv.value);
+                  if (kv.key === "at") at = Number.parseFloat(kv.value);
+                  if (kv.key === "duration")
+                    duration = Number.parseFloat(kv.value);
+                  if (kv.key === "i18n" || kv.key === "i18nKey")
+                    i18nKey = kv.value;
                 } else if (textLine) {
                   textContent.push(textLine);
                 }
@@ -171,7 +224,26 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 size,
                 align: "center",
                 color,
+                fontFamily,
+                stagger,
+                i18nKey,
               };
+
+              // If at: and duration: are specified, add to timelineElements
+              if (at !== undefined && duration !== undefined) {
+                if (!scene.timelineElements) {
+                  scene.timelineElements = [];
+                }
+                scene.timelineElements.push({
+                  id: generateId(),
+                  type: "text",
+                  content: textContent.join("\n"),
+                  at,
+                  duration,
+                  animation,
+                  stagger,
+                });
+              }
               break;
             }
 
@@ -182,6 +254,16 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               let annotations: Array<{ line: number; text: string }> = [];
               let typing = false;
               let typingSpeed = 50;
+              let fontSize: "xs" | "sm" | "md" | "lg" = "sm";
+              let fontFamily:
+                | "mono"
+                | "jetbrains"
+                | "fira"
+                | "source"
+                | "inconsolata"
+                | "courier" = "mono";
+              let height: number | undefined;
+              let width: number | undefined;
 
               while (i < lines.length) {
                 const codeLine = substituteVariables(
@@ -199,6 +281,10 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     showLineNumbers: true,
                     typing,
                     typingSpeed,
+                    fontSize,
+                    fontFamily,
+                    height,
+                    width,
                   };
                   i = parsed.endIndex;
                   break;
@@ -218,6 +304,28 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     codeLine.substring(6).trim(),
                     10
                   );
+                  i++;
+                } else if (codeLine.startsWith("fontSize:")) {
+                  fontSize = codeLine.substring(9).trim() as
+                    | "xs"
+                    | "sm"
+                    | "md"
+                    | "lg";
+                  i++;
+                } else if (codeLine.startsWith("fontFamily:")) {
+                  fontFamily = codeLine.substring(11).trim() as
+                    | "mono"
+                    | "jetbrains"
+                    | "fira"
+                    | "source"
+                    | "inconsolata"
+                    | "courier";
+                  i++;
+                } else if (codeLine.startsWith("height:")) {
+                  height = Number.parseInt(codeLine.substring(7).trim(), 10);
+                  i++;
+                } else if (codeLine.startsWith("width:")) {
+                  width = Number.parseInt(codeLine.substring(6).trim(), 10);
                   i++;
                 } else {
                   i++;
@@ -403,14 +511,50 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const valueMatch = currentLine.match(/:([\d.]+)/);
               const durationMatch = currentLine.match(/duration:([\d.]+)s?/);
 
+              // Check if this is a keyframe-based camera (starts with -)
+              const keyframes = [];
+              i++;
+
+              while (i < lines.length) {
+                const cameraLine = lines[i].trim();
+                if (cameraLine.startsWith("-")) {
+                  // Parse keyframe: - at:0s zoom:1 pan:left
+                  const atMatch = cameraLine.match(/at:([\d.]+)s?/);
+                  const zoomMatch = cameraLine.match(/zoom:([\d.]+)/);
+                  const panMatch = cameraLine.match(/pan:(\w+)/);
+                  const shakeMatch = cameraLine.match(/shake:(true|false)/);
+                  const shakeIntensityMatch =
+                    cameraLine.match(/shakeIntensity:(\w+)/);
+
+                  if (atMatch) {
+                    keyframes.push({
+                      at: Number.parseFloat(atMatch[1]),
+                      zoom: zoomMatch
+                        ? Number.parseFloat(zoomMatch[1])
+                        : undefined,
+                      pan: panMatch ? (panMatch[1] as any) : undefined,
+                      shake: shakeMatch ? shakeMatch[1] === "true" : undefined,
+                      shakeIntensity: shakeIntensityMatch
+                        ? (shakeIntensityMatch[1] as any)
+                        : undefined,
+                    });
+                  }
+                  i++;
+                } else if (cameraLine.startsWith("!") || cameraLine === "---") {
+                  break;
+                } else {
+                  i++;
+                }
+              }
+
               scene.camera = {
                 effect: (effectMatch?.[1] || "zoom") as CameraEffect,
                 value: valueMatch ? Number.parseFloat(valueMatch[1]) : 1.5,
                 duration: durationMatch
                   ? Number.parseFloat(durationMatch[1])
                   : 1,
+                keyframes: keyframes.length > 0 ? keyframes : undefined,
               };
-              i++;
               break;
             }
 
@@ -477,6 +621,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const animateMatch = currentLine.match(
                 /animate:(bounce|spin|pulse|shake|none)/
               );
+              const atMatch = currentLine.match(/at:([\d.]+)s?/);
+              const durationMatch = currentLine.match(/duration:([\d.]+)s?/);
 
               scene.emoji = {
                 emoji: emojiMatch?.[1] || "🎉",
@@ -490,6 +636,20 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     | "shake"
                     | "none") || "none",
               };
+
+              // If at: and duration: are specified, add to timelineElements
+              if (atMatch && durationMatch) {
+                if (!scene.timelineElements) {
+                  scene.timelineElements = [];
+                }
+                scene.timelineElements.push({
+                  id: generateId(),
+                  type: "emoji",
+                  content: emojiMatch?.[1] || "🎉",
+                  at: Number.parseFloat(atMatch[1]),
+                  duration: Number.parseFloat(durationMatch[1]),
+                });
+              }
               i++;
               break;
             }
@@ -573,6 +733,28 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               break;
             }
 
+            case "locale": {
+              const match = currentLine.match(/!locale\s+(\w+)/);
+              if (match) {
+                scene.locale = match[1];
+              }
+              i++;
+              break;
+            }
+
+            case "export": {
+              // Skip export directives in scene context - they're for configuration
+              i++;
+              while (i < lines.length) {
+                const exportLine = lines[i].trim();
+                if (exportLine.startsWith("!") || exportLine === "---") {
+                  break;
+                }
+                i++;
+              }
+              break;
+            }
+
             default:
               i++;
           }
@@ -584,7 +766,34 @@ export function parseMarkdownFull(markdown: string): ParseResult {
       currentTime += scene.duration;
       scenes.push(scene);
     } else {
-      i++;
+      // Handle global directives outside of scenes
+      if (line.startsWith("!locales")) {
+        // !locales en es fr de - defines supported locales
+        // This is handled at the application level, not in parser
+        i++;
+      } else if (line.startsWith("!strings")) {
+        // !strings block - skip for now, handled at application level
+        i++;
+        while (i < lines.length) {
+          const strLine = lines[i].trim();
+          if (strLine.startsWith("!") || strLine === "---") {
+            break;
+          }
+          i++;
+        }
+      } else if (line.startsWith("!export")) {
+        // !export block - skip for now, handled at application level
+        i++;
+        while (i < lines.length) {
+          const exportLine = lines[i].trim();
+          if (exportLine.startsWith("!") || exportLine === "---") {
+            break;
+          }
+          i++;
+        }
+      } else {
+        i++;
+      }
     }
   }
 
