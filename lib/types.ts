@@ -71,6 +71,7 @@ export interface SceneText {
   align?: TextAlign;
   animation?: AnimationType;
   delay?: number;
+  color?: string;
 }
 
 export interface SceneCode {

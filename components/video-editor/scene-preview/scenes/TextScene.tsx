@@ -1,23 +1,31 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { cn } from "@/lib/utils"
-import type { Scene } from "@/lib/types"
-import { useTypingEffect } from "../hooks/useTypingEffect"
-import { animationVariants, textSizeClasses } from "../utils/constants"
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+import type { Scene } from "@/lib/types";
+import { useTypingEffect } from "../hooks/useTypingEffect";
+import { animationVariants, textSizeClasses } from "../utils/constants";
 
 export function TextScene({ scene }: { scene: Scene }) {
-  const animation = scene.text?.animation || "fadeIn"
-  const variants = animationVariants[animation] || animationVariants.fadeIn
+  const animation = scene.text?.animation || "fadeIn";
+  const variants = animationVariants[animation] || animationVariants.fadeIn;
 
   // Typewriter effect
-  const { displayedText } = useTypingEffect(scene.text?.content || "", 30, animation === "typewriter")
+  const { displayedText } = useTypingEffect(
+    scene.text?.content || "",
+    30,
+    animation === "typewriter"
+  );
 
-  const content = animation === "typewriter" ? displayedText : scene.text?.content
+  const content =
+    animation === "typewriter" ? displayedText : scene.text?.content;
 
-  const transition = animation === "bounceIn"
-    ? { type: "spring" as const, stiffness: 300, damping: 20 }
-    : { duration: 0.5 }
+  const transition =
+    animation === "bounceIn"
+      ? { type: "spring" as const, stiffness: 300, damping: 20 }
+      : { duration: 0.5 };
+
+  const textColor = scene.text?.color || "#ffffff";
 
   return (
     <motion.div
@@ -29,15 +37,20 @@ export function TextScene({ scene }: { scene: Scene }) {
     >
       <h1
         className={cn(
-          "font-bold text-white text-center leading-tight drop-shadow-lg",
-          textSizeClasses[scene.text?.size || "lg"],
+          "font-bold text-center leading-tight drop-shadow-lg",
+          textSizeClasses[scene.text?.size || "lg"]
         )}
+        style={{ color: textColor }}
       >
         {content}
-        {animation === "typewriter" && displayedText !== scene.text?.content && (
-          <span className="inline-block w-1 h-[1em] bg-white ml-1 animate-pulse" />
-        )}
+        {animation === "typewriter" &&
+          displayedText !== scene.text?.content && (
+            <span
+              className="inline-block w-1 h-[1em] ml-1 animate-pulse"
+              style={{ backgroundColor: textColor }}
+            />
+          )}
       </h1>
     </motion.div>
-  )
+  );
 }

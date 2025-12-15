@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { CodeExample, Section, DirectiveDoc } from "../components"
+import { CodeExample, Section, DirectiveDoc } from "../components";
 
 export function BasicsTab() {
   return (
@@ -9,11 +9,41 @@ export function BasicsTab() {
       <Section title="Overview">
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3 space-y-2">
           <p className="text-xs text-gray-700 dark:text-neutral-300 leading-relaxed">
-            Create video scenes using markdown-like syntax. Each scene starts with{" "}
-            <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">!scene</code> (or <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">!slide</code>, <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">!frame</code>) and can contain text, code, terminal, charts, and more.
+            Create video scenes using markdown-like syntax. Each scene starts
+            with{" "}
+            <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">
+              !scene
+            </code>{" "}
+            (or{" "}
+            <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">
+              !slide
+            </code>
+            ,{" "}
+            <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">
+              !frame
+            </code>
+            ) and can contain text, code, terminal, charts, and more.
           </p>
           <p className="text-xs text-gray-600 dark:text-neutral-400 leading-relaxed">
-            <strong className="text-gray-900 dark:text-white">Tip:</strong> Alternative keywords are available to avoid conflicts with other markdown parsers. Use <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!slide</code> instead of <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!scene</code>, <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!heading</code> instead of <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">!text</code>, etc.
+            <strong className="text-gray-900 dark:text-white">Tip:</strong>{" "}
+            Alternative keywords are available to avoid conflicts with other
+            markdown parsers. Use{" "}
+            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+              !slide
+            </code>{" "}
+            instead of{" "}
+            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+              !scene
+            </code>
+            ,{" "}
+            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+              !heading
+            </code>{" "}
+            instead of{" "}
+            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+              !text
+            </code>
+            , etc.
           </p>
         </div>
       </Section>
@@ -44,18 +74,41 @@ size: lg
             description="Starts a new scene block"
             options={["!scene", "!slide", "!frame", "!section", "!page"]}
           />
-          <DirectiveDoc directive="!duration Xs" description="Scene duration in seconds" options={["!duration", "!time", "!length"]} />
+          <DirectiveDoc
+            directive="!duration Xs"
+            description="Scene duration in seconds"
+            options={["!duration", "!time", "!length"]}
+          />
           <DirectiveDoc
             directive="!background"
             description="Background color or gradient"
-            options={["!background", "!bg", "!color", "#3b82f6", "linear-gradient(...)"]}
+            options={[
+              "!background",
+              "!bg",
+              "!color",
+              "#3b82f6",
+              "linear-gradient(...)",
+            ]}
           />
           <DirectiveDoc
             directive="!transition"
             description="Transition effect"
-            options={["!transition", "!trans", "!effect", "fade", "slide", "wipe", "zoom", "magic", "none"]}
+            options={[
+              "!transition",
+              "!trans",
+              "!effect",
+              "fade",
+              "slide",
+              "wipe",
+              "zoom",
+              "magic",
+              "none",
+            ]}
           />
-          <DirectiveDoc directive="!chapter" description='Chapter marker: !chapter "Introduction"' />
+          <DirectiveDoc
+            directive="!chapter"
+            description='Chapter marker: !chapter "Introduction"'
+          />
         </div>
       </Section>
 
@@ -68,6 +121,7 @@ size: lg
 Hello World!
 animation: bounceIn
 size: 2xl
+color: #ffffff
 
 !duration 3s
 !background #8b5cf6`}
@@ -76,14 +130,37 @@ size: 2xl
           <DirectiveDoc
             directive="!text"
             description="Text content directive"
-            options={["!text", "!heading", "!title", "!h1", "!h2", "!paragraph", "!p"]}
+            options={[
+              "!text",
+              "!heading",
+              "!title",
+              "!h1",
+              "!h2",
+              "!paragraph",
+              "!p",
+            ]}
           />
           <DirectiveDoc
             directive="animation:"
             description="Text animation"
-            options={["fadeIn", "slideUp", "slideDown", "bounceIn", "typewriter"]}
+            options={[
+              "fadeIn",
+              "slideUp",
+              "slideDown",
+              "bounceIn",
+              "typewriter",
+            ]}
           />
-          <DirectiveDoc directive="size:" description="Text size" options={["sm", "md", "lg", "xl", "2xl"]} />
+          <DirectiveDoc
+            directive="size:"
+            description="Text size"
+            options={["sm", "md", "lg", "xl", "2xl"]}
+          />
+          <DirectiveDoc
+            directive="color:"
+            description="Text color (hex)"
+            options={["#ffffff", "#000000", "#3b82f6"]}
+          />
         </div>
       </Section>
 
@@ -110,11 +187,21 @@ console.log(msg)
             description="Code block directive"
             options={["!code", "!snippet", "!block", "!codeblock", "!syntax"]}
           />
-          <DirectiveDoc directive="highlight:" description="Lines to highlight" options={["2", "1-3", "1,3,5"]} />
-          <DirectiveDoc directive="typing: true" description="Enable typing animation" />
-          <DirectiveDoc directive="speed: 40" description="Typing speed (chars/sec)" />
+          <DirectiveDoc
+            directive="highlight:"
+            description="Lines to highlight"
+            options={["2", "1-3", "1,3,5"]}
+          />
+          <DirectiveDoc
+            directive="typing: true"
+            description="Enable typing animation"
+          />
+          <DirectiveDoc
+            directive="speed: 40"
+            description="Typing speed (chars/sec)"
+          />
         </div>
       </Section>
     </>
-  )
+  );
 }
