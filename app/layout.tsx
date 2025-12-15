@@ -1,18 +1,22 @@
-import type React from "react"
-import type { Metadata, Viewport } from "next"
-import { Inter, Geist_Mono, Playfair_Display } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@components/theme-provider"
+import type React from "react";
+import type { Metadata, Viewport } from "next";
+import { Inter, Geist_Mono, Playfair_Display } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@components/theme-provider";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" })
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" })
-const playfair = Playfair_Display({ subsets: ["latin"], variable: "--font-serif" })
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-serif",
+});
 
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://markdowneditor.avikmukherjee.me"
-const siteName = "Markdown Video"
-const title = "Markdown Video - Create Stunning Videos with Markdown"
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL || "https://markdowneditor.avikmukherjee.me";
+const siteName = "Markdown Video";
+const title = "Markdown Video - Create Stunning Videos with Markdown";
 const description =
-  "Transform simple markdown syntax into stunning animated videos. Perfect for tutorials, demos, and presentations. No timeline, no keyframes - just write."
+  "Transform simple markdown syntax into stunning animated videos. Perfect for tutorials, demos, and presentations. No timeline, no keyframes - just write.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -63,11 +67,16 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title,
-    description,
-    images: ["/og-image.png"],
-    creator: "@markdownvideo",
-    site: "@markdownvideo",
+    title: "Avik Mukherjee",
+    description:
+      "Avik Mukherjee is a developer who loves to code and build things.",
+    images: ["https://markdowneditor.avikmukherjee.me/og-image.png"],
+    creator: "@avikm744",
+    site: "@avikm744",
+    siteId: "@avikm744",
+  },
+  alternates: {
+    canonical: "https://markdowneditor.avikmukherjee.me",
   },
   robots: {
     index: true,
@@ -90,7 +99,7 @@ export const metadata: Metadata = {
   },
   manifest: "/site.webmanifest",
   category: "technology",
-}
+};
 
 export const viewport: Viewport = {
   themeColor: [
@@ -100,20 +109,22 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-}
+};
 
 export default function RootLayout({
   children,
 }: Readonly<{
-  children: React.ReactNode
+  children: React.ReactNode;
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`}>
+      <body
+        className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`}
+      >
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
