@@ -2,13 +2,18 @@
 
 import { FFmpeg } from "@ffmpeg/ffmpeg";
 import { useEffect, useRef, useState } from "react";
-import { Loader2, CheckCircle2, AlertCircle, Download, X, Film } from "lucide-react";
+import {
+  Loader2,
+  CheckCircle2,
+  AlertCircle,
+  Download,
+  X,
+  Film,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useVideoStore } from "@/lib/use-video-store";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { cn } from "@/lib/utils";
-import CornerMarkers from "@/components/CornerMarkers";
 
 interface FileUploaderProps {
   loadFunction: () => Promise<void>;
@@ -17,7 +22,13 @@ interface FileUploaderProps {
   logMessages: string;
 }
 
-type RenderStatus = "idle" | "preparing" | "capturing" | "encoding" | "complete" | "error";
+type RenderStatus =
+  | "idle"
+  | "preparing"
+  | "capturing"
+  | "encoding"
+  | "complete"
+  | "error";
 
 const getQualitySettings = (quality: string, speed: string) => {
   const qualityMap: Record<
@@ -108,9 +119,13 @@ export default function FfmpegRender({
     }
 
     // Find the scene preview element
-    const previewElement = document.querySelector('[data-scene-preview="true"]') as HTMLElement;
+    const previewElement = document.querySelector(
+      '[data-scene-preview="true"]'
+    ) as HTMLElement;
     if (!previewElement) {
-      toast.error("Scene preview not found. Please ensure the preview is visible.");
+      toast.error(
+        "Scene preview not found. Please ensure the preview is visible."
+      );
       return;
     }
 
@@ -151,59 +166,57 @@ export default function FfmpegRender({
         await new Promise((resolve) => requestAnimationFrame(resolve));
 
         try {
-          // Capture the frame using html2canvas with onclone to resize exactly to target resolution
+          // Get the computed style to check for transforms
+          const computedStyle = window.getComputedStyle(previewElement);
+          const transform = computedStyle.transform;
+
+          // Temporarily remove transform for capture
+          const originalTransform = previewElement.style.transform;
+          previewElement.style.transform = "none";
+
+          // Get element dimensions
+          const rect = previewElement.getBoundingClientRect();
+
+          // Calculate scale to capture at target resolution
+          const scaleX = dimensions.width / rect.width;
+          const scaleY = dimensions.height / rect.height;
+          const captureScale = Math.max(scaleX, scaleY);
+
+          // Capture the frame using html2canvas at higher resolution
           const capturedCanvas = await html2canvas(previewElement, {
-            backgroundColor: null,
-            scale: 2, // Higher quality capture
-            width: dimensions.width,
-            height: dimensions.height,
+            backgroundColor: "#000000",
+            scale: captureScale,
             logging: false,
             useCORS: true,
             allowTaint: true,
             removeContainer: true,
             imageTimeout: 0,
-            onclone: (clonedDoc) => {
-              const clonedElement = clonedDoc.querySelector('[data-scene-preview="true"]') as HTMLElement;
-              if (clonedElement) {
-                // Remove all styling that could cause L-shaped patterns
-                clonedElement.style.transform = 'none';
-                clonedElement.style.width = `${dimensions.width}px`;
-                clonedElement.style.height = `${dimensions.height}px`;
-                clonedElement.style.maxWidth = 'none';
-                clonedElement.style.maxHeight = 'none';
-                clonedElement.style.minWidth = 'none';
-                clonedElement.style.minHeight = 'none';
-                clonedElement.style.borderRadius = '0';
-                clonedElement.style.boxShadow = 'none';
-                clonedElement.style.margin = '0';
-                clonedElement.style.padding = '0';
-
-                // Force aspect ratio to match output
-                clonedElement.style.aspectRatio = 'auto';
-
-                // Ensure all child content fills the space
-                const children = clonedElement.querySelectorAll('*');
-                children.forEach((child) => {
-                  const el = child as HTMLElement;
-                  if (el.style) {
-                    // Remove any max-width/height constraints
-                    if (el.style.maxWidth) el.style.maxWidth = 'none';
-                    if (el.style.maxHeight) el.style.maxHeight = 'none';
-                  }
-                });
-              }
-            }
+            width: rect.width,
+            height: rect.height,
           });
 
-          // Create output canvas
+          // Restore original transform
+          previewElement.style.transform = originalTransform;
+
+          // Create output canvas with target resolution
           const outputCanvas = document.createElement("canvas");
           outputCanvas.width = dimensions.width;
           outputCanvas.height = dimensions.height;
           const ctx = outputCanvas.getContext("2d");
 
           if (ctx) {
-            // Draw the captured frame - stretch to fill if needed to avoid any gaps
-            ctx.drawImage(capturedCanvas, 0, 0, dimensions.width, dimensions.height);
+            // Simple stretch: draw captured canvas to fill entire output
+            ctx.drawImage(
+              capturedCanvas,
+              0,
+              0,
+              capturedCanvas.width,
+              capturedCanvas.height,
+              0,
+              0,
+              dimensions.width,
+              dimensions.height
+            );
 
             // Convert to PNG data
             const blob = await new Promise<Blob>((resolve, reject) => {
@@ -237,14 +250,21 @@ export default function FfmpegRender({
 
       // Use FFmpeg to encode frames to MP4
       const ffmpegArgs = [
-        "-framerate", String(fps),
-        "-i", "frame%05d.png",
-        "-c:v", "libx264",
-        "-preset", params.preset,
-        "-crf", String(params.crf),
-        "-pix_fmt", "yuv420p",
-        "-t", totalDuration.toFixed(3),
-        "output.mp4"
+        "-framerate",
+        String(fps),
+        "-i",
+        "frame%05d.png",
+        "-c:v",
+        "libx264",
+        "-preset",
+        params.preset,
+        "-crf",
+        String(params.crf),
+        "-pix_fmt",
+        "yuv420p",
+        "-t",
+        totalDuration.toFixed(3),
+        "output.mp4",
       ];
 
       await ffmpeg.exec(ffmpegArgs);
@@ -268,9 +288,9 @@ export default function FfmpegRender({
       setPreviewUrl(URL.createObjectURL(outputBlob));
       setStatus("complete");
       toast.success("Video rendered successfully!");
-
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to render video";
+      const message =
+        err instanceof Error ? err.message : "Failed to render video";
       if (message !== "Rendering cancelled") {
         setErrorMessage(message);
         setStatus("error");
@@ -285,52 +305,47 @@ export default function FfmpegRender({
   // Render button when idle
   if (status === "idle") {
     return (
-      <button
+      <Button
         onClick={render}
         disabled={!loadFfmpeg}
-        className={cn(
-          "group flex items-center justify-center gap-2 w-full relative transition-all duration-300 ease-out px-4 py-3",
-          "hover:translate-x-[-2px]",
-          "disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-x-0"
-        )}
+        className="w-full gap-2 bg-pink-500 hover:bg-pink-600 text-white"
       >
-        <CornerMarkers />
         {!loadFfmpeg ? (
           <>
-            <Loader2 className="w-5 h-5 animate-spin text-gray-900 dark:text-neutral-100" />
-            <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-              Loading FFmpeg...
-            </span>
+            <Loader2 className="w-4 h-4 animate-spin" />
+            Loading FFmpeg...
           </>
         ) : (
           <>
-            <Film className="w-5 h-5 text-gray-900 dark:text-neutral-100" />
-            <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-              Start Rendering
-            </span>
+            <Film className="w-4 h-4" />
+            Start Rendering
           </>
         )}
-      </button>
+      </Button>
     );
   }
 
   // Capturing/Encoding progress
-  if (status === "preparing" || status === "capturing" || status === "encoding") {
+  if (
+    status === "preparing" ||
+    status === "capturing" ||
+    status === "encoding"
+  ) {
     return (
       <div className="py-6 space-y-6">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-gray-900 dark:bg-neutral-100 bg-opacity-10 dark:bg-opacity-10 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-gray-900 dark:text-neutral-100 animate-spin" />
+            <div className="w-16 h-16 rounded-full bg-pink-500/10 flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
             </div>
           </div>
           <div className="text-center">
-            <p className="text-gray-900 dark:text-neutral-100 font-medium">
+            <p className="text-white font-medium">
               {status === "preparing" && "Preparing..."}
               {status === "capturing" && "Capturing frames..."}
               {status === "encoding" && "Encoding video..."}
             </p>
-            <p className="text-sm text-gray-600 dark:text-neutral-400 mt-1">
+            <p className="text-sm text-zinc-400 mt-1">
               {status === "capturing" && `Frame ${currentFrame}/${totalFrames}`}
               {status === "encoding" && "Almost done..."}
             </p>
@@ -338,22 +353,17 @@ export default function FfmpegRender({
         </div>
 
         <div className="space-y-2">
-          <Progress value={progress} className="h-2 bg-gray-200 dark:bg-neutral-800" />
-          <p className="text-xs text-gray-500 dark:text-neutral-500 text-center">{progress}%</p>
+          <Progress value={progress} className="h-2 bg-zinc-800" />
+          <p className="text-xs text-zinc-500 text-center">{progress}%</p>
         </div>
 
-        <button
+        <Button
           onClick={handleReset}
-          className={cn(
-            "group flex items-center justify-center gap-2 w-full relative transition-all duration-300 ease-out px-4 py-2.5",
-            "hover:translate-x-[-2px]"
-          )}
+          variant="outline"
+          className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
         >
-          <CornerMarkers />
-          <span className="text-sm font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-            Cancel
-          </span>
-        </button>
+          Cancel
+        </Button>
       </div>
     );
   }
@@ -368,7 +378,9 @@ export default function FfmpegRender({
           </div>
           <div className="text-center">
             <p className="text-white font-medium">Export Complete!</p>
-            <p className="text-sm text-zinc-400 mt-1">Your video is ready to download</p>
+            <p className="text-sm text-zinc-400 mt-1">
+              Your video is ready to download
+            </p>
           </div>
         </div>
 
@@ -383,30 +395,22 @@ export default function FfmpegRender({
         </div>
 
         <div className="flex gap-3">
-          <a
-            href={previewUrl}
-            download={`${projectName}.mp4`}
-            className={cn(
-              "group flex items-center justify-center gap-2 flex-1 relative transition-all duration-300 ease-out px-4 py-2.5",
-              "hover:translate-x-[-2px]"
-            )}
+          <Button
+            asChild
+            className="flex-1 gap-2 bg-pink-500 hover:bg-pink-600 text-white"
           >
-            <CornerMarkers />
-            <Download className="w-5 h-5 text-gray-900 dark:text-neutral-100" />
-            <span className="text-sm font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            <a href={previewUrl} download={`${projectName}.mp4`}>
+              <Download className="w-4 h-4" />
               Download Video
-            </span>
-          </a>
-          <button
+            </a>
+          </Button>
+          <Button
             onClick={handleReset}
-            className={cn(
-              "group flex items-center justify-center relative transition-all duration-300 ease-out px-3 py-2.5",
-              "hover:translate-x-[-2px]"
-            )}
+            variant="outline"
+            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
           >
-            <CornerMarkers />
-            <X className="w-5 h-5 text-gray-900 dark:text-neutral-100" />
-          </button>
+            <X className="w-4 h-4" />
+          </Button>
         </div>
       </div>
     );
