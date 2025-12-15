@@ -1,9 +1,9 @@
-"use client"
-import { useVideoStore } from "@/lib/use-video-store"
-import { useEffect, useState, useRef, useCallback } from "react"
-import { FileText } from "lucide-react"
-import { cn } from "@/lib/utils"
-import CornerMarkers from "@components/CornerMarkers"
+"use client";
+import { useVideoStore } from "@/lib/use-video-store";
+import { useEffect, useState, useRef, useCallback } from "react";
+import { FileText } from "lucide-react";
+import { cn } from "@/lib/utils";
+import CornerMarkers from "@components/CornerMarkers";
 
 const EXAMPLE_TEMPLATES = {
   intro: `!scene
@@ -72,64 +72,129 @@ size: 2xl
 !duration 4s
 !background #ec4899
 !transition fade`,
-}
+};
 
 function getLineClassName(line: string): string {
-  const trimmed = line.trim()
+  const trimmed = line.trim();
 
-  if (trimmed === "---") return "text-orange-400"
-  if (trimmed.startsWith("//")) return "text-gray-500 dark:text-neutral-500"
-  if (trimmed.startsWith("+") && !trimmed.startsWith("++")) return "text-green-400"
-  if (trimmed.startsWith("-") && !trimmed.startsWith("--") && !trimmed.startsWith("---")) return "text-red-400"
-  if (trimmed.startsWith("!")) return "text-pink-400"
-  if (trimmed.startsWith("```")) return "text-emerald-400"
-  if (trimmed.startsWith("$") || trimmed.startsWith(">")) return "text-cyan-400"
-  if (trimmed.includes(":")) return "text-purple-400"
+  if (trimmed === "---") return "text-orange-400";
+  if (trimmed.startsWith("//")) return "text-gray-500 dark:text-neutral-500";
+  if (trimmed.startsWith("+") && !trimmed.startsWith("++"))
+    return "text-green-400";
+  if (
+    trimmed.startsWith("-") &&
+    !trimmed.startsWith("--") &&
+    !trimmed.startsWith("---")
+  )
+    return "text-red-400";
+  if (trimmed.startsWith("!")) return "text-pink-400";
+  if (trimmed.startsWith("```")) return "text-emerald-400";
+  if (trimmed.startsWith("$") || trimmed.startsWith(">"))
+    return "text-cyan-400";
+  if (trimmed.includes(":")) return "text-purple-400";
 
-  return "text-gray-400 dark:text-neutral-500"
+  return "text-gray-400 dark:text-neutral-500";
 }
 
 export function MarkdownEditor() {
-  const markdown = useVideoStore((state) => state.markdown)
-  const setMarkdown = useVideoStore((state) => state.setMarkdown)
-  const [localMarkdown, setLocalMarkdown] = useState(markdown)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const lineNumbersRef = useRef<HTMLDivElement>(null)
+  const markdown = useVideoStore((state) => state.markdown);
+  const setMarkdown = useVideoStore((state) => state.setMarkdown);
+  const [localMarkdown, setLocalMarkdown] = useState(markdown);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const lineNumbersRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      setMarkdown(localMarkdown)
-    }, 500)
-    return () => clearTimeout(timeout)
-  }, [localMarkdown, setMarkdown])
+      setMarkdown(localMarkdown);
+    }, 500);
+    return () => clearTimeout(timeout);
+  }, [localMarkdown, setMarkdown]);
 
   useEffect(() => {
-    setLocalMarkdown(markdown)
-  }, [markdown])
+    setLocalMarkdown(markdown);
+  }, [markdown]);
 
   const insertTemplate = (type: keyof typeof EXAMPLE_TEMPLATES) => {
-    const template = EXAMPLE_TEMPLATES[type]
-    const separator = localMarkdown.trim() ? "\n\n---\n\n" : ""
-    const newMarkdown = localMarkdown + separator + template
-    setLocalMarkdown(newMarkdown)
+    const template = EXAMPLE_TEMPLATES[type];
+    const separator = localMarkdown.trim() ? "\n\n---\n\n" : "";
+    const newMarkdown = localMarkdown + separator + template;
+    setLocalMarkdown(newMarkdown);
 
     // Focus textarea after insert
     setTimeout(() => {
       if (textareaRef.current) {
-        textareaRef.current.focus()
-        textareaRef.current.scrollTop = textareaRef.current.scrollHeight
+        textareaRef.current.focus();
+        textareaRef.current.scrollTop = textareaRef.current.scrollHeight;
       }
-    }, 0)
-  }
+    }, 0);
+  };
+
+  const toggleCommentLines = useCallback(() => {
+    if (!textareaRef.current) return;
+
+    const textarea = textareaRef.current;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = localMarkdown;
+
+    // Get the lines that are selected
+    const beforeSelection = text.substring(0, start);
+    const selectedText = text.substring(start, end);
+    const afterSelection = text.substring(end);
+
+    // Find the start of the first line
+    const lineStart = beforeSelection.lastIndexOf("\n") + 1;
+    // Find the end of the last line
+    const lineEnd =
+      afterSelection.indexOf("\n") === -1
+        ? text.length
+        : end + afterSelection.indexOf("\n");
+
+    const beforeLines = text.substring(0, lineStart);
+    const selectedLines = text.substring(lineStart, lineEnd);
+    const afterLines = text.substring(lineEnd);
+
+    // Check if all selected lines are commented
+    const lines = selectedLines.split("\n");
+    const allCommented = lines.every((line) => line.trim().startsWith("//"));
+
+    let newLines: string[];
+    if (allCommented) {
+      // Uncomment
+      newLines = lines.map((line) => {
+        const match = line.match(/^(\s*)\/\/\s?(.*)$/);
+        return match ? match[1] + match[2] : line;
+      });
+    } else {
+      // Comment
+      newLines = lines.map((line) => {
+        if (line.trim() === "") return line;
+        const match = line.match(/^(\s*)(.*)$/);
+        return match ? match[1] + "// " + match[2] : "// " + line;
+      });
+    }
+
+    const newMarkdown = beforeLines + newLines.join("\n") + afterLines;
+    setLocalMarkdown(newMarkdown);
+
+    // Restore selection
+    setTimeout(() => {
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = lineStart;
+        textareaRef.current.selectionEnd =
+          lineStart + newLines.join("\n").length;
+      }
+    }, 0);
+  }, [localMarkdown]);
 
   const handleScroll = useCallback(() => {
     if (textareaRef.current && lineNumbersRef.current) {
-      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop
+      lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
     }
-  }, [])
+  }, []);
 
-  const lines = localMarkdown.split("\n")
-  const lineCount = lines.length
+  const lines = localMarkdown.split("\n");
+  const lineCount = lines.length;
 
   return (
     <div className="w-80 bg-white dark:bg-neutral-950 border-r border-gray-200 dark:border-neutral-800 flex flex-col h-full overflow-hidden">
@@ -137,9 +202,13 @@ export function MarkdownEditor() {
       <div className="p-3 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
           <FileText className="w-4 h-4 text-gray-600 dark:text-neutral-400" />
-          <h2 className="text-sm font-medium text-gray-900 dark:text-neutral-100">Editor</h2>
+          <h2 className="text-sm font-medium text-gray-900 dark:text-neutral-100">
+            Editor
+          </h2>
         </div>
-        <span className="text-xs text-gray-500 dark:text-neutral-500 bg-gray-50 dark:bg-neutral-900 px-2 py-0.5 rounded">{lineCount} lines</span>
+        <span className="text-xs text-gray-500 dark:text-neutral-500 bg-gray-50 dark:bg-neutral-900 px-2 py-0.5 rounded">
+          {lineCount} lines
+        </span>
       </div>
 
       {/* Quick insert buttons */}
@@ -147,7 +216,9 @@ export function MarkdownEditor() {
         {Object.entries(EXAMPLE_TEMPLATES).map(([key]) => (
           <button
             key={key}
-            onClick={() => insertTemplate(key as keyof typeof EXAMPLE_TEMPLATES)}
+            onClick={() =>
+              insertTemplate(key as keyof typeof EXAMPLE_TEMPLATES)
+            }
             className={cn(
               "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
               "hover:translate-x-[-2px]"
@@ -186,6 +257,12 @@ export function MarkdownEditor() {
           value={localMarkdown}
           onChange={(e) => setLocalMarkdown(e.target.value)}
           onScroll={handleScroll}
+          onKeyDown={(e) => {
+            if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+              e.preventDefault();
+              toggleCommentLines();
+            }
+          }}
           className="flex-1 resize-none bg-white dark:bg-neutral-950 border-0 text-sm font-mono text-gray-900 dark:text-neutral-100 focus:outline-none focus-visible:ring-0 p-3 overflow-auto"
           placeholder="Enter your scene markdown..."
           spellCheck={false}
@@ -198,11 +275,19 @@ export function MarkdownEditor() {
       </div>
 
       {/* Footer hint */}
-      <div className="p-3 border-t border-gray-200 dark:border-neutral-800 bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-950/20 dark:to-purple-950/20 shrink-0">
+      <div className="p-3 border-t border-gray-200 dark:border-neutral-800 bg-linear-to-r from-pink-50 to-purple-50 dark:from-pink-950/20 dark:to-purple-950/20 shrink-0">
         <p className="text-xs text-gray-600 dark:text-neutral-400 text-center">
-          Press <kbd className="bg-white dark:bg-neutral-800 px-2 py-1 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-900 shadow-sm mx-1">?</kbd> or click <span className="text-pink-600 dark:text-pink-400 font-medium">Guide</span> in header for syntax help
+          Press{" "}
+          <kbd className="bg-white dark:bg-neutral-800 px-2 py-1 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-900 shadow-sm mx-1">
+            ?
+          </kbd>{" "}
+          or click{" "}
+          <span className="text-pink-600 dark:text-pink-400 font-medium">
+            Guide
+          </span>{" "}
+          in header for syntax help
         </p>
       </div>
     </div>
-  )
+  );
 }

@@ -72,6 +72,7 @@ export interface SceneText {
   animation?: AnimationType;
   delay?: number;
   color?: string;
+  fontFamily?: "serif" | "sans" | "mono" | "display";
 }
 
 export interface SceneCode {
@@ -82,6 +83,16 @@ export interface SceneCode {
   showLineNumbers?: boolean;
   typing?: boolean; // Added typing animation support
   typingSpeed?: number; // Characters per second
+  fontSize?: "xs" | "sm" | "md" | "lg"; // Font size
+  height?: number; // Height in pixels
+  width?: number; // Width in pixels
+  fontFamily?:
+    | "mono"
+    | "jetbrains"
+    | "fira"
+    | "source"
+    | "inconsolata"
+    | "courier"; // Font family options
 }
 
 export interface SceneTerminal {

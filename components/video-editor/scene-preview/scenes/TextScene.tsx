@@ -27,6 +27,16 @@ export function TextScene({ scene }: { scene: Scene }) {
 
   const textColor = scene.text?.color || "#ffffff";
 
+  // Split content into lines for multi-line support
+  const lines = content?.split("\n") || [];
+
+  const fontFamilyClasses: Record<string, string> = {
+    serif: "font-serif",
+    sans: "font-sans",
+    mono: "font-mono",
+    display: "font-serif",
+  };
+
   return (
     <motion.div
       className="flex items-center justify-center h-full p-8"
@@ -35,22 +45,28 @@ export function TextScene({ scene }: { scene: Scene }) {
       exit={variants.exit}
       transition={transition}
     >
-      <h1
+      <div
         className={cn(
           "font-bold text-center leading-tight drop-shadow-lg",
-          textSizeClasses[scene.text?.size || "lg"]
+          textSizeClasses[scene.text?.size || "lg"],
+          fontFamilyClasses[scene.text?.fontFamily || "serif"]
         )}
         style={{ color: textColor }}
       >
-        {content}
-        {animation === "typewriter" &&
-          displayedText !== scene.text?.content && (
-            <span
-              className="inline-block w-1 h-[1em] ml-1 animate-pulse"
-              style={{ backgroundColor: textColor }}
-            />
-          )}
-      </h1>
+        {lines.map((line, index) => (
+          <div key={index}>
+            {line}
+            {animation === "typewriter" &&
+              index === lines.length - 1 &&
+              displayedText !== scene.text?.content && (
+                <span
+                  className="inline-block w-1 h-[1em] ml-1 animate-pulse"
+                  style={{ backgroundColor: textColor }}
+                />
+              )}
+          </div>
+        ))}
+      </div>
     </motion.div>
   );
 }

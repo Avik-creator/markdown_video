@@ -122,9 +122,24 @@ Hello World!
 animation: bounceIn
 size: 2xl
 color: #ffffff
+fontFamily: serif
 
 !duration 3s
 !background #8b5cf6`}
+        />
+        <CodeExample
+          title="multi-line-text.md"
+          code={`!scene
+!text
+Multi-Line Text
+Now you can create
+multiple lines in one slide
+animation: slideUp
+size: lg
+fontFamily: sans
+
+!duration 4s
+!background #3b82f6`}
         />
         <div className="space-y-2 mt-3">
           <DirectiveDoc
@@ -161,7 +176,17 @@ color: #ffffff
             description="Text color (hex)"
             options={["#ffffff", "#000000", "#3b82f6"]}
           />
+          <DirectiveDoc
+            directive="fontFamily:"
+            description="Text font family"
+            options={["serif", "sans", "mono", "display"]}
+          />
         </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Multi-line support:</strong> Use line breaks in your text to
+          create multiple lines. Each line will be rendered on a separate line
+          in the slide.
+        </p>
       </Section>
 
       {/* Code Scenes */}
@@ -173,12 +198,32 @@ color: #ffffff
 highlight: 2-4
 typing: true
 speed: 40
+fontSize: md
+fontFamily: jetbrains
 \`\`\`typescript
 const msg = "Hello"
 console.log(msg)
 \`\`\`
 
 !duration 5s
+!background #1e1e2e`}
+        />
+        <CodeExample
+          title="code-customization.md"
+          code={`!scene
+!code
+fontSize: lg
+fontFamily: fira
+height: 400
+width: 600
+typing: true
+\`\`\`javascript
+function createVideo(markdown) {
+  return renderToMP4(markdown);
+}
+\`\`\`
+
+!duration 4s
 !background #1e1e2e`}
         />
         <div className="space-y-2 mt-3">
@@ -199,6 +244,33 @@ console.log(msg)
           <DirectiveDoc
             directive="speed: 40"
             description="Typing speed (chars/sec)"
+          />
+          <DirectiveDoc
+            directive="fontSize:"
+            description="Code font size"
+            options={["xs", "sm", "md", "lg"]}
+          />
+          <DirectiveDoc
+            directive="fontFamily:"
+            description="Code font family"
+            options={[
+              "mono",
+              "jetbrains",
+              "fira",
+              "source",
+              "inconsolata",
+              "courier",
+            ]}
+          />
+          <DirectiveDoc
+            directive="height:"
+            description="Code block height in pixels"
+            options={["300", "400", "500"]}
+          />
+          <DirectiveDoc
+            directive="width:"
+            description="Code block width in pixels"
+            options={["500", "600", "800"]}
           />
         </div>
       </Section>

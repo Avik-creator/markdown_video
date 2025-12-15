@@ -1,10 +1,10 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import { useMemo } from "react"
-import { cn } from "@/lib/utils"
-import type { Scene } from "@/lib/types"
-import { highlightSyntax } from "../utils/code-highlighting"
+import { motion } from "framer-motion";
+import { useMemo } from "react";
+import { cn } from "@/lib/utils";
+import type { Scene } from "@/lib/types";
+import { highlightSyntax } from "../utils/code-highlighting";
 
 function CodeBlock({
   code,
@@ -13,34 +13,81 @@ function CodeBlock({
   typing,
   typingSpeed,
   sceneTime,
+  fontSize = "sm",
+  height,
+  width,
+  fontFamily = "mono",
 }: {
-  code: string
-  language: string
-  highlight?: { lines: number[] }
-  typing?: boolean
-  typingSpeed?: number
-  sceneTime?: number
+  code: string;
+  language: string;
+  highlight?: { lines: number[] };
+  typing?: boolean;
+  typingSpeed?: number;
+  sceneTime?: number;
+  fontSize?: "xs" | "sm" | "md" | "lg";
+  height?: number;
+  width?: number;
+  fontFamily?:
+    | "mono"
+    | "jetbrains"
+    | "fira"
+    | "source"
+    | "inconsolata"
+    | "courier";
 }) {
   const displayCode = useMemo(() => {
-    if (!typing || sceneTime === undefined) return code
+    if (!typing || sceneTime === undefined) return code;
 
-    const charsToShow = Math.floor((sceneTime || 0) * (typingSpeed || 50))
-    return code.slice(0, charsToShow)
-  }, [code, typing, typingSpeed, sceneTime])
+    const charsToShow = Math.floor((sceneTime || 0) * (typingSpeed || 50));
+    return code.slice(0, charsToShow);
+  }, [code, typing, typingSpeed, sceneTime]);
 
-  const lines = displayCode.split("\n")
-  const fullLines = code.split("\n")
-  const highlightedLines = highlight?.lines || []
+  const lines = displayCode.split("\n");
+  const fullLines = code.split("\n");
+  const highlightedLines = highlight?.lines || [];
 
   const isFirstInRange = (lineNum: number) => {
-    return highlightedLines.includes(lineNum) && !highlightedLines.includes(lineNum - 1)
-  }
+    return (
+      highlightedLines.includes(lineNum) &&
+      !highlightedLines.includes(lineNum - 1)
+    );
+  };
   const isLastInRange = (lineNum: number) => {
-    return highlightedLines.includes(lineNum) && !highlightedLines.includes(lineNum + 1)
-  }
+    return (
+      highlightedLines.includes(lineNum) &&
+      !highlightedLines.includes(lineNum + 1)
+    );
+  };
+
+  const fontSizeClasses = {
+    xs: "text-xs",
+    sm: "text-sm",
+    md: "text-base",
+    lg: "text-lg",
+  };
+
+  const fontFamilyStyles: Record<string, React.CSSProperties> = {
+    mono: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" },
+    jetbrains: { fontFamily: "'JetBrains Mono', monospace" },
+    fira: { fontFamily: "'Fira Code', monospace" },
+    source: { fontFamily: "'Source Code Pro', monospace" },
+    inconsolata: { fontFamily: "'Inconsolata', monospace" },
+    courier: { fontFamily: "'Courier New', monospace" },
+  };
 
   return (
-    <div className="bg-[#1a1a24] rounded-xl p-6 font-mono text-sm overflow-auto max-w-3xl w-full shadow-2xl border border-white/10">
+    <div
+      className={cn(
+        "bg-[#1a1a24] rounded-xl p-6 overflow-auto shadow-2xl border border-white/10",
+        fontSizeClasses[fontSize]
+      )}
+      style={{
+        height: height ? `${height}px` : "auto",
+        width: width ? `${width}px` : "max-w-3xl",
+        maxWidth: width ? `${width}px` : "100%",
+        ...fontFamilyStyles[fontFamily || "mono"],
+      }}
+    >
       <div className="flex items-center gap-2 mb-4 pb-3 border-b border-white/10">
         <div className="flex gap-1.5">
           <div className="w-3 h-3 rounded-full bg-red-500/80" />
@@ -52,12 +99,15 @@ function CodeBlock({
 
       <pre className="text-left">
         {fullLines.map((fullLine, index) => {
-          const lineNum = index + 1
-          const isHighlighted = highlightedLines.includes(lineNum)
-          const isFirst = isFirstInRange(lineNum)
-          const isLast = isLastInRange(lineNum)
-          const displayLine = lines[index] || ""
-          const isTyping = typing && index === lines.length - 1 && displayLine.length < fullLine.length
+          const lineNum = index + 1;
+          const isHighlighted = highlightedLines.includes(lineNum);
+          const isFirst = isFirstInRange(lineNum);
+          const isLast = isLastInRange(lineNum);
+          const displayLine = lines[index] || "";
+          const isTyping =
+            typing &&
+            index === lines.length - 1 &&
+            displayLine.length < fullLine.length;
 
           return (
             <div
@@ -67,24 +117,34 @@ function CodeBlock({
                 isHighlighted && "bg-amber-500/15 border-l-2 border-amber-400",
                 isFirst && "rounded-t-md pt-1",
                 isLast && "rounded-b-md pb-1",
-                index >= lines.length && "opacity-0",
+                index >= lines.length && "opacity-0"
               )}
             >
-              <span className="inline-block w-8 text-gray-600 select-none text-right pr-4">{lineNum}</span>
+              <span className="inline-block w-8 text-gray-600 select-none text-right pr-4">
+                {lineNum}
+              </span>
               <span className="text-gray-300">
                 {highlightSyntax(displayLine, language)}
-                {isTyping && <span className="inline-block w-2 h-4 bg-gray-100 ml-0.5 animate-pulse" />}
+                {isTyping && (
+                  <span className="inline-block w-2 h-4 bg-gray-100 ml-0.5 animate-pulse" />
+                )}
               </span>
             </div>
-          )
+          );
         })}
       </pre>
     </div>
-  )
+  );
 }
 
-export function CodeScene({ scene, sceneTime }: { scene: Scene; sceneTime: number }) {
-  if (!scene.code) return null
+export function CodeScene({
+  scene,
+  sceneTime,
+}: {
+  scene: Scene;
+  sceneTime: number;
+}) {
+  if (!scene.code) return null;
 
   return (
     <motion.div
@@ -101,7 +161,11 @@ export function CodeScene({ scene, sceneTime }: { scene: Scene; sceneTime: numbe
         typing={scene.code.typing}
         typingSpeed={scene.code.typingSpeed}
         sceneTime={sceneTime}
+        fontSize={scene.code.fontSize}
+        height={scene.code.height}
+        width={scene.code.width}
+        fontFamily={scene.code.fontFamily}
       />
     </motion.div>
-  )
+  );
 }
