@@ -202,6 +202,40 @@ console.log(msg)
           />
         </div>
       </Section>
+
+      {/* Image Scenes */}
+      <Section title="Image Scenes">
+        <CodeExample
+          title="image-scene.md"
+          code={`!scene
+!image src:https://example.com/photo.jpg fit:cover
+
+!duration 4s
+!background #1e1e2e`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="!image"
+            description="Image scene directive"
+            options={["!image", "!img", "!photo", "!picture"]}
+          />
+          <DirectiveDoc directive="src:" description="Image URL (required)" />
+          <DirectiveDoc
+            directive="fit:"
+            description="Image fit mode"
+            options={["cover", "contain", "fill"]}
+          />
+          <DirectiveDoc
+            directive="position:"
+            description="Image position"
+            options={["center", "top", "bottom", "left", "right"]}
+          />
+          <DirectiveDoc
+            directive='alt:"text"'
+            description="Alt text for accessibility"
+          />
+        </div>
+      </Section>
     </>
   );
 }

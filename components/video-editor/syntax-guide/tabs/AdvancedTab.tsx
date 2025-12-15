@@ -80,15 +80,23 @@ Angular: 60
       {/* Mockup */}
       <Section title="Device Mockups">
         <CodeExample
-          title="mockup.md"
+          title="mockup-text.md"
           code={`!scene
 !mockup device:iphone bg:#1e1e2e
 Hello World!
 color: #ffffff
 size: lg
 
-!duration 4s
-!background #1a1a24`}
+!duration 4s`}
+        />
+        <CodeExample
+          title="mockup-image.md"
+          code={`!scene
+!mockup device:browser bg:#ffffff
+src: https://example.com/screenshot.png
+fit: cover
+
+!duration 4s`}
         />
         <div className="space-y-2 mt-3">
           <DirectiveDoc
@@ -96,14 +104,19 @@ size: lg
             description="Device type"
             options={["iphone", "ipad", "macbook", "browser", "android"]}
           />
+          <DirectiveDoc directive="bg:" description="Screen background color" />
           <DirectiveDoc
-            directive="bg:"
-            description="Screen background color"
-            options={["#ffffff", "#1e1e2e", "#000000"]}
+            directive="src:"
+            description="Image URL for mockup content"
+          />
+          <DirectiveDoc
+            directive="fit:"
+            description="Image fit mode"
+            options={["cover", "contain", "fill"]}
           />
           <DirectiveDoc
             directive="color:"
-            description="Text color inside mockup"
+            description="Text color (for text content)"
           />
           <DirectiveDoc
             directive="size:"
@@ -112,9 +125,9 @@ size: lg
           />
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Add text content directly below the mockup directive. Mockups display
-          realistic device frames with Dynamic Island, keyboard bases, and
-          browser toolbars.
+          Add text or images inside mockups. Use src: for images. Mockups
+          display realistic device frames with Dynamic Island, keyboard bases,
+          and browser toolbars.
         </p>
       </Section>
 

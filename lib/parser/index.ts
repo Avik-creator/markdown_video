@@ -306,6 +306,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const textContent: string[] = [];
               let textColor: string | undefined;
               let textSize: "sm" | "md" | "lg" | "xl" | "2xl" = "md";
+              let imageSrc: string | undefined;
+              let imageFit: "cover" | "contain" | "fill" = "cover";
 
               while (i < lines.length) {
                 const mockupLine = substituteVariables(
@@ -325,6 +327,12 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   if (kv.key === "color") textColor = kv.value;
                   if (kv.key === "size")
                     textSize = kv.value as "sm" | "md" | "lg" | "xl" | "2xl";
+                  if (kv.key === "src" || kv.key === "image") {
+                    imageSrc = kv.value;
+                    contentType = "image";
+                  }
+                  if (kv.key === "fit")
+                    imageFit = kv.value as "cover" | "contain" | "fill";
                 } else if (mockupLine) {
                   textContent.push(mockupLine);
                 }
@@ -337,7 +345,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   type: contentType,
                   background: contentBg,
                   text:
-                    textContent.length > 0
+                    contentType === "text" && textContent.length > 0
                       ? {
                           content: textContent.join("\n"),
                           color: textColor,
@@ -345,6 +353,12 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                           align: "center",
                         }
                       : undefined,
+                  image: imageSrc
+                    ? {
+                        src: imageSrc,
+                        fit: imageFit,
+                      }
+                    : undefined,
                 },
               };
               break;
