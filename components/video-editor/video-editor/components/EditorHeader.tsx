@@ -18,6 +18,7 @@ import { ProjectMenu } from "../../project-menu"
 import { ThemeSelector } from "../../theme-selector"
 import { ASPECT_RATIOS, ZOOM_LEVELS } from "../utils/constants"
 import { ZoomLevel } from "@/lib/types"
+import Image from "next/image"
 
 interface EditorHeaderProps {
   undo: () => void
@@ -58,8 +59,7 @@ export function EditorHeader({
     <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800 shrink-0">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 group relative">
-          <CornerMarkers variant="static" />
-          <h1 className="text-sm font-serif font-semibold">Markdown Video</h1>
+         <Image src="/icon.png" alt="Markdown Video Logo" width={64} height={64} />
         </Link>
 
         <div className="w-px h-4 bg-zinc-700 mx-1" />

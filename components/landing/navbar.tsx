@@ -4,6 +4,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import CornerMarkers from "@components/CornerMarkers"
 import { GitHubStars } from "@components/github-stars"
+import Image from "next/image";
 
 interface NavbarProps {
   stargazersCount?: number
@@ -14,8 +15,7 @@ export function Navbar({ stargazersCount = 0 }: NavbarProps) {
     <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 dark:bg-neutral-950/80 backdrop-blur-sm border-b border-gray-200 dark:border-neutral-800">
       <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
         <Link href="/" className="flex items-center gap-2 group relative">
-          <CornerMarkers variant="static" />
-          <span className="font-serif font-semibold text-gray-900 dark:text-neutral-100">Markdown Video</span>
+          <Image src="/icon.png" alt="Markdown Video Logo" width={64} height={64} />
         </Link>
 
         <div className="flex items-center gap-6">
