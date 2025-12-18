@@ -3,9 +3,10 @@
 import { forwardRef } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
 import type { Scene } from "@/lib/types";
-import { AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useMemo } from "react";
+import { transitionVariants } from "./scene-preview/utils/constants";
 
 // Import extracted scene components
 import {
@@ -31,7 +32,84 @@ import {
 
 // Scene router - routes to appropriate scene component based on scene type
 
-function SceneContent({
+import { animationVariants } from "./scene-preview/utils/constants";
+import type { TimelineElement } from "@/lib/types";
+
+// Timeline element renderer
+function TimelineElementRenderer({
+  element,
+  sceneTime,
+}: {
+  element: TimelineElement;
+  sceneTime: number;
+}) {
+  const isVisible =
+    sceneTime >= element.at && sceneTime < element.at + element.duration;
+  const variants =
+    animationVariants[element.animation || "fadeIn"] ||
+    animationVariants.fadeIn;
+
+  if (!isVisible) return null;
+
+  if (element.type === "text") {
+    return (
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center"
+        initial={variants.initial}
+        animate={variants.animate}
+        exit={variants.exit}
+        transition={{ duration: 0.3 }}
+      >
+        <span className="text-2xl font-bold text-white drop-shadow-lg">
+          {element.content}
+        </span>
+      </motion.div>
+    );
+  }
+
+  if (element.type === "emoji") {
+    return (
+      <motion.div
+        className="absolute inset-0 flex items-center justify-center"
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 200, damping: 15 }}
+      >
+        <span className="text-6xl">{element.content}</span>
+      </motion.div>
+    );
+  }
+
+  return null;
+}
+
+// Timeline elements overlay
+function TimelineElementsOverlay({
+  elements,
+  sceneTime,
+}: {
+  elements: TimelineElement[];
+  sceneTime: number;
+}) {
+  if (!elements || elements.length === 0) return null;
+
+  return (
+    <div className="absolute inset-0 pointer-events-none">
+      <AnimatePresence>
+        {elements.map((element) => (
+          <TimelineElementRenderer
+            key={element.id}
+            element={element}
+            sceneTime={sceneTime}
+          />
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function SceneContentInner({
   scene,
   sceneTime,
 }: {
@@ -66,6 +144,29 @@ function SceneContent({
     default:
       return <TextScene scene={scene} />;
   }
+}
+
+function SceneContent({
+  scene,
+  sceneTime,
+}: {
+  scene: Scene;
+  sceneTime: number;
+}) {
+  const transition = scene.transition || "fade";
+  const variants = transitionVariants[transition] || transitionVariants.fade;
+
+  return (
+    <motion.div
+      className="absolute inset-0"
+      initial={variants.initial}
+      animate={variants.animate}
+      exit={variants.exit}
+      transition={variants.transition}
+    >
+      <SceneContentInner scene={scene} sceneTime={sceneTime} />
+    </motion.div>
+  );
 }
 
 export const ScenePreview = forwardRef<HTMLDivElement, object>(
@@ -167,6 +268,14 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                 <EmojiScene scene={currentScene} />
               </div>
+            )}
+          {/* Timeline elements */}
+          {currentScene.timelineElements &&
+            currentScene.timelineElements.length > 0 && (
+              <TimelineElementsOverlay
+                elements={currentScene.timelineElements}
+                sceneTime={sceneTime}
+              />
             )}
         </div>
       </div>
