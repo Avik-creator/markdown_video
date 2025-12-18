@@ -6,16 +6,27 @@ import type { Scene } from "@/lib/types";
 import { useTypingEffect } from "../hooks/useTypingEffect";
 import { animationVariants, textSizeClasses } from "../utils/constants";
 
-export function TextScene({ scene }: { scene: Scene }) {
+import { useAnimation } from "framer-motion";
+import { useEffect } from "react";
+
+export function TextScene({
+  scene,
+  sceneTime,
+}: {
+  scene: Scene;
+  sceneTime?: number;
+}) {
   const animation = scene.text?.animation || "fadeIn";
   const variants = animationVariants[animation] || animationVariants.fadeIn;
   const stagger = scene.text?.stagger || 0; // Stagger delay in seconds
+  const controls = useAnimation();
 
   // Typewriter effect
   const { displayedText } = useTypingEffect(
     scene.text?.content || "",
     30,
-    animation === "typewriter"
+    animation === "typewriter",
+    sceneTime
   );
 
   const content =
@@ -37,6 +48,34 @@ export function TextScene({ scene }: { scene: Scene }) {
     mono: { fontFamily: "'IBM Plex Mono', monospace" },
     display: { fontFamily: "'Merriweather', serif" },
   };
+
+  // Handle deterministic animation for export
+  useEffect(() => {
+    if (sceneTime !== undefined) {
+      const duration = 0.5;
+      const progress = Math.min(sceneTime / duration, 1);
+
+      // Simple interpolation for common properties
+      const initial = variants.initial as any;
+      const animate = variants.animate as any;
+
+      const currentState: any = {};
+      for (const key in animate) {
+        if (
+          typeof animate[key] === "number" &&
+          typeof initial[key] === "number"
+        ) {
+          currentState[key] =
+            initial[key] + (animate[key] - initial[key]) * progress;
+        } else {
+          currentState[key] = progress >= 1 ? animate[key] : initial[key];
+        }
+      }
+      controls.set(currentState);
+    } else {
+      controls.start(variants.animate);
+    }
+  }, [sceneTime, variants, controls]);
 
   // If stagger is enabled, use container with staggerChildren
   if (stagger > 0) {
@@ -64,7 +103,7 @@ export function TextScene({ scene }: { scene: Scene }) {
       <motion.div
         className="flex items-center justify-center h-full p-8"
         initial="hidden"
-        animate="visible"
+        animate={sceneTime !== undefined ? undefined : "visible"}
         variants={containerVariants}
       >
         <div
@@ -78,7 +117,11 @@ export function TextScene({ scene }: { scene: Scene }) {
           }}
         >
           {lines.map((line, index) => (
-            <motion.div key={index} variants={childVariants}>
+            <motion.div
+              key={index}
+              variants={childVariants}
+              animate={sceneTime !== undefined ? controls : undefined}
+            >
               {line}
               {animation === "typewriter" &&
                 index === lines.length - 1 &&
@@ -100,7 +143,7 @@ export function TextScene({ scene }: { scene: Scene }) {
     <motion.div
       className="flex items-center justify-center h-full p-8"
       initial={variants.initial}
-      animate={variants.animate}
+      animate={sceneTime !== undefined ? controls : variants.animate}
       exit={variants.exit}
       transition={transition}
     >

@@ -133,6 +133,9 @@ export default function FfmpegRender({
     cancelledRef.current = false;
 
     try {
+      // Ensure all fonts are loaded before capture
+      await document.fonts.ready;
+
       const html2canvas = (await import("html2canvas-pro")).default;
       const dimensions = getResolutionDimensions(exportSettings.resolution);
       const params = getQualitySettings(
@@ -160,27 +163,28 @@ export default function FfmpegRender({
         const currentTime = frameIndex / outputFps;
         seekTo(Math.min(currentTime, totalDuration));
 
-        // Wait for animations to render
-        // 500ms gives Framer Motion animations time to update between frames
-        await new Promise((resolve) => setTimeout(resolve, captureWaitTime));
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-        await new Promise((resolve) => requestAnimationFrame(resolve));
+        // Wait for React to re-render and animations to update
+        // Since we made animations deterministic, we don't need a long wait
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        // Ensure all styles are flushed
+        for (let i = 0; i < 3; i++) {
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        }
+
+        void previewElement.offsetHeight;
 
         try {
-          // Temporarily remove transform for capture
-          const originalTransform = previewElement.style.transform;
-          previewElement.style.transform = "none";
-
           // Get element dimensions
           const rect = previewElement.getBoundingClientRect();
 
-          // Calculate scale to capture at target resolution
-          const scaleX = dimensions.width / rect.width;
-          const scaleY = dimensions.height / rect.height;
-          const captureScale = Math.max(scaleX, scaleY);
+          // Calculate the actual scale needed to reach target resolution
+          // We use the target dimensions directly to ensure high quality
+          const captureScale =
+            dimensions.width /
+            (rect.width / (useVideoStore.getState().zoom / 100));
 
-          // Capture the frame using html2canvas at higher resolution
+          // Capture the frame using html2canvas
           const capturedCanvas = await html2canvas(previewElement, {
             backgroundColor: "#000000",
             scale: captureScale,
@@ -189,32 +193,50 @@ export default function FfmpegRender({
             allowTaint: true,
             removeContainer: true,
             imageTimeout: 0,
-            width: rect.width,
-            height: rect.height,
+            width: rect.width / (useVideoStore.getState().zoom / 100),
+            height: rect.height / (useVideoStore.getState().zoom / 100),
             onclone: (clonedDoc) => {
-              // Ensure all animations are captured in their current state
               const clonedElement = clonedDoc.querySelector(
                 '[data-scene-preview="true"]'
-              );
+              ) as HTMLElement;
               if (clonedElement) {
-                // Force all transforms to be applied
+                // Remove the zoom transform from the cloned element so it captures at full size
+                clonedElement.style.transform = "none";
+                clonedElement.style.width = `${
+                  rect.width / (useVideoStore.getState().zoom / 100)
+                }px`;
+                clonedElement.style.height = `${
+                  rect.height / (useVideoStore.getState().zoom / 100)
+                }px`;
+
+                // Force all transforms and styles to be applied from computed styles
                 const allElements = clonedElement.querySelectorAll("*");
                 allElements.forEach((el) => {
                   const htmlEl = el as HTMLElement;
                   const style = window.getComputedStyle(el);
+
                   if (style.transform && style.transform !== "none") {
                     htmlEl.style.transform = style.transform;
                   }
                   if (style.opacity) {
                     htmlEl.style.opacity = style.opacity;
                   }
+                  if (style.fontFamily) {
+                    htmlEl.style.fontFamily = style.fontFamily;
+                  }
+                  if (style.scale && style.scale !== "none") {
+                    htmlEl.style.scale = style.scale;
+                  }
+                  if (style.rotate && style.rotate !== "none") {
+                    htmlEl.style.rotate = style.rotate;
+                  }
+                  if (style.translate && style.translate !== "none") {
+                    htmlEl.style.translate = style.translate;
+                  }
                 });
               }
             },
           });
-
-          // Restore original transform
-          previewElement.style.transform = originalTransform;
 
           // Create output canvas with target resolution
           const outputCanvas = document.createElement("canvas");
@@ -223,7 +245,6 @@ export default function FfmpegRender({
           const ctx = outputCanvas.getContext("2d");
 
           if (ctx) {
-            // Simple stretch: draw captured canvas to fill entire output
             ctx.drawImage(
               capturedCanvas,
               0,
@@ -236,7 +257,6 @@ export default function FfmpegRender({
               dimensions.height
             );
 
-            // Convert to PNG data
             const blob = await new Promise<Blob>((resolve, reject) => {
               outputCanvas.toBlob((b) => {
                 if (b) resolve(b);

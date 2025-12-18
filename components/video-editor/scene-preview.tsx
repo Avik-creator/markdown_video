@@ -1,12 +1,11 @@
 "use client";
 
-import { forwardRef } from "react";
+import { forwardRef, useMemo, useEffect } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
 import type { Scene } from "@/lib/types";
-import { AnimatePresence, motion } from "framer-motion";
-import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { AnimatePresence, motion, useAnimation } from "framer-motion";
 import { transitionVariants } from "./scene-preview/utils/constants";
+import { cn } from "@/lib/utils";
 
 // Import extracted scene components
 import {
@@ -118,7 +117,7 @@ function SceneContentInner({
 }) {
   switch (scene.type) {
     case "text":
-      return <TextScene scene={scene} />;
+      return <TextScene scene={scene} sceneTime={sceneTime} />;
     case "code":
       return <CodeScene scene={scene} sceneTime={sceneTime} />;
     case "terminal":
@@ -155,12 +154,47 @@ function SceneContent({
 }) {
   const transition = scene.transition || "fade";
   const variants = transitionVariants[transition] || transitionVariants.fade;
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (sceneTime !== undefined) {
+      const duration = 0.5;
+      const progress = Math.min(sceneTime / duration, 1);
+
+      const initial = variants.initial as any;
+      const animate = variants.animate as any;
+
+      const currentState: any = {};
+      for (const key in animate) {
+        if (
+          typeof animate[key] === "number" &&
+          typeof initial[key] === "number"
+        ) {
+          currentState[key] =
+            initial[key] + (animate[key] - initial[key]) * progress;
+        } else if (
+          typeof animate[key] === "string" &&
+          animate[key].includes("%") &&
+          initial[key].includes("%")
+        ) {
+          const start = parseFloat(initial[key]);
+          const end = parseFloat(animate[key]);
+          currentState[key] = `${start + (end - start) * progress}%`;
+        } else {
+          currentState[key] = progress >= 1 ? animate[key] : initial[key];
+        }
+      }
+      controls.set(currentState);
+    } else {
+      controls.start(variants.animate);
+    }
+  }, [sceneTime, variants, controls]);
 
   return (
     <motion.div
       className="absolute inset-0"
       initial={variants.initial}
-      animate={variants.animate}
+      animate={controls}
       exit={variants.exit}
       transition={variants.transition}
     >

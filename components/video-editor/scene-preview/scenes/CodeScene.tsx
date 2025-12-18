@@ -1,7 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { useMemo } from "react";
+import { motion, useAnimation } from "framer-motion";
+import { useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Scene } from "@/lib/types";
 import { highlightSyntax } from "../utils/code-highlighting";
@@ -144,13 +144,28 @@ export function CodeScene({
   scene: Scene;
   sceneTime: number;
 }) {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (sceneTime !== undefined) {
+      const duration = 0.3;
+      const progress = Math.min(sceneTime / duration, 1);
+      controls.set({
+        opacity: progress,
+        scale: 0.95 + 0.05 * progress,
+      });
+    } else {
+      controls.start({ opacity: 1, scale: 1 });
+    }
+  }, [sceneTime, controls]);
+
   if (!scene.code) return null;
 
   return (
     <motion.div
       className="flex items-center justify-center h-full p-8"
       initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
+      animate={controls}
       exit={{ opacity: 0, scale: 0.95 }}
       transition={{ duration: 0.3 }}
     >
