@@ -1,31 +1,56 @@
-"use client"
+"use client";
 
-import { motion } from "framer-motion"
-import type { Scene } from "@/lib/types"
+import { motion, useAnimation } from "framer-motion";
+import { useEffect } from "react";
+import type { Scene } from "@/lib/types";
 
-export function CountdownScene({ scene, sceneTime }: { scene: Scene; sceneTime: number }) {
-  const countdown = scene.countdown
-  if (!countdown) return null
+export function CountdownScene({
+  scene,
+  sceneTime,
+}: {
+  scene: Scene;
+  sceneTime: number;
+}) {
+  const countdown = scene.countdown;
+  const controls = useAnimation();
 
-  const remainingTime = Math.max(0, countdown.from - Math.floor(sceneTime))
-  const progress = sceneTime / countdown.from
+  useEffect(() => {
+    if (sceneTime !== undefined) {
+      const progress = Math.min(sceneTime / 0.5, 1);
+      controls.set({ opacity: progress, scale: 0.5 + 0.5 * progress });
+    } else {
+      controls.start({ opacity: 1, scale: 1 });
+    }
+  }, [sceneTime, controls]);
+
+  if (!countdown) return null;
+
+  const remainingTime = Math.max(0, countdown.from - Math.floor(sceneTime));
+  const progress = sceneTime / countdown.from;
 
   if (countdown.style === "circle") {
-    const radius = 80
-    const circumference = 2 * Math.PI * radius
-    const strokeDashoffset = circumference * (1 - (1 - progress))
+    const radius = 80;
+    const circumference = 2 * Math.PI * radius;
+    const strokeDashoffset = circumference * (1 - (1 - progress));
 
     return (
       <motion.div
         className="flex items-center justify-center h-full"
         initial={{ opacity: 0, scale: 0.5 }}
-        animate={{ opacity: 1, scale: 1 }}
+        animate={controls}
         exit={{ opacity: 0, scale: 0.5 }}
       >
         <div className="relative">
           <svg width="200" height="200" viewBox="0 0 200 200">
             {/* Background circle */}
-            <circle cx="100" cy="100" r={radius} fill="none" stroke="rgba(255,255,255,0.2)" strokeWidth="8" />
+            <circle
+              cx="100"
+              cy="100"
+              r={radius}
+              fill="none"
+              stroke="rgba(255,255,255,0.2)"
+              strokeWidth="8"
+            />
             {/* Progress circle */}
             <motion.circle
               cx="100"
@@ -39,24 +64,41 @@ export function CountdownScene({ scene, sceneTime }: { scene: Scene; sceneTime: 
               strokeDashoffset={strokeDashoffset}
               transform="rotate(-90 100 100)"
               initial={{ strokeDashoffset: 0 }}
-              animate={{ strokeDashoffset }}
-              transition={{ duration: 0.3 }}
+              animate={
+                sceneTime !== undefined
+                  ? { strokeDashoffset }
+                  : { strokeDashoffset }
+              }
+              transition={
+                sceneTime !== undefined ? { duration: 0 } : { duration: 0.3 }
+              }
             />
           </svg>
           <motion.div
             className="absolute inset-0 flex items-center justify-center"
             key={remainingTime}
             initial={{ scale: 1.5, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            animate={
+              sceneTime !== undefined
+                ? { scale: 1, opacity: 1 }
+                : { scale: 1, opacity: 1 }
+            }
+            transition={
+              sceneTime !== undefined
+                ? { duration: 0 }
+                : { type: "spring", stiffness: 300, damping: 20 }
+            }
           >
-            <span className="text-6xl font-bold" style={{ color: countdown.color || "#ec4899" }}>
+            <span
+              className="text-6xl font-bold"
+              style={{ color: countdown.color || "#ec4899" }}
+            >
               {remainingTime}
             </span>
           </motion.div>
         </div>
       </motion.div>
-    )
+    );
   }
 
   if (countdown.style === "minimal") {
@@ -79,7 +121,7 @@ export function CountdownScene({ scene, sceneTime }: { scene: Scene; sceneTime: 
           {remainingTime}
         </motion.span>
       </motion.div>
-    )
+    );
   }
 
   // Digital style (default)
@@ -103,5 +145,5 @@ export function CountdownScene({ scene, sceneTime }: { scene: Scene; sceneTime: 
         </motion.div>
       </div>
     </motion.div>
-  )
+  );
 }

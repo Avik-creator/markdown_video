@@ -30,6 +30,7 @@ export type AnimationType =
   | "slideLeft"
   | "slideRight"
   | "bounceIn"
+  | "zoomIn"
   | "typewriter"
   | "none";
 

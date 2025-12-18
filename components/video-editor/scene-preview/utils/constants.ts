@@ -38,6 +38,11 @@ export const animationVariants = {
     exit: { opacity: 0, scale: 0.3 },
     transition: { type: "spring" as const, stiffness: 300, damping: 20 },
   },
+  zoomIn: {
+    initial: { opacity: 0, scale: 0.8 },
+    animate: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 1.2 },
+  },
   typewriter: {
     initial: { opacity: 1 },
     animate: { opacity: 1 },

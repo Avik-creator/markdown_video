@@ -41,6 +41,7 @@ export const ANIMATION_TYPES = [
   "slideLeft",
   "slideRight",
   "bounceIn",
+  "zoomIn",
   "typewriter",
   "none",
 ] as const;

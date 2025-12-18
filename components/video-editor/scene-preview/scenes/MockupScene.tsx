@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Scene } from "@/lib/types";
 import { TextScene } from "./TextScene";
@@ -59,7 +60,13 @@ const deviceStyles: Record<string, DeviceStyle> = {
   },
 };
 
-function MockupContent({ contentScene }: { contentScene: Scene["mockup"] }) {
+function MockupContent({
+  contentScene,
+  sceneTime,
+}: {
+  contentScene: Scene["mockup"];
+  sceneTime: number;
+}) {
   if (!contentScene?.content) {
     return (
       <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -81,11 +88,11 @@ function MockupContent({ contentScene }: { contentScene: Scene["mockup"] }) {
 
   switch (content.type) {
     case "text":
-      return <TextScene scene={mockScene} />;
+      return <TextScene scene={mockScene} sceneTime={sceneTime} />;
     case "code":
-      return <CodeScene scene={mockScene} sceneTime={0} />;
+      return <CodeScene scene={mockScene} sceneTime={sceneTime} />;
     case "image":
-      return <ImageScene scene={mockScene} />;
+      return <ImageScene scene={mockScene} sceneTime={sceneTime} />;
     default:
       return (
         <div className="w-full h-full flex items-center justify-center text-gray-400">
@@ -95,7 +102,15 @@ function MockupContent({ contentScene }: { contentScene: Scene["mockup"] }) {
   }
 }
 
-function IPhoneMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
+function IPhoneMockup({
+  scene,
+  style,
+  sceneTime,
+}: {
+  scene: Scene;
+  style: DeviceStyle;
+  sceneTime: number;
+}) {
   const mockup = scene.mockup!;
   const height = style.width / style.aspectRatio;
 
@@ -121,7 +136,7 @@ function IPhoneMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} />
+        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
       </div>
       {/* Home indicator */}
       <div
@@ -132,7 +147,15 @@ function IPhoneMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
   );
 }
 
-function AndroidMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
+function AndroidMockup({
+  scene,
+  style,
+  sceneTime,
+}: {
+  scene: Scene;
+  style: DeviceStyle;
+  sceneTime: number;
+}) {
   const mockup = scene.mockup!;
   const height = style.width / style.aspectRatio;
 
@@ -158,13 +181,21 @@ function AndroidMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} />
+        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
       </div>
     </div>
   );
 }
 
-function IPadMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
+function IPadMockup({
+  scene,
+  style,
+  sceneTime,
+}: {
+  scene: Scene;
+  style: DeviceStyle;
+  sceneTime: number;
+}) {
   const mockup = scene.mockup!;
   const height = style.width / style.aspectRatio;
 
@@ -190,13 +221,21 @@ function IPadMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} />
+        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
       </div>
     </div>
   );
 }
 
-function MacbookMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
+function MacbookMockup({
+  scene,
+  style,
+  sceneTime,
+}: {
+  scene: Scene;
+  style: DeviceStyle;
+  sceneTime: number;
+}) {
   const mockup = scene.mockup!;
   const height = style.width / style.aspectRatio;
 
@@ -224,7 +263,7 @@ function MacbookMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
           className={cn("w-full h-full overflow-hidden", style.screenRadius)}
           style={{ backgroundColor: mockup.content.background || "#ffffff" }}
         >
-          <MockupContent contentScene={mockup} />
+          <MockupContent contentScene={mockup} sceneTime={sceneTime} />
         </div>
       </div>
       {/* Base */}
@@ -240,7 +279,15 @@ function MacbookMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
   );
 }
 
-function BrowserMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
+function BrowserMockup({
+  scene,
+  style,
+  sceneTime,
+}: {
+  scene: Scene;
+  style: DeviceStyle;
+  sceneTime: number;
+}) {
   const mockup = scene.mockup!;
   const height = style.width / style.aspectRatio;
 
@@ -276,31 +323,59 @@ function BrowserMockup({ scene, style }: { scene: Scene; style: DeviceStyle }) {
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} />
+        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
       </div>
     </div>
   );
 }
 
-export function MockupScene({ scene }: { scene: Scene }) {
+export function MockupScene({
+  scene,
+  sceneTime,
+}: {
+  scene: Scene;
+  sceneTime: number;
+}) {
   const mockup = scene.mockup;
   if (!mockup) return null;
 
   const style = deviceStyles[mockup.device] || deviceStyles.browser;
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (sceneTime !== undefined) {
+      const progress = Math.min(sceneTime / 0.5, 1);
+      controls.set({
+        opacity: progress,
+        y: 20 * (1 - progress),
+        scale: 0.95 + 0.05 * progress,
+      });
+    } else {
+      controls.start({ opacity: 1, y: 0, scale: 1 });
+    }
+  }, [sceneTime, controls]);
 
   const renderDevice = () => {
     switch (mockup.device) {
       case "iphone":
-        return <IPhoneMockup scene={scene} style={style} />;
+        return (
+          <IPhoneMockup scene={scene} style={style} sceneTime={sceneTime} />
+        );
       case "android":
-        return <AndroidMockup scene={scene} style={style} />;
+        return (
+          <AndroidMockup scene={scene} style={style} sceneTime={sceneTime} />
+        );
       case "ipad":
-        return <IPadMockup scene={scene} style={style} />;
+        return <IPadMockup scene={scene} style={style} sceneTime={sceneTime} />;
       case "macbook":
-        return <MacbookMockup scene={scene} style={style} />;
+        return (
+          <MacbookMockup scene={scene} style={style} sceneTime={sceneTime} />
+        );
       case "browser":
       default:
-        return <BrowserMockup scene={scene} style={style} />;
+        return (
+          <BrowserMockup scene={scene} style={style} sceneTime={sceneTime} />
+        );
     }
   };
 
@@ -308,7 +383,7 @@ export function MockupScene({ scene }: { scene: Scene }) {
     <motion.div
       className="flex items-center justify-center h-full w-full p-4"
       initial={{ opacity: 0, y: 20, scale: 0.95 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
+      animate={controls}
       exit={{ opacity: 0, scale: 0.9 }}
       transition={{ type: "spring", damping: 20, stiffness: 100 }}
     >

@@ -48,6 +48,50 @@ function TimelineElementRenderer({
     animationVariants[element.animation || "fadeIn"] ||
     animationVariants.fadeIn;
 
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (isVisible) {
+      const elementTime = sceneTime - element.at;
+      const progress = Math.min(elementTime / 0.3, 1); // 0.3s fade in
+
+      if (element.animation === "slideUp") {
+        controls.set({
+          opacity: progress,
+          y: 20 * (1 - progress),
+        });
+      } else if (element.animation === "slideDown") {
+        controls.set({
+          opacity: progress,
+          y: -20 * (1 - progress),
+        });
+      } else if (element.animation === "slideLeft") {
+        controls.set({
+          opacity: progress,
+          x: 20 * (1 - progress),
+        });
+      } else if (element.animation === "slideRight") {
+        controls.set({
+          opacity: progress,
+          x: -20 * (1 - progress),
+        });
+      } else if (
+        element.animation === "zoomIn" ||
+        element.animation === "bounceIn"
+      ) {
+        controls.set({
+          opacity: progress,
+          scale: 0.8 + 0.2 * progress,
+        });
+      } else {
+        // Default fadeIn
+        controls.set({
+          opacity: progress,
+        });
+      }
+    }
+  }, [isVisible, sceneTime, element, controls]);
+
   if (!isVisible) return null;
 
   if (element.type === "text") {
@@ -55,9 +99,8 @@ function TimelineElementRenderer({
       <motion.div
         className="absolute inset-0 flex items-center justify-center"
         initial={variants.initial}
-        animate={variants.animate}
+        animate={controls}
         exit={variants.exit}
-        transition={{ duration: 0.3 }}
       >
         <span className="text-2xl font-bold text-white drop-shadow-lg">
           {element.content}
@@ -71,9 +114,8 @@ function TimelineElementRenderer({
       <motion.div
         className="absolute inset-0 flex items-center justify-center"
         initial={{ scale: 0, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
+        animate={controls}
         exit={{ scale: 0, opacity: 0 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
       >
         <span className="text-6xl">{element.content}</span>
       </motion.div>
@@ -123,25 +165,25 @@ function SceneContentInner({
     case "terminal":
       return <TerminalScene scene={scene} sceneTime={sceneTime} />;
     case "diff":
-      return <DiffScene scene={scene} />;
+      return <DiffScene scene={scene} sceneTime={sceneTime} />;
     case "chart":
-      return <ChartScene scene={scene} />;
+      return <ChartScene scene={scene} sceneTime={sceneTime} />;
     case "mockup":
-      return <MockupScene scene={scene} />;
+      return <MockupScene scene={scene} sceneTime={sceneTime} />;
     case "split":
-      return <SplitScene scene={scene} />;
+      return <SplitScene scene={scene} sceneTime={sceneTime} />;
     case "image":
-      return <ImageScene scene={scene} />;
+      return <ImageScene scene={scene} sceneTime={sceneTime} />;
     case "emoji":
-      return <EmojiScene scene={scene} />;
+      return <EmojiScene scene={scene} sceneTime={sceneTime} />;
     case "qr":
-      return <QRScene scene={scene} />;
+      return <QRScene scene={scene} sceneTime={sceneTime} />;
     case "countdown":
       return <CountdownScene scene={scene} sceneTime={sceneTime} />;
     case "progress":
       return <ProgressScene scene={scene} sceneTime={sceneTime} />;
     default:
-      return <TextScene scene={scene} />;
+      return <TextScene scene={scene} sceneTime={sceneTime} />;
   }
 }
 
@@ -289,18 +331,25 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
             <ParticleEffect
               type={currentScene.particles.type}
               intensity={currentScene.particles.intensity}
+              sceneTime={sceneTime}
             />
           )}
           {currentScene.callout && (
-            <CalloutOverlay callout={currentScene.callout} />
+            <CalloutOverlay
+              callout={currentScene.callout}
+              sceneTime={sceneTime}
+            />
           )}
           {currentScene.presenter && (
-            <PresenterOverlay presenter={currentScene.presenter} />
+            <PresenterOverlay
+              presenter={currentScene.presenter}
+              sceneTime={sceneTime}
+            />
           )}
           {currentScene.emoji &&
             !["text", "code", "terminal"].includes(currentScene.type) && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <EmojiScene scene={currentScene} />
+                <EmojiScene scene={currentScene} sceneTime={sceneTime} />
               </div>
             )}
           {/* Timeline elements */}
