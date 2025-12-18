@@ -15,7 +15,6 @@ export default function Ffmpeg() {
   const loadFFmpegFunction = async () => {
     try {
       setLoadedFfmpeg(false);
-      console.log("Starting FFmpeg load...");
 
       const baseURL = "https://unpkg.com/@ffmpeg/core@0.12.10/dist/umd";
 
@@ -27,11 +26,9 @@ export default function Ffmpeg() {
       const ffmpeg = ffmpegRef.current;
 
       ffmpeg.on("log", ({ message }: { message: string }) => {
-        console.log("FFmpeg log:", message);
         setLogMessages(message);
       });
 
-      console.log("Loading FFmpeg core...");
       await ffmpeg.load({
         coreURL: await toBlobURL(
           `${baseURL}/ffmpeg-core.js`,
@@ -43,7 +40,6 @@ export default function Ffmpeg() {
         ),
       });
 
-      console.log("FFmpeg loaded successfully");
       setLoadedFfmpeg(true);
       toast.success("FFmpeg loaded successfully");
     } catch (error) {
