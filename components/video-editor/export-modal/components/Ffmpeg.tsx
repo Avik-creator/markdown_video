@@ -64,7 +64,6 @@ export default function Ffmpeg() {
         <FfmpegRender
           loadFunction={loadFFmpegFunction}
           loadFfmpeg={loadFfmpeg}
-          logMessages={logMessages}
           ffmpeg={ffmpegRef.current}
         />
       )}

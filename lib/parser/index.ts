@@ -199,12 +199,16 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   if (kv.key === "size")
                     size = kv.value as "sm" | "md" | "lg" | "xl" | "2xl";
                   if (kv.key === "color") color = kv.value;
-                  if (kv.key === "fontFamily")
-                    fontFamily = kv.value as
-                      | "serif"
-                      | "sans"
-                      | "mono"
-                      | "display";
+                  if (kv.key === "fontfamily") {
+                    const validFonts = ["serif", "sans", "mono", "display"];
+                    if (validFonts.includes(kv.value.toLowerCase())) {
+                      fontFamily = kv.value.toLowerCase() as
+                        | "serif"
+                        | "sans"
+                        | "mono"
+                        | "display";
+                    }
+                  }
                   if (kv.key === "stagger")
                     stagger = Number.parseFloat(kv.value);
                   if (kv.key === "at") at = Number.parseFloat(kv.value);
@@ -224,7 +228,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 size,
                 align: "center",
                 color,
-                fontFamily,
+                fontFamily: fontFamily || "serif",
                 stagger,
                 i18nKey,
               };
@@ -312,14 +316,25 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     | "md"
                     | "lg";
                   i++;
-                } else if (codeLine.startsWith("fontFamily:")) {
-                  fontFamily = codeLine.substring(11).trim() as
-                    | "mono"
-                    | "jetbrains"
-                    | "fira"
-                    | "source"
-                    | "inconsolata"
-                    | "courier";
+                } else if (codeLine.toLowerCase().startsWith("fontfamily:")) {
+                  const fontValue = codeLine.substring(11).trim().toLowerCase();
+                  const validCodeFonts = [
+                    "mono",
+                    "jetbrains",
+                    "fira",
+                    "source",
+                    "inconsolata",
+                    "courier",
+                  ];
+                  if (validCodeFonts.includes(fontValue)) {
+                    fontFamily = fontValue as
+                      | "mono"
+                      | "jetbrains"
+                      | "fira"
+                      | "source"
+                      | "inconsolata"
+                      | "courier";
+                  }
                   i++;
                 } else if (codeLine.startsWith("height:")) {
                   height = Number.parseInt(codeLine.substring(7).trim(), 10);

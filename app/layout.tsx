@@ -5,10 +5,13 @@ import "./globals.css";
 import { ThemeProvider } from "@components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-mono" });
+const geistMono = Geist_Mono({
+  subsets: ["latin"],
+  variable: "--font-geist-mono",
+});
 const playfair = Playfair_Display({
   subsets: ["latin"],
-  variable: "--font-serif",
+  variable: "--font-playfair",
 });
 
 const siteUrl =

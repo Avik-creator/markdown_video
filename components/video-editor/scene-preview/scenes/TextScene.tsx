@@ -74,7 +74,7 @@ export function TextScene({ scene }: { scene: Scene }) {
           )}
           style={{
             color: textColor,
-            ...fontFamilyStyles[scene.text?.fontFamily || "serif"],
+            ...fontFamilyStyles[scene.text?.fontFamily || "sans"],
           }}
         >
           {lines.map((line, index) => (
@@ -111,7 +111,7 @@ export function TextScene({ scene }: { scene: Scene }) {
         )}
         style={{
           color: textColor,
-          ...fontFamilyStyles[scene.text?.fontFamily || "serif"],
+          ...fontFamilyStyles[scene.text?.fontFamily || "sans"],
         }}
       >
         {lines.map((line, index) => (
