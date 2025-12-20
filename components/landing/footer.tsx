@@ -1,5 +1,16 @@
 import Link from "next/link"
-import { Github, X } from "lucide-react"
+import { createLucideIcon, Github, X } from "lucide-react"
+
+const XIcon = createLucideIcon("X", [
+  [
+    "path",
+    {
+      d: "M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z",
+      stroke: "none",
+      fill: "currentColor",
+    },
+  ],
+]);
 
 export function Footer() {
   return (
@@ -28,7 +39,7 @@ export function Footer() {
             rel="noopener noreferrer"
             className="text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 transition-colors"
           >
-            <Github className="w-5 h-5" />
+            <Github className="size-5" />
           </a>
           <a
             href="https://x.com/avikm744"
@@ -36,7 +47,7 @@ export function Footer() {
             rel="noopener noreferrer"
             className="text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <XIcon className="size-4.5" />
           </a>
         </div>
       </div>
