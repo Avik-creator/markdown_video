@@ -12,6 +12,7 @@ import type {
   VideoStore,
   ExportSettings,
   LocalizationStrings,
+  SourceRange,
 } from "./types";
 
 const DEFAULT_MARKDOWN = `!var brandColor #3b82f6
@@ -136,6 +137,9 @@ export const useVideoStore = create<VideoStore>()(
 
         findText: "",
         replaceText: "",
+        
+        // Editor highlight (for property-to-code linking)
+        highlightRange: null,
 
         exportSettings: {
           resolution: "1080p",
@@ -267,6 +271,8 @@ export const useVideoStore = create<VideoStore>()(
           setMarkdown(newMarkdown);
         },
 
+        setHighlightRange: (range: SourceRange | null) => set({ highlightRange: range }),
+
         play: () => set({ isPlaying: true }),
         pause: () => set({ isPlaying: false }),
         toggle: () => set((state) => ({ isPlaying: !state.isPlaying })),
@@ -355,6 +361,17 @@ export const useVideoStore = create<VideoStore>()(
         theme: state.theme,
         markers: state.markers,
       }),
+      onRehydrateStorage: () => (state) => {
+        // Re-parse markdown after loading from localStorage to ensure scenes have correct sourceMaps
+        if (state?.markdown) {
+          const parsed = parseMarkdownFull(state.markdown);
+          useVideoStore.setState({
+            scenes: parsed.scenes,
+            chapters: parsed.chapters,
+            totalDuration: parsed.scenes.reduce((acc, s) => acc + s.duration, 0),
+          });
+        }
+      },
     }
   )
 );

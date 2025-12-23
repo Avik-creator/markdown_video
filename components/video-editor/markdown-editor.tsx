@@ -1,7 +1,7 @@
 "use client";
 import { useVideoStore } from "@/lib/use-video-store";
-import { useEffect, useState, useRef, useCallback } from "react";
-import { FileText } from "lucide-react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { FileText, MousePointerClick } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CornerMarkers from "@components/CornerMarkers";
 
@@ -99,9 +99,12 @@ function getLineClassName(line: string): string {
 export function MarkdownEditor() {
   const markdown = useVideoStore((state) => state.markdown);
   const setMarkdown = useVideoStore((state) => state.setMarkdown);
+  const highlightRange = useVideoStore((state) => state.highlightRange);
+  const setHighlightRange = useVideoStore((state) => state.setHighlightRange);
   const [localMarkdown, setLocalMarkdown] = useState(markdown);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
+  const highlightOverlayRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const timeout = setTimeout(() => {
@@ -113,6 +116,32 @@ export function MarkdownEditor() {
   useEffect(() => {
     setLocalMarkdown(markdown);
   }, [markdown]);
+
+  // Scroll to highlighted lines when highlight range changes
+  useEffect(() => {
+    if (highlightRange && textareaRef.current && lineNumbersRef.current) {
+      const lineHeight = 20; // Must match the lineHeight in styles
+      const targetScrollTop = (highlightRange.startLine - 1) * lineHeight;
+      const containerHeight = textareaRef.current.clientHeight;
+
+      // Scroll to center the highlighted lines in view
+      const scrollPosition = Math.max(0, targetScrollTop - containerHeight / 3);
+
+      textareaRef.current.scrollTop = scrollPosition;
+      lineNumbersRef.current.scrollTop = scrollPosition;
+
+      // Also set cursor position to the start of the highlighted line
+      const lines = localMarkdown.split("\n");
+      let charPosition = 0;
+      for (let i = 0; i < highlightRange.startLine - 1 && i < lines.length; i++) {
+        charPosition += lines[i].length + 1; // +1 for newline
+      }
+
+      // Focus and set selection
+      textareaRef.current.focus();
+      textareaRef.current.setSelectionRange(charPosition, charPosition);
+    }
+  }, [highlightRange, localMarkdown]);
 
   const insertTemplate = (type: keyof typeof EXAMPLE_TEMPLATES) => {
     const template = EXAMPLE_TEMPLATES[type];
@@ -191,7 +220,16 @@ export function MarkdownEditor() {
     if (textareaRef.current && lineNumbersRef.current) {
       lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;
     }
+    if (highlightOverlayRef.current && textareaRef.current) {
+      highlightOverlayRef.current.scrollTop = textareaRef.current.scrollTop;
+    }
   }, []);
+
+  const clearHighlight = useCallback(() => {
+    if (highlightRange) {
+      setHighlightRange(null);
+    }
+  }, [highlightRange, setHighlightRange]);
 
   const lines = localMarkdown.split("\n");
   const lineCount = lines.length;
@@ -205,6 +243,17 @@ export function MarkdownEditor() {
           <h2 className="text-sm font-medium text-gray-900 dark:text-neutral-100">
             Editor
           </h2>
+          {highlightRange && (
+            <button
+              onClick={clearHighlight}
+              className="flex items-center gap-1 text-xs text-pink-500 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 px-2 py-0.5 rounded-full border border-pink-200 dark:border-pink-900/50 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors"
+            >
+              <MousePointerClick className="w-3 h-3" />
+              Line {highlightRange.startLine}
+              {highlightRange.endLine !== highlightRange.startLine && `-${highlightRange.endLine}`}
+              <span className="text-pink-400 dark:text-pink-500">×</span>
+            </button>
+          )}
         </div>
         <span className="text-xs text-gray-500 dark:text-neutral-500 bg-gray-50 dark:bg-neutral-900 px-2 py-0.5 rounded">
           {lineCount} lines
@@ -240,38 +289,94 @@ export function MarkdownEditor() {
           style={{ scrollbarWidth: "none" }}
         >
           <div className="py-3">
-            {lines.map((_, i) => (
-              <div
-                key={i}
-                className="text-xs text-gray-400 dark:text-neutral-600 font-mono text-right pr-2"
-                style={{ height: "20px", lineHeight: "20px" }}
-              >
-                {i + 1}
-              </div>
-            ))}
+            {lines.map((_, i) => {
+              const lineNum = i + 1;
+              const isHighlighted = highlightRange &&
+                lineNum >= highlightRange.startLine &&
+                lineNum <= highlightRange.endLine;
+
+              return (
+                <div
+                  key={i}
+                  className={cn(
+                    "text-xs font-mono text-right pr-2 transition-colors duration-200",
+                    isHighlighted
+                      ? "text-pink-500 dark:text-pink-400 font-semibold"
+                      : "text-gray-400 dark:text-neutral-600"
+                  )}
+                  style={{ height: "20px", lineHeight: "20px" }}
+                >
+                  {lineNum}
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        <textarea
-          ref={textareaRef}
-          value={localMarkdown}
-          onChange={(e) => setLocalMarkdown(e.target.value)}
-          onScroll={handleScroll}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === "/") {
-              e.preventDefault();
-              toggleCommentLines();
-            }
-          }}
-          className="flex-1 resize-none bg-white dark:bg-neutral-950 border-0 text-sm font-mono text-gray-900 dark:text-neutral-100 focus:outline-none focus-visible:ring-0 p-3 overflow-auto"
-          placeholder="Enter your scene markdown..."
-          spellCheck={false}
-          style={{
-            lineHeight: "20px",
-            caretColor: "#ec4899",
-            tabSize: 2,
-          }}
-        />
+        {/* Editor container with highlight overlay */}
+        <div className="flex-1 relative overflow-hidden">
+          {/* Highlight overlay */}
+          <div
+            ref={highlightOverlayRef}
+            className="absolute inset-0 pointer-events-none overflow-hidden"
+            style={{ scrollbarWidth: "none" }}
+          >
+            <div className="py-3 px-3">
+              {lines.map((_, i) => {
+                const lineNum = i + 1;
+                const isHighlighted = highlightRange &&
+                  lineNum >= highlightRange.startLine &&
+                  lineNum <= highlightRange.endLine;
+
+                const isFirstHighlighted = highlightRange && lineNum === highlightRange.startLine;
+                const isLastHighlighted = highlightRange && lineNum === highlightRange.endLine;
+
+                return (
+                  <div
+                    key={i}
+                    className={cn(
+                      "transition-all duration-300",
+                      isHighlighted && "bg-pink-500/15 dark:bg-pink-500/20 border-l-2 border-pink-500 -ml-3 pl-2.5",
+                      isFirstHighlighted && "rounded-t-md mt-0.5",
+                      isLastHighlighted && "rounded-b-md mb-0.5"
+                    )}
+                    style={{
+                      height: "20px",
+                      lineHeight: "20px",
+                      marginLeft: isHighlighted ? "-12px" : "0",
+                      paddingLeft: isHighlighted ? "10px" : "0",
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
+
+          <textarea
+            ref={textareaRef}
+            value={localMarkdown}
+            onChange={(e) => {
+              setLocalMarkdown(e.target.value);
+              clearHighlight();
+            }}
+            onScroll={handleScroll}
+            onClick={clearHighlight}
+            onKeyDown={(e) => {
+              if ((e.metaKey || e.ctrlKey) && e.key === "/") {
+                e.preventDefault();
+                toggleCommentLines();
+              }
+            }}
+            className="absolute inset-0 resize-none bg-transparent border-0 text-sm font-mono text-gray-900 dark:text-neutral-100 focus:outline-none focus-visible:ring-0 p-3 overflow-auto"
+            placeholder="Enter your scene markdown..."
+            spellCheck={false}
+            style={{
+              lineHeight: "20px",
+              caretColor: "#ec4899",
+              tabSize: 2,
+            }}
+          />
+        </div>
       </div>
 
       {/* Footer hint */}

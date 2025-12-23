@@ -237,6 +237,35 @@ export interface SceneProgress {
   label?: string;
 }
 
+export interface SourceRange {
+  startLine: number; // 1-indexed line number
+  endLine: number; // 1-indexed line number (inclusive)
+}
+
+export interface SceneSourceMap {
+  scene?: SourceRange;
+  type?: SourceRange;
+  duration?: SourceRange;
+  background?: SourceRange;
+  transition?: SourceRange;
+  chapter?: SourceRange;
+  text?: SourceRange;
+  code?: SourceRange;
+  terminal?: SourceRange;
+  chart?: SourceRange;
+  mockup?: SourceRange;
+  particles?: SourceRange;
+  camera?: SourceRange;
+  presenter?: SourceRange;
+  image?: SourceRange;
+  emoji?: SourceRange;
+  qr?: SourceRange;
+  countdown?: SourceRange;
+  progress?: SourceRange;
+  diff?: SourceRange;
+  callout?: SourceRange;
+}
+
 export interface Scene {
   id: string;
   type: SceneType;
@@ -268,6 +297,7 @@ export interface Scene {
   progress?: SceneProgress;
   timelineElements?: TimelineElement[]; // In-scene timeline elements
   locale?: string; // Scene-specific locale override
+  sourceMap?: SceneSourceMap; // Source line mapping for editor highlighting
 }
 
 export interface LocalizationStrings {
@@ -377,6 +407,10 @@ export interface VideoStore {
   findNext: () => number;
   replaceNext: () => void;
   replaceAll: () => void;
+
+  // Editor highlight (for property-to-code linking)
+  highlightRange: SourceRange | null;
+  setHighlightRange: (range: SourceRange | null) => void;
 
   // Playback controls
   play: () => void;

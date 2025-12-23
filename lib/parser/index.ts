@@ -12,6 +12,7 @@ import type {
   PresenterPosition,
   Chapter,
   VideoVariables,
+  SceneSourceMap,
 } from "../types";
 import {
   SCENE_COLORS,
@@ -81,11 +82,16 @@ export function parseMarkdownFull(markdown: string): ParseResult {
     );
 
     if (isSceneDirective) {
+      const sceneStartLine = i + 1; // 1-indexed
+      const sourceMap: SceneSourceMap = {
+        scene: { startLine: sceneStartLine, endLine: sceneStartLine },
+      };
       const scene: Scene = {
         id: generateId(),
         type: "text",
         duration: 3,
         background: SCENE_COLORS[colorIndex % SCENE_COLORS.length],
+        sourceMap,
       };
       colorIndex++;
       i++;
@@ -110,6 +116,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
 
           switch (directive) {
             case DIRECTIVE_CASES.CHAPTER: {
+              const chapterLine = i + 1;
               const match = currentLine.match(REGEX_PATTERNS.CHAPTER);
               if (match) {
                 scene.chapter = match[1];
@@ -119,11 +126,13 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   time: currentTime,
                 });
               }
+              sourceMap.chapter = { startLine: chapterLine, endLine: chapterLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.TRANSITION: {
+              const transitionLine = i + 1;
               const match = currentLine.match(REGEX_PATTERNS.TRANSITION);
               if (match) {
                 scene.transition = match[1] as TransitionType;
@@ -131,21 +140,26 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   scene.transitionDuration = Number.parseFloat(match[2]);
                 }
               }
+              sourceMap.transition = { startLine: transitionLine, endLine: transitionLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.DURATION: {
+              const durationLine = i + 1;
               const match = currentLine.match(REGEX_PATTERNS.DURATION);
               if (match) {
                 scene.duration = Number.parseFloat(match[1]);
               }
+              sourceMap.duration = { startLine: durationLine, endLine: durationLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.TEXT: {
+              const textStartLine = i + 1;
               scene.type = "text";
+              sourceMap.type = { startLine: textStartLine, endLine: textStartLine };
               const textContent: string[] = [];
               let animation: AnimationType = "fadeIn";
               let size: "sm" | "md" | "lg" | "xl" | "2xl" = "lg";
@@ -181,6 +195,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                       ? (animMatch[1] as AnimationType)
                       : "fadeIn",
                   });
+                  sourceMap.text = { startLine: textStartLine, endLine: textStartLine };
                   i++;
                   break;
                 }
@@ -193,6 +208,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               }
 
               i++;
+              let textEndLine = textStartLine; // Default to the !text line itself
 
               while (i < lines.length) {
                 const textLine = substituteVariables(
@@ -205,6 +221,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 ) {
                   break;
                 }
+
+                // Update endLine whenever we process a line within this block
+                textEndLine = i + 1;
 
                 const kv = parseKeyValue(textLine);
                 if (kv) {
@@ -240,6 +259,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 i++;
               }
 
+              sourceMap.text = { startLine: textStartLine, endLine: textEndLine };
+
               scene.text = {
                 content: textContent.join("\n"),
                 animation,
@@ -270,7 +291,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.CODE: {
+              const codeStartLine = i + 1;
               scene.type = "code";
+              sourceMap.type = { startLine: codeStartLine, endLine: codeStartLine };
               i++;
               let highlights: { lines: number[] } | undefined;
               let annotations: Array<{ line: number; text: string }> = [];
@@ -309,6 +332,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     width,
                   };
                   i = parsed.endIndex;
+                  sourceMap.code = { startLine: codeStartLine, endLine: i };
                   break;
                 } else if (
                   codeLine.startsWith(CASE_SENSITIVE_VALUES.HIGHLIGHT)
@@ -372,7 +396,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.TERMINAL: {
+              const terminalStartLine = i + 1;
               scene.type = "terminal";
+              sourceMap.type = { startLine: terminalStartLine, endLine: terminalStartLine };
               i++;
               let typing = true;
               let typingSpeed = 30;
@@ -409,6 +435,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     typingSpeed,
                   };
                   i = parsed.endIndex;
+                  sourceMap.terminal = { startLine: terminalStartLine, endLine: i };
                   break;
                 } else if (
                   termLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
@@ -423,7 +450,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.DIFF: {
+              const diffStartLine = i + 1;
               scene.type = "diff";
+              sourceMap.type = { startLine: diffStartLine, endLine: diffStartLine };
               const langMatch = currentLine.match(/!diff\s+(\w+)?/);
               i++;
 
@@ -433,11 +462,14 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 changes: parsed.changes,
               };
               i = parsed.endIndex;
+              sourceMap.diff = { startLine: diffStartLine, endLine: i };
               break;
             }
 
             case DIRECTIVE_CASES.CHART: {
+              const chartStartLine = i + 1;
               scene.type = "chart";
+              sourceMap.type = { startLine: chartStartLine, endLine: chartStartLine };
               const typeMatch = currentLine.match(/type:(\w+)/);
               const animateMatch = currentLine.match(/animate:(true|false)/);
               i++;
@@ -449,11 +481,14 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 animate: animateMatch?.[1] !== "false",
               };
               i = parsed.endIndex;
+              sourceMap.chart = { startLine: chartStartLine, endLine: i };
               break;
             }
 
             case DIRECTIVE_CASES.MOCKUP: {
+              const mockupStartLine = i + 1;
               scene.type = "mockup";
+              sourceMap.type = { startLine: mockupStartLine, endLine: mockupStartLine };
               const deviceMatch = currentLine.match(/device:(\w+)/);
               const bgMatch = currentLine.match(/bg:(\S+)/);
               i++;
@@ -506,6 +541,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 i++;
               }
 
+              sourceMap.mockup = { startLine: mockupStartLine, endLine: i };
+
               scene.mockup = {
                 device: (deviceMatch?.[1] || "browser") as DeviceType,
                 content: {
@@ -514,17 +551,17 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   text:
                     contentType === "text" && textContent.length > 0
                       ? {
-                          content: textContent.join("\n"),
-                          color: textColor,
-                          size: textSize,
-                          align: "center",
-                        }
+                        content: textContent.join("\n"),
+                        color: textColor,
+                        size: textSize,
+                        align: "center",
+                      }
                       : undefined,
                   image: imageSrc
                     ? {
-                        src: imageSrc,
-                        fit: imageFit,
-                      }
+                      src: imageSrc,
+                      fit: imageFit,
+                    }
                     : undefined,
                 },
               };
@@ -551,6 +588,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.PARTICLES: {
+              const particlesLine = i + 1;
               const typeMatch = currentLine.match(/type:(\w+)/);
               const intensityMatch = currentLine.match(/intensity:(\w+)/);
 
@@ -561,11 +599,13 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   | "medium"
                   | "high",
               };
+              sourceMap.particles = { startLine: particlesLine, endLine: particlesLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.CAMERA: {
+              const cameraStartLine = i + 1;
               const effectMatch = currentLine.match(/(zoom|pan|shake)/);
               const valueMatch = currentLine.match(/:([\d.]+)/);
               const durationMatch = currentLine.match(/duration:([\d.]+)s?/);
@@ -618,6 +658,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 }
               }
 
+              sourceMap.camera = { startLine: cameraStartLine, endLine: i };
+
               scene.camera = {
                 effect: (effectMatch?.[1] || "zoom") as CameraEffect,
                 value: valueMatch ? Number.parseFloat(valueMatch[1]) : 1.5,
@@ -630,6 +672,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.PRESENTER: {
+              const presenterLine = i + 1;
               const posMatch = currentLine.match(/position:(\S+)/);
               const sizeMatch = currentLine.match(/size:(\w+)/);
               const shapeMatch = currentLine.match(/shape:(\w+)/);
@@ -643,6 +686,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   | "square"
                   | "rounded",
               };
+              sourceMap.presenter = { startLine: presenterLine, endLine: presenterLine };
               i++;
               break;
             }
@@ -662,7 +706,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.IMAGE: {
+              const imageLine = i + 1;
               scene.type = "image";
+              sourceMap.type = { startLine: imageLine, endLine: imageLine };
               const srcMatch = currentLine.match(/src:(\S+)/);
               const fitMatch = currentLine.match(/fit:(cover|contain|fill)/);
               const posMatch = currentLine.match(
@@ -682,12 +728,15 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     | "right") || "center",
                 alt: altMatch?.[1],
               };
+              sourceMap.image = { startLine: imageLine, endLine: imageLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.EMOJI: {
+              const emojiLine = i + 1;
               scene.type = "emoji";
+              sourceMap.type = { startLine: emojiLine, endLine: emojiLine };
               const emojiMatch = currentLine.match(/!emoji\s+(\S+)/);
               const sizeMatch = currentLine.match(/size:(sm|md|lg|xl|2xl)/);
               const animateMatch = currentLine.match(
@@ -708,6 +757,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     | "shake"
                     | "none") || "none",
               };
+              sourceMap.emoji = { startLine: emojiLine, endLine: emojiLine };
 
               // If at: and duration: are specified, add to timelineElements
               if (atMatch && durationMatch) {
@@ -727,7 +777,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.QR: {
+              const qrLine = i + 1;
               scene.type = "qr";
+              sourceMap.type = { startLine: qrLine, endLine: qrLine };
               const urlMatch = currentLine.match(/url:(\S+)/);
               const sizeMatch = currentLine.match(/size:(\d+)/);
               const colorMatch = currentLine.match(/color:(\S+)/);
@@ -741,12 +793,15 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 bgColor: bgMatch?.[1] || "transparent",
                 label: labelMatch?.[1],
               };
+              sourceMap.qr = { startLine: qrLine, endLine: qrLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.COUNTDOWN: {
+              const countdownLine = i + 1;
               scene.type = "countdown";
+              sourceMap.type = { startLine: countdownLine, endLine: countdownLine };
               const fromMatch = currentLine.match(/from:(\d+)/);
               const styleMatch = currentLine.match(
                 /style:(digital|circle|minimal)/
@@ -760,12 +815,15 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   "digital",
                 color: colorMatch?.[1] || "#ec4899",
               };
+              sourceMap.countdown = { startLine: countdownLine, endLine: countdownLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.PROGRESS: {
+              const progressLine = i + 1;
               scene.type = "progress";
+              sourceMap.type = { startLine: progressLine, endLine: progressLine };
               const valueMatch = currentLine.match(/value:(\d+)/);
               const maxMatch = currentLine.match(/max:(\d+)/);
               const animateMatch = currentLine.match(/animate:(true|false)/);
@@ -784,11 +842,13 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 color: colorMatch?.[1] || "#ec4899",
                 label: labelMatch?.[1],
               };
+              sourceMap.progress = { startLine: progressLine, endLine: progressLine };
               i++;
               break;
             }
 
             case DIRECTIVE_CASES.BACKGROUND: {
+              const backgroundLine = i + 1;
               const match = currentLine.match(/!background\s+(.+)/);
               if (match) {
                 scene.background = substituteVariables(
@@ -796,6 +856,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   variables
                 );
               }
+              sourceMap.background = { startLine: backgroundLine, endLine: backgroundLine };
               i++;
               break;
             }
@@ -833,6 +894,11 @@ export function parseMarkdownFull(markdown: string): ParseResult {
         } else {
           i++;
         }
+      }
+
+      // Update the scene's end line in sourceMap
+      if (sourceMap.scene) {
+        sourceMap.scene.endLine = i;
       }
 
       currentTime += scene.duration;
