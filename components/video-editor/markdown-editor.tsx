@@ -119,7 +119,7 @@ export function MarkdownEditor() {
 
   // Scroll to highlighted lines when highlight range changes
   useEffect(() => {
-    if (highlightRange && textareaRef.current && lineNumbersRef.current) {
+    if (highlightRange && textareaRef.current && lineNumbersRef.current && highlightOverlayRef.current) {
       const lineHeight = 20; // Must match the lineHeight in styles
       const targetScrollTop = (highlightRange.startLine - 1) * lineHeight;
       const containerHeight = textareaRef.current.clientHeight;
@@ -129,6 +129,7 @@ export function MarkdownEditor() {
 
       textareaRef.current.scrollTop = scrollPosition;
       lineNumbersRef.current.scrollTop = scrollPosition;
+      highlightOverlayRef.current.scrollTop = scrollPosition;
 
       // Also set cursor position to the start of the highlighted line
       const lines = localMarkdown.split("\n");
@@ -336,9 +337,9 @@ export function MarkdownEditor() {
                     key={i}
                     className={cn(
                       "transition-all duration-300",
-                      isHighlighted && "bg-pink-500/15 dark:bg-pink-500/20 border-l-2 border-pink-500 -ml-3 pl-2.5",
-                      isFirstHighlighted && "rounded-t-md mt-0.5",
-                      isLastHighlighted && "rounded-b-md mb-0.5"
+                      isHighlighted && "bg-pink-500/15 dark:bg-pink-500/20 border-l-2 border-pink-500",
+                      isFirstHighlighted && "rounded-t-md",
+                      isLastHighlighted && "rounded-b-md"
                     )}
                     style={{
                       height: "20px",
@@ -367,7 +368,8 @@ export function MarkdownEditor() {
                 toggleCommentLines();
               }
             }}
-            className="absolute inset-0 resize-none bg-transparent border-0 text-sm font-mono text-gray-900 dark:text-neutral-100 focus:outline-none focus-visible:ring-0 p-3 overflow-auto"
+            className="absolute inset-0 resize-none bg-transparent border-0 text-sm font-mono text-gray-900 dark:text-neutral-100 focus:outline-none focus-visible:ring-0 p-3 overflow-auto whitespace-pre"
+            wrap="off"
             placeholder="Enter your scene markdown..."
             spellCheck={false}
             style={{

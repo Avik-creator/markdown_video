@@ -126,8 +126,14 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   time: currentTime,
                 });
               }
-              sourceMap.chapter = { startLine: chapterLine, endLine: chapterLine };
               i++;
+              // Consume properties if any
+              while (i < lines.length) {
+                const nextLine = lines[i].trim();
+                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+                i++;
+              }
+              sourceMap.chapter = { startLine: chapterLine, endLine: i };
               break;
             }
 
@@ -140,8 +146,14 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   scene.transitionDuration = Number.parseFloat(match[2]);
                 }
               }
-              sourceMap.transition = { startLine: transitionLine, endLine: transitionLine };
               i++;
+              // Consume properties if any
+              while (i < lines.length) {
+                const nextLine = lines[i].trim();
+                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+                i++;
+              }
+              sourceMap.transition = { startLine: transitionLine, endLine: i };
               break;
             }
 
@@ -151,8 +163,14 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               if (match) {
                 scene.duration = Number.parseFloat(match[1]);
               }
-              sourceMap.duration = { startLine: durationLine, endLine: durationLine };
               i++;
+              // Consume properties if any
+              while (i < lines.length) {
+                const nextLine = lines[i].trim();
+                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+                i++;
+              }
+              sourceMap.duration = { startLine: durationLine, endLine: i };
               break;
             }
 
@@ -599,8 +617,21 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   | "medium"
                   | "high",
               };
-              sourceMap.particles = { startLine: particlesLine, endLine: particlesLine };
               i++;
+              // Consume separate property lines if any
+              while (i < lines.length) {
+                const nextLine = substituteVariables(lines[i].trim(), variables);
+                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+
+                const kv = parseKeyValue(nextLine);
+                if (kv && kv.key === PROPERTY_KEYS.INTENSITY) {
+                  scene.particles.intensity = kv.value as any;
+                } else if (kv && kv.key === PROPERTY_KEYS.TYPE) {
+                  scene.particles.type = kv.value as any;
+                }
+                i++;
+              }
+              sourceMap.particles = { startLine: particlesLine, endLine: i };
               break;
             }
 
@@ -686,8 +717,21 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   | "square"
                   | "rounded",
               };
-              sourceMap.presenter = { startLine: presenterLine, endLine: presenterLine };
               i++;
+              // Consume separate property lines if any
+              while (i < lines.length) {
+                const nextLine = substituteVariables(lines[i].trim(), variables);
+                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+
+                const kv = parseKeyValue(nextLine);
+                if (kv) {
+                  if (kv.key === PROPERTY_KEYS.POSITION) scene.presenter.position = kv.value as any;
+                  if (kv.key === PROPERTY_KEYS.SIZE) scene.presenter.size = kv.value as any;
+                  if (kv.key === PROPERTY_KEYS.SHAPE) scene.presenter.shape = kv.value as any;
+                }
+                i++;
+              }
+              sourceMap.presenter = { startLine: presenterLine, endLine: i };
               break;
             }
 
@@ -856,8 +900,14 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   variables
                 );
               }
-              sourceMap.background = { startLine: backgroundLine, endLine: backgroundLine };
               i++;
+              // Consume properties if any
+              while (i < lines.length) {
+                const nextLine = lines[i].trim();
+                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+                i++;
+              }
+              sourceMap.background = { startLine: backgroundLine, endLine: i };
               break;
             }
 
