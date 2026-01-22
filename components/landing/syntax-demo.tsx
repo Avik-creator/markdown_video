@@ -3,7 +3,6 @@
 import { Copy, Check } from "lucide-react"
 import { useState } from "react"
 import { Button } from "@components/ui/button"
-import { cn } from "@/lib/utils"
 
 const exampleCode = `!scene
 !text
@@ -104,7 +103,7 @@ export function SyntaxDemo() {
               </div>
 
               {/* Code */}
-              <div className="p-4 font-mono text-sm max-h-[400px] overflow-auto bg-white dark:bg-neutral-950">
+              <div className="p-4 font-mono text-sm max-h-100 overflow-auto bg-white dark:bg-neutral-950">
                 <pre className="whitespace-pre-wrap">
                   {exampleCode.split("\n").map((line, i) => (
                     <div key={i} className="flex">

@@ -18,7 +18,7 @@ export function CTA() {
           href="/editor"
           className={cn(
             "group inline-flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-[-2px]"
+            "hover:-translate-x-0.5"
           )}
         >
           <CornerMarkers />

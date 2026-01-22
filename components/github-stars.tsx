@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, useSpring, useTransform } from "motion/react";
 
 type GitHubStarsProps = {
@@ -9,8 +9,6 @@ type GitHubStarsProps = {
 };
 
 export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
-  const ref = useRef<HTMLAnchorElement>(null);
-  const [isInView, setIsInView] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   // Smooth spring animation starting from 0
@@ -27,47 +25,18 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
       compactDisplay: "short",
     })
       .format(Math.round(latest))
-      .toLowerCase()
+      .toLowerCase(),
   );
 
   useEffect(() => {
-    // Check if already in view on mount
-    if (ref.current) {
-      const rect = ref.current.getBoundingClientRect();
-      const isVisible = rect.top < window.innerHeight && rect.bottom > 0;
-      if (isVisible && !isInView) {
-        setIsInView(true);
-        // Small delay to ensure smooth start
-        setTimeout(() => {
-          springValue.set(stargazersCount);
-        }, 100);
-      }
-    }
-
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !isInView) {
-          setIsInView(true);
-          // Small delay to ensure smooth start
-          setTimeout(() => {
-            springValue.set(stargazersCount);
-          }, 100);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-
-    return () => observer.disconnect();
-  }, [stargazersCount, isInView, springValue]);
+    setTimeout(() => {
+      springValue.set(stargazersCount);
+    }, 100);
+  }, [stargazersCount, springValue]);
 
   return (
     <div className="inline-block relative group">
       <motion.a
-        ref={ref}
         href={`https://github.com/${repo}`}
         target="_blank"
         rel="noopener noreferrer"
@@ -78,7 +47,6 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
         whileTap={{ scale: 0.98 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
-
         {/* GitHub Icon with smooth rotation */}
         <div className="relative">
           <motion.svg
@@ -149,9 +117,9 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
           animate={
             isHovered
               ? {
-                y: [-2, -6, -2],
-                rotate: [0, 360],
-              }
+                  y: [-2, -6, -2],
+                  rotate: [0, 360],
+                }
               : { y: 0, rotate: 0 }
           }
           transition={{
