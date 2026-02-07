@@ -18,7 +18,7 @@ import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
 type RightPanel = "properties" | "guide" | "templates"
 
-export function VideoEditor({ initialMarkdown, isEmbed = false, stargazersCount }: { initialMarkdown?: string; isEmbed?: boolean; stargazersCount?: number }) {
+export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkdown?: string; isEmbed?: boolean; }) {
   const [rightPanel, setRightPanel] = useState<RightPanel>("properties")
   const [showExportModal, setShowExportModal] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
@@ -140,7 +140,6 @@ export function VideoEditor({ initialMarkdown, isEmbed = false, stargazersCount 
         setShowShortcuts={setShowShortcuts}
         setShowShareModal={setShowShareModal}
         setShowExportModal={setShowExportModal}
-        stargazersCount={stargazersCount}
       />
 
       {/* Main content area */}

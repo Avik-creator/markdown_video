@@ -25,7 +25,7 @@ export function Navbar({ stargazersCount = 0 }: NavbarProps) {
             href="/editor"
             className={cn(
               "group flex items-center gap-1 relative transition-all duration-300 ease-out",
-              "hover:translate-x-[-2px]"
+              "hover:-translate-x-0.5"
             )}
           >
             <CornerMarkers />

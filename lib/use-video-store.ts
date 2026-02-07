@@ -2,16 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { parseMarkdown, getTimelineSegments } from "./parser";
 import type {
-  Scene,
-  TimelineSegment,
-  HistoryState,
-  AspectRatio,
-  ZoomLevel,
-  ThemePreset,
   Marker,
   VideoStore,
-  ExportSettings,
-  LocalizationStrings,
   SourceRange,
 } from "./types";
 
@@ -364,10 +356,10 @@ export const useVideoStore = create<VideoStore>()(
       onRehydrateStorage: () => (state) => {
         // Re-parse markdown after loading from localStorage to ensure scenes have correct sourceMaps
         if (state?.markdown) {
-          const parsed = parseMarkdownFull(state.markdown);
+          const parsed = parseAndComputeSegments(state.markdown);
           useVideoStore.setState({
             scenes: parsed.scenes,
-            chapters: parsed.chapters,
+            segments: parsed.segments,
             totalDuration: parsed.scenes.reduce((acc, s) => acc + s.duration, 0),
           });
         }

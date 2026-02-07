@@ -35,7 +35,6 @@ interface EditorHeaderProps {
   setShowShortcuts: (show: boolean) => void
   setShowShareModal: (show: boolean) => void
   setShowExportModal: (show: boolean) => void
-  stargazersCount?: number
 }
 
 
@@ -103,7 +102,7 @@ export function EditorHeader({
         >
           <ZoomOut className="w-4 h-4" />
         </Button>
-        <span className="text-xs text-gray-600 dark:text-neutral-400 min-w-[40px] text-center">{zoom}%</span>
+        <span className="text-xs text-gray-600 dark:text-neutral-400 min-w-10 text-center">{zoom}%</span>
         <Button
           variant="ghost"
           size="icon"
@@ -169,7 +168,7 @@ export function EditorHeader({
           onClick={() => togglePanel("templates")}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-[-2px]"
+            "hover:translate-x-0.5"
           )}
         >
           <CornerMarkers />
@@ -182,7 +181,7 @@ export function EditorHeader({
           onClick={() => togglePanel("guide")}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-[-2px]"
+            "hover:translate-x-0.5"
           )}
           title="Syntax Guide (Press ?)"
         >
@@ -198,7 +197,7 @@ export function EditorHeader({
           onClick={() => setShowShareModal(true)}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-[-2px]"
+            "hover:translate-x-0.5"
           )}
         >
           <CornerMarkers />
@@ -211,7 +210,7 @@ export function EditorHeader({
           onClick={() => setShowExportModal(true)}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-[-2px]"
+            "hover:translate-x-0.5"
           )}
         >
           <CornerMarkers />
