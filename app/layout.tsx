@@ -15,7 +15,7 @@ const playfair = Playfair_Display({
 });
 
 const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://markdowneditor.avikmukherjee.me";
+  process.env.NEXT_PUBLIC_SITE_URL || "https://markdowneditor.avikmukherjee.com";
 const siteName = "Markdown Video";
 const title = "Markdown Video - Create Stunning Videos with Markdown";
 const description =
@@ -73,13 +73,13 @@ export const metadata: Metadata = {
     title: "Avik Mukherjee",
     description:
       "Avik Mukherjee is a developer who loves to code and build things.",
-    images: ["https://markdowneditor.avikmukherjee.me/og-image.png"],
+    images: ["https://markdowneditor.avikmukherjee.com/og-image.png"],
     creator: "@avikm744",
     site: "@avikm744",
     siteId: "@avikm744",
   },
   alternates: {
-    canonical: "https://markdowneditor.avikmukherjee.me",
+    canonical: "https://markdowneditor.avikmukherjee.com",
   },
   robots: {
     index: true,
