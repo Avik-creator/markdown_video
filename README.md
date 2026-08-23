@@ -24,6 +24,43 @@ Transform your Markdown into stunning videos with a custom syntax that brings yo
 - **Responsive Design**: Fully responsive interface that works on all devices
 - **Share & Embed**: Generate shareable links and embed videos
 
+## 🏗️ Architecture
+
+```mermaid
+flowchart LR
+    MD["Markdown source<br/>with scene directives"]
+    AGENT["MCP client<br/>Claude, IDEs"]
+
+    subgraph EDITOR["Editor — /editor"]
+        ED["markdown-editor"]
+        PREV["scene-preview<br/>per scene-type renderers"]
+        TL["timeline scrubber"]
+        EXP["export-modal"]
+    end
+
+    PARSE["lib/parser<br/>index + code, chart,<br/>diff, terminal parsers"]
+    STORE["lib/use-video-store<br/>Zustand"]
+    MCP["/api/mcp<br/>10 tools: syntax validation + docs"]
+    FF["@ffmpeg/ffmpeg<br/>wasm, in the browser"]
+    MP4["MP4 download"]
+    REDIS[("Upstash Redis<br/>project persistence")]
+
+    MD --> ED
+    ED --> PARSE
+    PARSE --> STORE
+    STORE --> PREV
+    STORE --> TL
+    STORE --> EXP
+    EXP --> FF
+    FF --> MP4
+    ED <-->|"/api/projects"| REDIS
+    AGENT --> MCP
+    MCP --> PARSE
+```
+
+Rendering and export both happen client-side — the parser produces scenes, the preview draws them,
+and FFmpeg compiles the same scenes to MP4 in the browser. Nothing is rendered on a server.
+
 ## 🏗️ Project Structure
 
 ```
