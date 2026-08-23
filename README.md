@@ -6,6 +6,8 @@ Transform your Markdown into stunning videos with a custom syntax that brings yo
 
 ## ✨ Features
 
+- **MCP server** — an [MCP](https://modelcontextprotocol.io) endpoint at `/api/mcp` exposes 10 tools (`validate_syntax`, `parse_markdown`, `list_directives`, `get_directive_docs`, `search_docs`, `get_examples`, `get_suggestions`, `generate_template`, `quick_check`, `quick_reference`) so a coding agent can author and validate scenes against the same parser the editor uses.
+
 - **Custom Markdown Syntax**: Write videos using an intuitive extended Markdown syntax with custom directives
 - **Rich Scene Types**: Support for text, code, images, terminal, diffs, charts, mockups, QR codes, countdowns, progress bars, and more
 - **FFmpeg Integration**: Export videos directly to MP4 or other formats using FFmpeg
@@ -70,7 +72,8 @@ app/
   ├── editor/
   │   └── page.tsx            # Video editor interface
   ├── api/
-  │   └── projects/route.ts   # API endpoint for project management
+  │   ├── projects/route.ts   # API endpoint for project management
+  │   └── mcp/[transport]/    # MCP server (10 tools over the parser)
   └── globals.css
 components/
   ├── landing/                # Landing page components
@@ -87,6 +90,9 @@ components/
       ├── theme-selector.tsx      # Theme customization
       └── keyboard-shortcuts.tsx  # Shortcuts reference
 lib/
+  ├── mcp/
+  │   ├── syntax-validator.ts # Validation shared with the MCP tools
+  │   └── documentation.ts    # Directive docs served over MCP
   ├── parser/
   │   ├── index.ts            # Main markdown parser
   │   ├── parsers/            # Specialized parsers for different scenes
@@ -157,45 +163,6 @@ public/
 - **Icons**: [Lucide React](https://lucide.dev/) - SVG icon library
 - **Toast Notifications**: [Sonner](https://sonner.emilkowal.ski/) - Toast notification system
 - **Themes**: [Next.js Themes](https://github.com/pacocoursey/next-themes) - Theme switching
-
-## 📄 License
-
-## 🚀 Getting Started
-
-### Prerequisites
-
-- Node.js 18+ or higher
-- pnpm, npm, or yarn
-
-### Installation
-
-1. **Clone the repository**:
-
-   ```bash
-   git clone https://github.com/Avik-creator/markdown_video.git
-   cd markdown-to-video
-   ```
-
-2. **Install dependencies**:
-
-   ```bash
-   pnpm install
-   ```
-
-3. **Set up environment variables** (optional for local development):
-
-   ```bash
-   cp .env.example .env.local
-   ```
-
-4. **Run the development server**:
-
-   ```bash
-   pnpm dev
-   ```
-
-5. **Open the application**:
-   Visit [http://localhost:3000](http://localhost:3000) in your browser
 
 ## 📦 Available Scripts
 
