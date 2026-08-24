@@ -124,8 +124,8 @@ const x = 1
             { keys: "?", action: "Toggle guide" },
           ].map(({ keys, action }) => (
             <div key={keys} className="flex items-center justify-between">
-              <kbd className="text-xs bg-white/10 px-2 py-1 rounded font-mono">{keys}</kbd>
-              <span className="text-xs text-muted-foreground">{action}</span>
+              <kbd className="text-xs bg-gray-100 dark:bg-neutral-800 px-2 py-1 rounded font-mono text-gray-900 dark:text-neutral-100 border border-gray-200 dark:border-neutral-700">{keys}</kbd>
+              <span className="text-xs text-gray-600 dark:text-neutral-400">{action}</span>
             </div>
           ))}
         </div>

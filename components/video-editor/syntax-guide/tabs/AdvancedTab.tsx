@@ -455,7 +455,7 @@ welcome:
 
       {/* Editor Features */}
       <Section title="Editor Features">
-        <div className="bg-purple-50 dark:bg-purple-950/20 border border-purple-200 dark:border-purple-900 rounded-lg p-3 space-y-3">
+        <div className="bg-gray-50 dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-lg p-3 space-y-3">
           <div>
             <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-1">
               Comment Toggle
@@ -508,7 +508,7 @@ welcome:
 
       {/* Customization Guide */}
       <Section title="Customization Guide">
-        <div className="bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-900 rounded-lg p-3 space-y-3">
+        <div className="bg-gray-50 dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-lg p-3 space-y-3">
           <div>
             <h4 className="text-xs font-semibold text-gray-900 dark:text-white mb-1">
               Text Font Families

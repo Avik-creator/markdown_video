@@ -7,7 +7,7 @@ export function BasicsTab() {
     <>
       {/* Overview */}
       <Section title="Overview">
-        <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3 space-y-2">
+        <div className="bg-gray-50 dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 rounded-lg p-3 space-y-2">
           <p className="text-xs text-gray-700 dark:text-neutral-300 leading-relaxed">
             Create video scenes using markdown-like syntax. Each scene starts
             with{" "}
