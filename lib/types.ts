@@ -316,7 +316,6 @@ export interface ExportSettings {
   includeSubtitles?: boolean;
   locale?: string; // Export in specific language
   fps?: number; // Output FPS (5-60)
-  captureWaitTime?: number; // Wait time between captures in ms (50-1000)
 }
 
 export interface VideoProject {

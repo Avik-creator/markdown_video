@@ -1,19 +1,15 @@
-// Test suite for syntax validation
+import { describe, expect, it } from "vitest";
 import {
-  validateMarkdownSyntax,
-  quickSyntaxCheck,
   getSyntaxSuggestions,
+  quickSyntaxCheck,
+  validateMarkdownSyntax,
 } from "../syntax-validator";
 
-/**
- * Test cases for syntax validation
- */
+const messages = (items: { message: string }[]) => items.map((i) => i.message);
 
-// Test 1: Valid basic scene
-console.log("=".repeat(60));
-console.log("Test 1: Valid Basic Scene");
-console.log("=".repeat(60));
-const validBasic = `!scene
+describe("validateMarkdownSyntax", () => {
+  it("accepts a valid text scene and code scene", () => {
+    const result = validateMarkdownSyntax(`!scene
 !text
 Hello World
 size: lg
@@ -27,179 +23,67 @@ animation: fadeIn
 \`\`\`javascript
 console.log("Hello");
 \`\`\`
-`;
+`);
+    expect(result.valid).toBe(true);
+    expect(result.scenes).toHaveLength(2);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.totalDuration).toBe(8);
+  });
 
-const result1 = validateMarkdownSyntax(validBasic);
-console.log("Valid:", result1.valid);
-console.log("Scenes:", result1.scenes.length);
-console.log("Errors:", result1.errors.length);
-console.log("Warnings:", result1.warnings.length);
-console.log("Duration:", result1.totalDuration, "seconds");
-if (result1.errors.length > 0) {
-  console.log("Errors found:", JSON.stringify(result1.errors, null, 2));
-}
-console.log("\n");
-
-// Test 2: Invalid transition
-console.log("=".repeat(60));
-console.log("Test 2: Invalid Transition");
-console.log("=".repeat(60));
-const invalidTransition = `!scene
+  it("rejects an unknown transition", () => {
+    const result = validateMarkdownSyntax(`!scene
 !transition invalid_transition
 !text
 This should have an error
-`;
+`);
+    expect(result.valid).toBe(false);
+    expect(messages(result.errors)).toEqual([
+      'Scene 1: Invalid transition "invalid_transition"',
+    ]);
+  });
 
-const result2 = validateMarkdownSyntax(invalidTransition);
-console.log("Valid:", result2.valid);
-console.log("Errors:", result2.errors.length);
-if (result2.errors.length > 0) {
-  console.log("Error messages:");
-  result2.errors.forEach((e) => console.log("  -", e.message));
-}
-console.log("\n");
-
-// Test 3: Invalid animation
-console.log("=".repeat(60));
-console.log("Test 3: Invalid Animation");
-console.log("=".repeat(60));
-const invalidAnimation = `!scene
+  it("rejects an unknown animation", () => {
+    const result = validateMarkdownSyntax(`!scene
 !text
 Hello
 animation: invalid_animation
-`;
+`);
+    expect(result.valid).toBe(false);
+    expect(messages(result.errors)).toEqual([
+      'Scene 1: Invalid animation "invalid_animation"',
+    ]);
+  });
 
-const result3 = validateMarkdownSyntax(invalidAnimation);
-console.log("Valid:", result3.valid);
-console.log("Errors:", result3.errors.length);
-if (result3.errors.length > 0) {
-  console.log("Error messages:");
-  result3.errors.forEach((e) => console.log("  -", e.message));
-}
-console.log("\n");
-
-// Test 4: Missing required fields
-console.log("=".repeat(60));
-console.log("Test 4: Missing Image Source");
-console.log("=".repeat(60));
-const missingRequired = `!scene
+  it("requires an image source", () => {
+    const result = validateMarkdownSyntax(`!scene
 !image fit:cover
-`;
+`);
+    expect(result.valid).toBe(false);
+    expect(messages(result.errors)).toEqual(["Scene 1: Image source is required"]);
+  });
 
-const result4 = validateMarkdownSyntax(missingRequired);
-console.log("Valid:", result4.valid);
-console.log("Errors:", result4.errors.length);
-if (result4.errors.length > 0) {
-  console.log("Error messages:");
-  result4.errors.forEach((e) => console.log("  -", e.message));
-}
-console.log("\n");
-
-// Test 5: Invalid URL in QR code
-console.log("=".repeat(60));
-console.log("Test 5: Invalid QR URL");
-console.log("=".repeat(60));
-const invalidUrl = `!scene
+  it("rejects an invalid QR code URL", () => {
+    const result = validateMarkdownSyntax(`!scene
 !qr url:not-a-valid-url
-`;
+`);
+    expect(result.valid).toBe(false);
+    expect(messages(result.errors)).toEqual([
+      'Scene 1: Invalid QR code URL "not-a-valid-url"',
+    ]);
+  });
 
-const result5 = validateMarkdownSyntax(invalidUrl);
-console.log("Valid:", result5.valid);
-console.log("Errors:", result5.errors.length);
-if (result5.errors.length > 0) {
-  console.log("Error messages:");
-  result5.errors.forEach((e) => console.log("  -", e.message));
-}
-console.log("\n");
-
-// Test 6: Empty content warnings
-console.log("=".repeat(60));
-console.log("Test 6: Empty Content");
-console.log("=".repeat(60));
-const emptyContent = `!scene
+  it("warns about empty text content without failing", () => {
+    const result = validateMarkdownSyntax(`!scene
 !text
 
-`;
+`);
+    expect(result.valid).toBe(true);
+    expect(messages(result.warnings)).toEqual(["Scene 1: Text content is empty"]);
+  });
 
-const result6 = validateMarkdownSyntax(emptyContent);
-console.log("Valid:", result6.valid);
-console.log("Warnings:", result6.warnings.length);
-if (result6.warnings.length > 0) {
-  console.log("Warning messages:");
-  result6.warnings.forEach((w) => console.log("  -", w.message));
-}
-console.log("\n");
-
-// Test 7: Quick syntax check
-console.log("=".repeat(60));
-console.log("Test 7: Quick Syntax Check");
-console.log("=".repeat(60));
-const quickCheckMarkdown = `!scene
-!text
-Scene 1
-
----
-
-!scene
-!duration 10
-!code
-\`\`\`javascript
-const x = 1;
-\`\`\`
-
----
-
-!scene
-!text
-Scene 3
-`;
-
-const quickResult = quickSyntaxCheck(quickCheckMarkdown);
-console.log("Has scenes:", quickResult.hasScenes);
-console.log("Scene count:", quickResult.sceneCount);
-console.log("Estimated duration:", quickResult.estimatedDuration, "seconds");
-console.log("Issues:", quickResult.issues.length);
-console.log("\n");
-
-// Test 8: Unclosed code block detection
-console.log("=".repeat(60));
-console.log("Test 8: Unclosed Code Block");
-console.log("=".repeat(60));
-const unclosedCode = `!scene
-!code
-\`\`\`javascript
-const x = 1;
-`;
-
-const quickResult2 = quickSyntaxCheck(unclosedCode);
-console.log("Issues found:", quickResult2.issues.length);
-if (quickResult2.issues.length > 0) {
-  console.log("Issues:");
-  quickResult2.issues.forEach((i) => console.log("  -", i));
-}
-console.log("\n");
-
-// Test 9: Get suggestions
-console.log("=".repeat(60));
-console.log("Test 9: Get Suggestions");
-console.log("=".repeat(60));
-const partial1 = "!scene\n";
-const suggestions1 = getSyntaxSuggestions(partial1);
-console.log("After !scene, suggestions:");
-suggestions1.forEach((s) => console.log("  -", s));
-console.log("\n");
-
-const partial2 = "";
-const suggestions2 = getSyntaxSuggestions(partial2);
-console.log("Empty document, suggestions:");
-suggestions2.forEach((s) => console.log("  -", s));
-console.log("\n");
-
-// Test 10: Complex valid scene with all features
-console.log("=".repeat(60));
-console.log("Test 10: Complex Valid Scene");
-console.log("=".repeat(60));
-const complexValid = `!var brandColor #3b82f6
+  it("accepts a scene using every major feature", () => {
+    const result = validateMarkdownSyntax(`!var brandColor #3b82f6
 
 !scene
 !chapter "Introduction"
@@ -256,39 +140,64 @@ color: #ffffff
 !scene
 !emoji 🎉 size:2xl animate:bounce at:0s duration:2s
 !countdown from:5 style:digital color:#ec4899
-`;
+`);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+    expect(result.valid).toBe(true);
+    expect(result.scenes).toHaveLength(5);
+    expect(result.totalDuration).toBe(17);
+  });
+});
 
-const result10 = validateMarkdownSyntax(complexValid);
-console.log("Valid:", result10.valid);
-console.log("Scenes:", result10.scenes.length);
-console.log("Total Duration:", result10.totalDuration, "seconds");
-console.log("Errors:", result10.errors.length);
-console.log("Warnings:", result10.warnings.length);
-if (result10.errors.length > 0) {
-  console.log("Errors found:");
-  result10.errors.forEach((e) => console.log("  -", e.message));
-}
-if (result10.warnings.length > 0) {
-  console.log("Warnings found:");
-  result10.warnings.forEach((w) => console.log("  -", w.message));
-}
+describe("quickSyntaxCheck", () => {
+  it("counts scenes in a valid document", () => {
+    const result = quickSyntaxCheck(`!scene
+!text
+Scene 1
 
-// Summary
-console.log("\n");
-console.log("=".repeat(60));
-console.log("TEST SUMMARY");
-console.log("=".repeat(60));
-console.log("✅ All validation tests completed!");
-console.log("The syntax validator is working correctly.");
-console.log("\nKey capabilities verified:");
-console.log("  ✓ Valid syntax detection");
-console.log("  ✓ Invalid transition detection");
-console.log("  ✓ Invalid animation detection");
-console.log("  ✓ Missing required field detection");
-console.log("  ✓ Invalid URL detection");
-console.log("  ✓ Empty content warnings");
-console.log("  ✓ Quick syntax check");
-console.log("  ✓ Unclosed code block detection");
-console.log("  ✓ Context-aware suggestions");
-console.log("  ✓ Complex scene validation");
+---
 
+!scene
+!duration 10
+!code
+\`\`\`javascript
+const x = 1;
+\`\`\`
+
+---
+
+!scene
+!text
+Scene 3
+`);
+    expect(result.hasScenes).toBe(true);
+    expect(result.sceneCount).toBe(3);
+    expect(result.issues).toHaveLength(0);
+  });
+
+  it("reports an unclosed code block", () => {
+    const result = quickSyntaxCheck(`!scene
+!code
+\`\`\`javascript
+const x = 1;
+`);
+    expect(result.issues).toEqual(["Unclosed code block at line 3"]);
+  });
+});
+
+describe("getSyntaxSuggestions", () => {
+  it("suggests starting a scene in an empty document", () => {
+    expect(getSyntaxSuggestions("")).toContain("!scene - Start a new scene");
+  });
+
+  it("suggests starting a scene after a separator", () => {
+    expect(getSyntaxSuggestions("!scene\n!text\nHi\n\n---\n")).toContain(
+      "!scene - Start a new scene"
+    );
+  });
+
+  it("suggests content types after !scene, even with the cursor on a new line", () => {
+    expect(getSyntaxSuggestions("!scene")).toContain("!text - Add text content");
+    expect(getSyntaxSuggestions("!scene\n")).toContain("!text - Add text content");
+  });
+});

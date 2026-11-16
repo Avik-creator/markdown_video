@@ -205,30 +205,6 @@ export default function RenderOptions() {
           Higher FPS = smoother video, longer render time
         </p>
       </div>
-
-      {/* Capture Wait Time Control */}
-      <div>
-        <label className="text-sm text-zinc-400 flex items-center gap-2 mb-2">
-          <Zap className="w-3.5 h-3.5" />
-          Animation Wait Time: {exportSettings.captureWaitTime || 500}ms
-        </label>
-        <input
-          type="range"
-          min="50"
-          max="1000"
-          step="50"
-          value={exportSettings.captureWaitTime || 500}
-          onChange={(e) =>
-            setExportSettings({
-              captureWaitTime: Number.parseInt(e.target.value, 10),
-            })
-          }
-          className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
-        />
-        <p className="text-xs text-zinc-500 mt-1">
-          Higher wait time = smoother animations, longer render time
-        </p>
-      </div>
     </div>
   );
 }

@@ -448,11 +448,13 @@ export function quickSyntaxCheck(markdown: string): {
  */
 export function getSyntaxSuggestions(partialMarkdown: string): string[] {
   const suggestions: string[] = [];
-  const lines = partialMarkdown.split("\n");
-  const lastLine = lines[lines.length - 1]?.trim() || "";
+  // Use the last non-blank line: the cursor usually sits on an empty line
+  // after the directive the user just typed.
+  const lines = partialMarkdown.split("\n").map((l) => l.trim()).filter(Boolean);
+  const lastLine = lines[lines.length - 1] ?? "";
 
   // Suggest scene starters
-  if (lines.length === 0 || lastLine === "---") {
+  if (lastLine === "" || lastLine === "---") {
     suggestions.push("!scene - Start a new scene");
     suggestions.push("!slide - Start a new slide (alias for scene)");
   }
