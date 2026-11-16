@@ -12,6 +12,8 @@ Transform your Markdown into stunning videos with a custom syntax that brings yo
 - **Rich Scene Types**: Support for text, code, images, terminal, diffs, charts, mockups, QR codes, countdowns, progress bars, and more
 - **FFmpeg Integration**: Export videos directly to MP4 or other formats using FFmpeg
 - **Real-time Preview**: See your video content as you edit it with live scene previews
+- **Errors as you type**: Unknown directives and invalid values are marked on the line that caused them, with one-click fixes for typos
+- **Autocomplete**: Directive names after `!`, and allowed values for properties like `transition`, `animation:` and `type:`
 - **Advanced Animations**: Multiple animation types including typewriter, slide, fade, bounce, and custom effects
 - **Particle Effects**: Add confetti, snow, rain, sparkles, and fireworks to your scenes
 - **Code Syntax Highlighting**: Beautiful syntax highlighting for multiple programming languages
