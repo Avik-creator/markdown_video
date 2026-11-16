@@ -28,6 +28,30 @@ Transform your Markdown into stunning videos with a custom syntax that brings yo
 - **Responsive Design**: Fully responsive interface that works on all devices
 - **Share & Embed**: Generate shareable links and embed videos
 
+## 🤖 Use it from an AI agent (MCP)
+
+The hosted MCP server lets Claude, Cursor or any MCP client write and check scenes with the same parser the editor uses.
+
+Claude Code:
+
+```bash
+claude mcp add --transport http markdown-video https://markdown-video-theta.vercel.app/api/mcp/mcp
+```
+
+Cursor, Windsurf and other clients that take a JSON config:
+
+```json
+{
+  "mcpServers": {
+    "markdown-video": {
+      "url": "https://markdown-video-theta.vercel.app/api/mcp/mcp"
+    }
+  }
+}
+```
+
+Then ask your agent something like *"Write a 30-second markdown_video script announcing our v2 release, and validate it."*
+
 ## 🏗️ Architecture
 
 ```mermaid
