@@ -2,6 +2,7 @@
 // Provides documentation, validation, and guide tools for AI assistants
 
 import { createMcpHandler } from "mcp-handler";
+import { version } from "../../../../package.json";
 import { z } from "zod";
 import {
   validateMarkdownSyntax,
@@ -28,6 +29,10 @@ const handler = createMcpHandler(
       },
       async ({ markdown }) => {
         const result = validateMarkdownSyntax(markdown);
+        const byLine = (a: { line?: number }, b: { line?: number }) =>
+          (a.line ?? Infinity) - (b.line ?? Infinity);
+        result.errors.sort(byLine);
+        result.warnings.sort(byLine);
 
         const errorText =
           result.errors.length > 0
@@ -627,6 +632,7 @@ ${template}
     );
   },
   {
+    serverInfo: { name: "markdown-video", version },
     capabilities: {
       tools: {},
     },
