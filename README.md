@@ -181,22 +181,15 @@ Contributions are welcome! To contribute:
 4. Push to the branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+## 💖 Sponsors
+
+markdown_video is free and open source, and maintained in my spare time. If it saves you time, or your company builds on it, consider [sponsoring the project on GitHub](https://github.com/sponsors/Avik-creator). Sponsorship pays for maintenance, new scene types, and keeping the hosted editor online.
+
 ## 📄 License
 
-This project is licensed under the **Creative Commons Attribution-NonCommercial 4.0 International License**.
+markdown_video is released under the [MIT License](LICENSE). You can use, modify, and distribute it, including for commercial purposes, as long as the copyright notice is kept.
 
-You are free to:
-
-- ✅ Use for personal projects
-- ✅ Modify and adapt the code
-- ✅ Share with others (with attribution)
-
-You are NOT allowed to:
-
-- ❌ Use for commercial purposes
-- ❌ Sell or profit from this project
-
-For details, see the [LICENSE](LICENSE) file or visit [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/).
+> Code before v1.0.0 was published under CC BY-NC 4.0. From v1.0.0 on, the project is MIT-licensed.
 
 ## 👏 Acknowledgments
 
