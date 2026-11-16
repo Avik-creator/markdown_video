@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useVideoStore } from "@/lib/use-video-store";
+import { getExportDimensions } from "../utils/export-utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -64,15 +65,6 @@ const getQualitySettings = (quality: string, speed: string) => {
     },
   };
   return qualityMap[quality]?.[speed] || qualityMap.high.balanced;
-};
-
-const getResolutionDimensions = (resolution: string) => {
-  const resMap: Record<string, { width: number; height: number }> = {
-    "480p": { width: 854, height: 480 },
-    "720p": { width: 1280, height: 720 },
-    "1080p": { width: 1920, height: 1080 },
-  };
-  return resMap[resolution] || resMap["1080p"];
 };
 
 export default function FfmpegRender({
@@ -137,16 +129,16 @@ export default function FfmpegRender({
       await document.fonts.ready;
 
       const html2canvas = (await import("html2canvas-pro")).default;
-      const dimensions = getResolutionDimensions(exportSettings.resolution);
+      const dimensions = getExportDimensions(
+        exportSettings.resolution,
+        useVideoStore.getState().aspectRatio
+      );
       const params = getQualitySettings(
         exportSettings.quality,
         exportSettings.speed
       );
 
-      // Capture timing: use user-selected settings
-      // This gives smooth playback while allowing animations to complete
-      const captureWaitTime = exportSettings.captureWaitTime || 500; // ms between captures
-      const outputFps = exportSettings.fps || 30; // Output video FPS
+      const outputFps = exportSettings.fps || 30;
       const totalFrameCount = Math.ceil(totalDuration * outputFps);
       setTotalFrames(totalFrameCount);
 
@@ -157,17 +149,18 @@ export default function FfmpegRender({
 
       setStatus("capturing");
 
+      const frameName = (i: number) => `frame${String(i).padStart(5, "0")}.png`;
+      let lastFrame: Uint8Array | null = null;
+
       for (let frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
         if (cancelledRef.current) break;
 
         const currentTime = frameIndex / outputFps;
         seekTo(Math.min(currentTime, totalDuration));
 
-        // Wait for React to re-render and animations to update
-        // Since we made animations deterministic, we don't need a long wait
-        await new Promise((resolve) => setTimeout(resolve, 100));
-
-        // Ensure all styles are flushed
+        // Scenes render from sceneTime, so a frame is ready once React has
+        // committed and effects have run. A few animation frames cover that;
+        // a fixed sleep here only added 100 ms to every frame.
         for (let i = 0; i < 3; i++) {
           await new Promise((resolve) => requestAnimationFrame(resolve));
         }
@@ -267,12 +260,19 @@ export default function FfmpegRender({
             const arrayBuffer = await blob.arrayBuffer();
             const frameData = new Uint8Array(arrayBuffer);
 
-            // Write frame to FFmpeg filesystem
-            const frameName = `frame${String(frameIndex).padStart(5, "0")}.png`;
-            await ffmpeg.writeFile(frameName, frameData);
+            await ffmpeg.writeFile(frameName(frameIndex), frameData);
+            lastFrame = frameData;
+          } else {
+            throw new Error("Could not get 2D context");
           }
         } catch (error) {
           console.error(`Failed to capture frame ${frameIndex}:`, error);
+          // FFmpeg's image sequence input stops at the first missing file, so a
+          // gap would silently cut the video short. Repeat the previous frame.
+          if (!lastFrame) {
+            throw new Error("Could not capture the first frame");
+          }
+          await ffmpeg.writeFile(frameName(frameIndex), lastFrame);
         }
 
         setCurrentFrame(frameIndex + 1);
@@ -362,8 +362,7 @@ export default function FfmpegRender({
       // Clean up frame files
       for (let frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
         try {
-          const frameName = `frame${String(frameIndex).padStart(5, "0")}.png`;
-          await ffmpeg.deleteFile(frameName);
+          await ffmpeg.deleteFile(frameName(frameIndex));
         } catch {
           // Ignore cleanup errors
         }

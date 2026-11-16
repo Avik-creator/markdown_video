@@ -33,19 +33,34 @@ export function savePresets(presets: ExportPreset[]) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
 }
 
-export function getResolutionDimensions(res: string) {
-  switch (res) {
-    case "720p":
-      return { width: 1280, height: 720 }
-    case "1080p":
-      return { width: 1920, height: 1080 }
-    case "1440p":
-      return { width: 2560, height: 1440 }
-    case "4k":
-      return { width: 3840, height: 2160 }
-    default:
-      return { width: 1920, height: 1080 }
-  }
+const SHORT_SIDE: Record<string, number> = {
+  "480p": 480,
+  "720p": 720,
+  "1080p": 1080,
+  "1440p": 1440,
+  "4k": 2160,
+}
+
+const ASPECT: Record<string, [number, number]> = {
+  "16:9": [16, 9],
+  "9:16": [9, 16],
+  "1:1": [1, 1],
+  "4:3": [4, 3],
+}
+
+// libx264 with yuv420p needs even dimensions.
+const even = (n: number) => Math.round(n / 2) * 2
+
+/**
+ * Output size for a resolution preset and the project's aspect ratio.
+ * The preset names the short side, so "1080p" is 1920x1080 at 16:9 and 1080x1920 at 9:16.
+ */
+export function getExportDimensions(resolution: string, aspectRatio: string = "16:9") {
+  const short = SHORT_SIDE[resolution] ?? 1080
+  const [w, h] = ASPECT[aspectRatio] ?? ASPECT["16:9"]
+  return w >= h
+    ? { width: even((short * w) / h), height: even(short) }
+    : { width: even(short), height: even((short * h) / w) }
 }
 
 export function getQualitySettings(q: string): QualitySettings {
@@ -74,23 +89,6 @@ export function getQualitySettings(q: string): QualitySettings {
     default:
       return { scale: 2, captureInterval: 1, bitrate: 20000000, waitTime: 16 }
   }
-}
-
-export function getMimeType(fmt: string) {
-  if (fmt === "webm") {
-    // Prefer VP9 for better quality
-    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")) {
-      return "video/webm;codecs=vp9,opus"
-    }
-    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp9")) {
-      return "video/webm;codecs=vp9"
-    }
-    if (MediaRecorder.isTypeSupported("video/webm;codecs=vp8")) {
-      return "video/webm;codecs=vp8"
-    }
-    return "video/webm"
-  }
-  return "video/webm"
 }
 
 export function estimatedTime(totalDuration: number, fps: string, quality: string) {

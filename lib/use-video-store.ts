@@ -139,7 +139,6 @@ export const useVideoStore = create<VideoStore>()(
           speed: "balanced",
           format: "mp4",
           fps: 30,
-          captureWaitTime: 500,
         },
 
         // Localization

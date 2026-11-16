@@ -169,7 +169,8 @@ public/
 - `pnpm dev` - Start the development server with hot reload
 - `pnpm build` - Build the application for production
 - `pnpm start` - Start the production server
-- `pnpm lint` - Run ESLint to check code quality
+- `pnpm typecheck` - Type-check the project with `tsc`
+- `pnpm test` - Run the test suite with Vitest
 
 ## 🤝 Contributing
 
