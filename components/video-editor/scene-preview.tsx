@@ -237,12 +237,16 @@ function SceneContent({
       className="absolute inset-0"
       initial={variants.initial}
       animate={controls}
-      exit={variants.exit}
       transition={variants.transition}
     >
       <SceneContentInner scene={scene} sceneTime={sceneTime} />
     </motion.div>
   );
+}
+
+// True when the editor is rendered inside an iframe (embed mode).
+function isEmbeddedFrame() {
+  return typeof window !== "undefined" && window.self !== window.top;
 }
 
 export const ScenePreview = forwardRef<HTMLDivElement, object>(
@@ -267,13 +271,22 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
       return { currentScene: scenes[scenes.length - 1] || null, sceneTime: 0 };
     }, [scenes, currentTime]);
 
-    const aspectRatioClass =
-      {
-        "16:9": "aspect-video",
-        "9:16": "aspect-[9/16]",
-        "1:1": "aspect-square",
-        "4:3": "aspect-[4/3]",
-      }[aspectRatio] || "aspect-video";
+    const [ratioW, ratioH] =
+      (
+        {
+          "16:9": [16, 9],
+          "9:16": [9, 16],
+          "1:1": [1, 1],
+          "4:3": [4, 3],
+        } as Record<string, [number, number]>
+      )[aspectRatio] ?? [16, 9];
+
+    // Fit the frame inside the preview area at any aspect ratio: as wide as
+    // possible without exceeding the area's height. cqw/cqh are the
+    // container's content box, set up by containerType below.
+    const fitWidth = `min(100cqw, calc(100cqh * ${ratioW} / ${ratioH})${
+      isEmbeddedFrame() ? "" : ", 56rem"
+    })`;
 
     if (!currentScene) {
       return (
@@ -283,47 +296,38 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
       );
     }
 
-    // Check if we're in an iframe (embed mode)
-    const isEmbedded =
-      typeof window !== "undefined" && window.self !== window.top;
+    const isEmbedded = isEmbeddedFrame();
 
     return (
       <div
         className={cn(
-          "flex-1 flex items-center justify-center bg-[#0d0d12]",
+          "flex-1 min-h-0 min-w-0 flex items-center justify-center bg-[#0d0d12]",
           isEmbedded ? "p-2 overflow-auto" : "p-4 overflow-hidden"
         )}
+        style={{ containerType: "size" }}
       >
         <div
           ref={ref}
           data-scene-preview="true"
           className={cn(
-            "relative w-full rounded-lg overflow-hidden shadow-2xl transition-transform",
-            aspectRatioClass,
-            isEmbedded ? "max-w-full" : "max-w-4xl"
+            "relative shrink-0 rounded-lg overflow-hidden shadow-2xl transition-transform"
           )}
           style={{
             background: currentScene.background || "#1a1a24",
             transform: isEmbedded ? "scale(1)" : `scale(${zoom / 100})`,
-            maxHeight:
-              aspectRatio === "9:16"
-                ? isEmbedded
-                  ? "100%"
-                  : "80vh"
-                : isEmbedded
-                ? "100%"
-                : undefined,
-            width: aspectRatio === "9:16" ? "auto" : undefined,
+            width: fitWidth,
+            aspectRatio: `${ratioW} / ${ratioH}`,
           }}
         >
           <CameraWrapper camera={currentScene.camera} sceneTime={sceneTime}>
-            <AnimatePresence mode="wait">
-              <SceneContent
-                key={currentScene.id}
-                scene={currentScene}
-                sceneTime={sceneTime}
-              />
-            </AnimatePresence>
+            {/* No exit animation: it ran on wall-clock time, so exports caught
+                the previous scene mid-exit depending on capture speed. The
+                incoming scene's transition is driven by sceneTime instead. */}
+            <SceneContent
+              key={currentScene.id}
+              scene={currentScene}
+              sceneTime={sceneTime}
+            />
           </CameraWrapper>
 
           {/* Overlays */}
