@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Button } from "@components/ui/button"
-import { X, Play, Sparkles, Code, Monitor, LogOut, Settings } from "lucide-react"
+import { X, Play, Sparkles, Code, Monitor, LogOut, Settings, LayoutTemplate } from "lucide-react"
 import { TEMPLATES } from "@/lib/templates"
 import type { Template } from "@/lib/types"
 import { useVideoStore } from "@/lib/use-video-store"
@@ -20,38 +20,32 @@ const categoryIcons = {
   custom: Settings,
 }
 
-const categoryColors = {
-  intro: "text-pink-400 bg-pink-500/10",
-  tutorial: "text-emerald-400 bg-emerald-500/10",
-  demo: "text-blue-400 bg-blue-500/10",
-  outro: "text-amber-400 bg-amber-500/10",
-  custom: "text-purple-400 bg-purple-500/10",
-}
-
 function TemplateCard({ template, onSelect }: { template: Template; onSelect: () => void }) {
   const Icon = categoryIcons[template.category]
-  const colorClass = categoryColors[template.category]
 
   return (
-    <div className="bg-[#1a1a24] rounded-lg border border-white/10 overflow-hidden hover:border-white/20 transition-colors group">
-      {/* Preview gradient */}
-      <div className="h-20 bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden">
+    <div className="bg-gray-50 dark:bg-neutral-900 rounded-lg border border-gray-200 dark:border-neutral-800 overflow-hidden hover:border-gray-300 dark:hover:border-neutral-700 transition-colors group">
+      {/* Preview area */}
+      <div className="h-16 bg-white dark:bg-neutral-950 relative overflow-hidden border-b border-gray-200 dark:border-neutral-800">
         <div className="absolute inset-0 flex items-center justify-center">
-          <Icon className={cn("w-8 h-8 opacity-30", colorClass.split(" ")[0])} />
+          <Icon className="w-6 h-6 text-gray-400 dark:text-neutral-600" />
         </div>
         <div className="absolute bottom-2 left-2">
-          <span className={cn("text-xs px-2 py-0.5 rounded-full", colorClass)}>{template.category}</span>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 dark:bg-neutral-800 text-gray-600 dark:text-neutral-400 border border-gray-200 dark:border-neutral-700 capitalize">
+            {template.category}
+          </span>
         </div>
       </div>
 
       <div className="p-3">
-        <h3 className="text-sm font-medium text-white mb-1">{template.name}</h3>
-        <p className="text-xs text-muted-foreground line-clamp-2 mb-3">{template.description}</p>
+        <h3 className="text-sm font-medium text-gray-900 dark:text-neutral-100 mb-1">{template.name}</h3>
+        <p className="text-xs text-gray-600 dark:text-neutral-400 line-clamp-2 mb-3">{template.description}</p>
 
         <Button
           size="sm"
+          variant="outline"
           onClick={onSelect}
-          className="w-full gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10"
+          className="w-full gap-2"
         >
           <Play className="w-3 h-3" />
           Use Template
@@ -74,24 +68,24 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
   }
 
   return (
-    <div className="w-96 bg-[#0f0f14] border-l border-white/10 flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+    <div className="w-80 bg-white dark:bg-neutral-950 border-l border-gray-200 dark:border-neutral-800 flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-neutral-800 shrink-0">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-pink-400" />
-          <h2 className="font-semibold text-white">Templates</h2>
+          <LayoutTemplate className="w-4 h-4 text-gray-600 dark:text-neutral-400" />
+          <h2 className="text-sm font-medium text-gray-900 dark:text-neutral-100">Templates</h2>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 text-muted-foreground hover:text-white"
+          className="h-8 w-8 text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-neutral-800"
         >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
       {/* Category filter */}
-      <div className="p-3 border-b border-white/10 flex gap-1 flex-wrap shrink-0">
+      <div className="p-3 border-b border-gray-200 dark:border-neutral-800 flex gap-1 flex-wrap shrink-0">
         {["all", "intro", "tutorial", "demo", "outro", "custom"].map((cat) => (
           <Button
             key={cat}
@@ -100,7 +94,9 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
             onClick={() => setActiveCategory(cat as Template["category"] | "all")}
             className={cn(
               "text-xs h-7 capitalize",
-              activeCategory === cat ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white",
+              activeCategory === cat 
+                ? "bg-gray-100 dark:bg-neutral-800 text-gray-900 dark:text-neutral-100" 
+                : "text-gray-500 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-neutral-800",
             )}
           >
             {cat}
