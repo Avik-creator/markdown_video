@@ -212,6 +212,14 @@ Contributions are welcome! To contribute:
 
 markdown_video is free and open source, and maintained in my spare time. If it saves you time, or your company builds on it, consider [sponsoring the project on GitHub](https://github.com/sponsors/Avik-creator). Sponsorship pays for maintenance, new scene types, and keeping the hosted editor online.
 
+### Sponsored by
+
+<a href="https://neon.com">
+  <img src=".github/assets/neon-logo.svg" alt="Neon" width="200">
+</a>
+
+[Neon](https://neon.com) supports markdown_video through the Neon Open Source Program.
+
 ## 📄 License
 
 markdown_video is released under the [MIT License](LICENSE). You can use, modify, and distribute it, including for commercial purposes, as long as the copyright notice is kept.
