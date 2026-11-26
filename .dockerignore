@@ -1,0 +1,16 @@
+.git
+.gitignore
+.turbo
+.vercel
+node_modules
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/coverage
+**/*.log
+**/*.tsbuildinfo
+.env
+.env.*
+!.env.template
+IMPROVEMENTS.md

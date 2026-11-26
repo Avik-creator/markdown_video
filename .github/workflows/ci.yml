@@ -57,3 +57,5 @@ jobs:
         timeout-minutes: 10
       - run: pnpm --filter markdown-video test:integration
         timeout-minutes: 10
+      - run: pnpm --filter @markdown-video/render-worker test:integration
+        timeout-minutes: 10
