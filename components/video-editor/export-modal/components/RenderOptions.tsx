@@ -3,7 +3,8 @@
 import { useState, useRef, useEffect } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
 import type { ExportFormat } from "@/lib/types";
-import { ChevronDown, Monitor, Sparkles, Zap, Film } from "lucide-react";
+import { ChevronDown, Monitor, Sparkles, Zap, Film, Languages } from "lucide-react";
+import { resolveEffectiveLocale } from "@/lib/parser/i18n";
 import { cn } from "@/lib/utils";
 import CornerMarkers from "@/components/CornerMarkers";
 
@@ -122,6 +123,20 @@ function CustomDropdown({
 export default function RenderOptions() {
   const exportSettings = useVideoStore((state) => state.exportSettings);
   const setExportSettings = useVideoStore((state) => state.setExportSettings);
+  const locales = useVideoStore((state) => state.locales);
+  const defaultLocale = useVideoStore((state) => state.defaultLocale);
+  const activeLocale = useVideoStore((state) => state.activeLocale);
+  const setActiveLocale = useVideoStore((state) => state.setActiveLocale);
+
+  const effectiveLocale = resolveEffectiveLocale({
+    activeLocale,
+    locales,
+    defaultLocale,
+  });
+  const localeOptions: DropdownOption[] = locales.map((locale) => ({
+    value: locale,
+    label: locale,
+  }));
 
   const formatOptions: DropdownOption[] = [
     { value: "mp4", label: "MP4 - Project aspect" },
@@ -160,6 +175,23 @@ export default function RenderOptions() {
         options={formatOptions}
         onChange={(value) => setExportSettings({ format: value as ExportFormat })}
       />
+
+      {/* Export captures the live preview DOM. To avoid preview/export text
+          diverging, choosing an export locale deliberately selects the same
+          runtime activeLocale used by the preview; exportSettings.locale is a
+          record of that choice for export consumers. */}
+      {locales.length > 0 && effectiveLocale && (
+        <CustomDropdown
+          label="Export Locale"
+          icon={<Languages className="w-3.5 h-3.5" />}
+          value={effectiveLocale}
+          options={localeOptions}
+          onChange={(value) => {
+            setActiveLocale(value);
+            setExportSettings({ locale: value });
+          }}
+        />
+      )}
 
       <CustomDropdown
         label="Resolution"
