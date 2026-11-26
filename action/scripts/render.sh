@@ -107,7 +107,9 @@ fi
 
 # The workspace remains the CLI cwd, so the canonical CLI path safety checks
 # still apply. All paths above are absolute but deliberately confined to that
-# same cwd before the CLI is invoked.
+# same cwd before the CLI is invoked. The browser path is fixed to the same
+# location restored by the action cache.
+export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
 cd "$workspace"
 "${command[@]}"
 

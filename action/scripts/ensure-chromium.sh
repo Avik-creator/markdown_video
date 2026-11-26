@@ -4,6 +4,10 @@ set -euo pipefail
 renderer_root="${1:?renderer root required}"
 cd "$renderer_root"
 
+# Keep the browser location aligned with the action's cache path even when the
+# calling workflow sets PLAYWRIGHT_BROWSERS_PATH for a different purpose.
+export PLAYWRIGHT_BROWSERS_PATH="$HOME/.cache/ms-playwright"
+
 pnpm --filter markdown-video exec playwright install chromium
 
 chromium_launches() {
