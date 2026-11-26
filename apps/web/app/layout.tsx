@@ -8,6 +8,7 @@ import {
   Inter,
   JetBrains_Mono,
   Merriweather,
+  Noto_Color_Emoji,
   Playfair_Display,
   Source_Code_Pro,
 } from "next/font/google";
@@ -75,6 +76,17 @@ const merriweather = Merriweather({
   variable: "--font-merriweather-family",
   preload: false,
   fallback: ["Georgia", "serif"],
+});
+
+// Color emoji are loaded on demand rather than preloaded: the full repertoire
+// is much larger than a text subset, and export capture explicitly waits for
+// document.fonts.ready before rasterizing frames.
+const notoColorEmoji = Noto_Color_Emoji({
+  weight: "400",
+  subsets: ["emoji"],
+  variable: "--font-emoji",
+  preload: false,
+  fallback: ["Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"],
 });
 
 const fallbackSiteUrl = "https://markdownvideo.avikmukherjee.com";
@@ -196,7 +208,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable}`}
+      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable} ${notoColorEmoji.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
