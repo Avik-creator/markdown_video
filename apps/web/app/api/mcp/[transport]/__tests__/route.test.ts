@@ -1,11 +1,38 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { enforceMcpRateLimit } = vi.hoisted(() => ({
+const {
+  enforceMcpRateLimit,
+  enforceMcpRenderPreviewRateLimit,
+  enforceMcpRenderVideoRateLimit,
+  isRenderWorkerConfigured,
+  renderWorkerPreview,
+  renderWorkerVideo,
+  isRenderStorageConfigured,
+  storeRenderVideo,
+} = vi.hoisted(() => ({
   enforceMcpRateLimit: vi.fn(),
+  enforceMcpRenderPreviewRateLimit: vi.fn(),
+  enforceMcpRenderVideoRateLimit: vi.fn(),
+  isRenderWorkerConfigured: vi.fn(),
+  renderWorkerPreview: vi.fn(),
+  renderWorkerVideo: vi.fn(),
+  isRenderStorageConfigured: vi.fn(),
+  storeRenderVideo: vi.fn(),
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
   enforceMcpRateLimit,
+  enforceMcpRenderPreviewRateLimit,
+  enforceMcpRenderVideoRateLimit,
+}));
+vi.mock("@/lib/render-worker-client", () => ({
+  isRenderWorkerConfigured,
+  renderWorkerPreview,
+  renderWorkerVideo,
+}));
+vi.mock("@/lib/render-storage", () => ({
+  isRenderStorageConfigured,
+  storeRenderVideo,
 }));
 
 import { GET, POST } from "../route";
@@ -106,7 +133,18 @@ async function callTool(name: string, args: Record<string, unknown>) {
 describe("MCP route", () => {
   beforeEach(() => {
     enforceMcpRateLimit.mockReset();
+    enforceMcpRenderPreviewRateLimit.mockReset();
+    enforceMcpRenderVideoRateLimit.mockReset();
+    isRenderWorkerConfigured.mockReset();
+    renderWorkerPreview.mockReset();
+    renderWorkerVideo.mockReset();
+    isRenderStorageConfigured.mockReset();
+    storeRenderVideo.mockReset();
     enforceMcpRateLimit.mockResolvedValue(null);
+    enforceMcpRenderPreviewRateLimit.mockResolvedValue(null);
+    enforceMcpRenderVideoRateLimit.mockResolvedValue(null);
+    isRenderWorkerConfigured.mockReturnValue(true);
+    isRenderStorageConfigured.mockReturnValue(true);
   });
 
   it("accepts an initialize request", async () => {
@@ -120,7 +158,7 @@ describe("MCP route", () => {
     expect(body.result.serverInfo).toEqual({ name: "markdown-video", version: "1.0.0" });
   });
 
-  it("lists all ten tools", async () => {
+  it("lists all twelve tools", async () => {
     const { body } = await rpc("tools/list");
     expect(body.result.tools.map((t: { name: string }) => t.name).sort()).toEqual([
       "generate_template",
@@ -131,6 +169,8 @@ describe("MCP route", () => {
       "parse_markdown",
       "quick_check",
       "quick_reference",
+      "render_preview",
+      "render_video",
       "search_docs",
       "validate_syntax",
     ]);
@@ -270,5 +310,104 @@ describe("MCP route", () => {
   it("validate_syntax accepts a valid document", async () => {
     const text = await callTool("validate_syntax", { markdown: "!scene\n!text\nHello" });
     expect(text).toContain("Valid: true");
+  });
+
+  it("render_preview returns MCP image content blocks from worker PNGs", async () => {
+    renderWorkerPreview.mockResolvedValueOnce({
+      duration: 2,
+      width: 1280,
+      height: 720,
+      frames: [0, 1, 2].map((time) => ({
+        time,
+        pngBase64: Buffer.from(`png-${time}`).toString("base64"),
+      })),
+    });
+
+    const { body } = await rpc("tools/call", {
+      name: "render_preview",
+      arguments: { markdown: "!scene\n!duration 2\n!text\nHello", times: [0, 1, 2] },
+    });
+
+    expect(body.result.isError).not.toBe(true);
+    expect(body.result.content[0].text).toContain("Rendered 3 preview frame");
+    expect(body.result.content.slice(1)).toEqual(
+      [0, 1, 2].map((time) => ({
+        type: "image",
+        data: Buffer.from(`png-${time}`).toString("base64"),
+        mimeType: "image/png",
+      }))
+    );
+    expect(enforceMcpRenderPreviewRateLimit).toHaveBeenCalled();
+  });
+
+  it("render_video stores the worker mp4 and returns its temporary URL metadata", async () => {
+    renderWorkerVideo.mockResolvedValueOnce({
+      mp4: Buffer.from("mp4"),
+      duration: 1,
+      width: 854,
+      height: 480,
+      fps: 12,
+      totalFrames: 12,
+      sizeBytes: 3,
+    });
+    storeRenderVideo.mockResolvedValueOnce({
+      id: "a".repeat(32),
+      duration: 1,
+      width: 854,
+      height: 480,
+      fps: 12,
+      totalFrames: 12,
+      sizeBytes: 3,
+      expiresAt: "2030-01-01T00:00:00.000Z",
+      ttlSeconds: 3600,
+    });
+
+    const { body } = await rpc("tools/call", {
+      name: "render_video",
+      arguments: {
+        markdown: "!scene\n!duration 1\n!text\nHello",
+        options: { resolution: "480p", fps: 12 },
+      },
+    });
+
+    expect(body.result.isError).not.toBe(true);
+    expect(body.result.structuredContent).toMatchObject({
+      id: "a".repeat(32),
+      duration: 1,
+      width: 854,
+      height: 480,
+      sizeBytes: 3,
+    });
+    expect(body.result.structuredContent.url).toContain(`/api/renders/${"a".repeat(32)}`);
+    expect(storeRenderVideo).toHaveBeenCalledWith(
+      expect.objectContaining({ duration: 1, width: 854, fps: 12 })
+    );
+    expect(enforceMcpRenderVideoRateLimit).toHaveBeenCalled();
+  });
+
+  it("render tools fail closed with clear tool errors when unconfigured", async () => {
+    isRenderWorkerConfigured.mockReturnValue(false);
+    const { body } = await rpc("tools/call", {
+      name: "render_preview",
+      arguments: { markdown: "!scene\n!duration 1\n!text\nHello" },
+    });
+
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content[0].text).toContain("RENDER_WORKER_URL");
+    expect(renderWorkerPreview).not.toHaveBeenCalled();
+  });
+
+  it("render tools map fail-closed rate limiting to tool errors", async () => {
+    enforceMcpRenderVideoRateLimit.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "Rate limiting is unavailable" }), { status: 503 })
+    );
+    const { body } = await rpc("tools/call", {
+      name: "render_video",
+      arguments: { markdown: "!scene\n!duration 1\n!text\nHello" },
+    });
+
+    expect(body.result.isError).toBe(true);
+    expect(body.result.content[0].text).toContain("fails closed");
+    expect(renderWorkerVideo).not.toHaveBeenCalled();
   });
 });
