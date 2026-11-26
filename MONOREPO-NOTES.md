@@ -7,6 +7,7 @@ apps/
   web/       # Next.js editor, landing page, API routes, and MCP route
 packages/
   core/      # Parser, directive schema, validation/docs, share codec, types, and render geometry
+  scenes/    # React scene renderers, overlays, deterministic animation math, and SceneFrame composition
 ```
 
 ## Local commands
@@ -80,3 +81,16 @@ Notes:
 3. Vercel detects the pnpm workspace and install command automatically. Do not override the install command unless a deployment log shows otherwise.
 4. Existing environment variables do not move. Keep `NEXT_PUBLIC_SITE_URL` and either the `UPSTASH_REDIS_REST_*` or `KV_REST_API_*` variables configured for the appropriate environments.
 5. If using the Vercel CLI instead of the dashboard, use version 20.1.0 or newer and link/manage the project from the repository root so the `apps/web` root-directory mapping is preserved.
+
+## `packages/scenes` boundaries
+
+`@markdown-video/scenes` owns the reusable React rendering surface: every scene-type renderer, the particle/callout/presenter/timeline overlays, deterministic sceneTime-driven animation math, and `SceneFrame` — the logical-size composition root that is the single capture contract (`data-scene-preview="true"`). It has no zustand store, no `next/*` imports and no `@/` aliases; localization arrives through `SceneLocalizationProvider` as plain parsed-document data. `react`, `react-dom`, and `framer-motion` are peer dependencies so the host controls the single runtime copy.
+
+The app shell keeps what is genuinely editor-specific: store subscriptions, the ResizeObserver fit/zoom measurement (`use-measured-preview-size`, `preview-fit`), and the display transform/visibility gating, passed into `SceneFrame` through the `style` prop. Browser export capture machinery (html2canvas clone mutation of `data-scene-preview`) also stays in the app.
+
+Scenes builds like core: plain `tsc`, NodeNext ESM, explicit `.js` import specifiers. The build config additionally excludes `**/__tests__` and `*.test.*` so unit tests never reach published output. `transpilePackages` remains unnecessary for the same reasons as core.
+
+Two host contracts are documented in `packages/scenes/README.md` and pinned empirically:
+
+- **Fonts**: scenes resolve font families through host-defined CSS variables (`SCENE_FONT_CSS_VARIABLES`); the package never loads fonts. The Next.js host defines them via next/font in `apps/web/app/layout.tsx`.
+- **Tailwind**: Tailwind v4 automatic scanning does not reach workspace package sources (verified: deleting `packages/scenes/src` changes generated CSS by zero bytes). `apps/web/app/globals.css` therefore registers `@source "../../../packages/scenes/src"` — note the three segments, resolved relative to the CSS file. Scanning `src/` rather than `dist/` is deliberate because `dist/` is gitignored and invisible to the scanner.

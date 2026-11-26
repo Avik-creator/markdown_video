@@ -10,13 +10,49 @@ export interface FontFamilyStyle {
 const MONOSPACE_FALLBACKS = "ui-monospace, SFMono-Regular, Menlo, monospace";
 
 /**
- * Build a font-family declaration around a next/font CSS variable.
+ * The host font-loading contract, in one authoritative place.
+ *
+ * Scene font families resolve through CSS custom properties that the HOST
+ * must define — the package never loads fonts itself. The Next.js editor
+ * defines them with next/font in app/layout.tsx (which exposes hashed family
+ * names through exactly these variables); a headless render host can define
+ * the same variable names with @font-face rules and its own font files.
+ *
+ * The variable names intentionally do not use Google family names: hosts
+ * injecting next/font cannot choose them, so the contract is fixed.
+ */
+export const SCENE_TEXT_FONT_VARIABLES: Record<TextFontFamily, string> = {
+  serif: "--font-playfair",
+  sans: "--font-inter",
+  mono: "--font-ibm-plex-family",
+  display: "--font-merriweather-family",
+};
+
+export const SCENE_CODE_FONT_VARIABLES: Record<
+  Exclude<CodeFontFamily, "courier">,
+  string
+> = {
+  mono: "--font-geist-mono",
+  jetbrains: "--font-jetbrains-family",
+  fira: "--font-fira-family",
+  source: "--font-source-code-family",
+  inconsolata: "--font-inconsolata-family",
+};
+
+/** Every CSS variable a host must define for full scene font coverage. */
+export const SCENE_FONT_CSS_VARIABLES: readonly string[] = [
+  ...Object.values(SCENE_TEXT_FONT_VARIABLES),
+  ...Object.values(SCENE_CODE_FONT_VARIABLES),
+];
+
+/**
+ * Build a font-family declaration around a host-provided CSS variable.
  *
  * The fallback argument inside var() is deliberate. If a custom property is
  * unavailable (most importantly in a detached html2canvas clone whose styles
  * failed to copy), the declaration still resolves to the fallback instead of
  * becoming invalid at computed-value time. In normal rendering and in intact
- * export clones, the variable contains next/font's generated family names.
+ * export clones, the variable contains the host's generated family names.
  */
 function variableFontFamily(
   variableName: string,
@@ -26,56 +62,42 @@ function variableFontFamily(
   return `var(${variableName}, ${firstFallback}), ${fallbacks}`;
 }
 
-/**
- * Variables must match app/layout.tsx. They intentionally do not use Google
- * family names: next/font exposes hashed family names through these variables.
- */
-export const textFontFamilyStyles: Record<TextFontFamily, FontFamilyStyle> = {
-  serif: {
-    fontFamily: variableFontFamily("--font-playfair", "Georgia, serif"),
-  },
-  sans: {
-    fontFamily: variableFontFamily("--font-inter", "system-ui, sans-serif"),
-  },
-  mono: {
-    fontFamily: variableFontFamily(
-      "--font-ibm-plex-family",
-      MONOSPACE_FALLBACKS
-    ),
-  },
-  display: {
-    fontFamily: variableFontFamily(
-      "--font-merriweather-family",
-      "Georgia, serif"
-    ),
-  },
+const SERIF_FALLBACKS = "Georgia, serif";
+const SANS_FALLBACKS = "system-ui, sans-serif";
+
+const TEXT_FALLBACKS: Record<TextFontFamily, string> = {
+  serif: SERIF_FALLBACKS,
+  sans: SANS_FALLBACKS,
+  mono: MONOSPACE_FALLBACKS,
+  display: SERIF_FALLBACKS,
+};
+
+function buildFontStyles<T extends string>(
+  variables: Record<T, string>,
+  fallbacks: Record<T, string>
+): Record<T, FontFamilyStyle> {
+  const styles = {} as Record<T, FontFamilyStyle>;
+  for (const key of Object.keys(variables) as T[]) {
+    styles[key] = {
+      fontFamily: variableFontFamily(variables[key], fallbacks[key]),
+    };
+  }
+  return styles;
+}
+
+export const textFontFamilyStyles: Record<TextFontFamily, FontFamilyStyle> =
+  buildFontStyles(SCENE_TEXT_FONT_VARIABLES, TEXT_FALLBACKS);
+
+const CODE_FALLBACKS: Record<keyof typeof SCENE_CODE_FONT_VARIABLES, string> = {
+  mono: MONOSPACE_FALLBACKS,
+  jetbrains: MONOSPACE_FALLBACKS,
+  fira: MONOSPACE_FALLBACKS,
+  source: MONOSPACE_FALLBACKS,
+  inconsolata: MONOSPACE_FALLBACKS,
 };
 
 export const codeFontFamilyStyles: Record<CodeFontFamily, FontFamilyStyle> = {
-  mono: {
-    fontFamily: variableFontFamily("--font-geist-mono", MONOSPACE_FALLBACKS),
-  },
-  jetbrains: {
-    fontFamily: variableFontFamily(
-      "--font-jetbrains-family",
-      MONOSPACE_FALLBACKS
-    ),
-  },
-  fira: {
-    fontFamily: variableFontFamily("--font-fira-family", MONOSPACE_FALLBACKS),
-  },
-  source: {
-    fontFamily: variableFontFamily(
-      "--font-source-code-family",
-      MONOSPACE_FALLBACKS
-    ),
-  },
-  inconsolata: {
-    fontFamily: variableFontFamily(
-      "--font-inconsolata-family",
-      MONOSPACE_FALLBACKS
-    ),
-  },
-  // Courier is a system font; there is no corresponding next/font variable.
+  ...buildFontStyles(SCENE_CODE_FONT_VARIABLES, CODE_FALLBACKS),
+  // Courier is a system font; there is no corresponding host font variable.
   courier: { fontFamily: '"Courier New", Courier, monospace' },
 };

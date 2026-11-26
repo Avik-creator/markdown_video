@@ -98,10 +98,14 @@ export {
 } from "./utils/constants.js";
 
 // Scene font-family resolution against host-provided CSS variables. The
-// variable contract is documented in the package README.
+// variable contract is documented in the package README; the SCENE_*_VARIABLES
+// constants are its machine-readable form for hosts wiring their own fonts.
 export {
   textFontFamilyStyles,
   codeFontFamilyStyles,
+  SCENE_TEXT_FONT_VARIABLES,
+  SCENE_CODE_FONT_VARIABLES,
+  SCENE_FONT_CSS_VARIABLES,
 } from "./utils/fonts.js";
 export type { FontFamilyStyle } from "./utils/fonts.js";
 

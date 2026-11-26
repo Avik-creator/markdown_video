@@ -1,6 +1,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Scene components live outside this app in @markdown-video/scenes. Tailwind's
+   automatic content detection does not reach workspace package sources, so
+   the scene classes would silently drop out of the build without this
+   explicit source registration. Keep it in sync with the contract documented
+   in packages/scenes/README.md. */
+@source "../../../packages/scenes/src";
+
 @custom-variant dark (&:is(.dark *));
 
 /* Minimalistic dark theme with zinc colors */
