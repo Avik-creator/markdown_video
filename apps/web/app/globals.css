@@ -180,3 +180,116 @@ html {
     transform: translateY(0);
   }
 }
+
+/* Landing-page paper system. These tokens are scoped to the homepage so the
+   editor's dark-first UI keeps its existing contrast and component colors. */
+.landing-paper {
+  --landing-paper: #f4f0e6;
+  --landing-paper-deep: #e7e1cf;
+  --landing-card: #fbf8ef;
+  --landing-ink: #171512;
+  --landing-muted: #6f6a5e;
+  --landing-faint: #817a6d;
+  --landing-line: #d3ccba;
+  --landing-accent: #a81645;
+  --landing-accent-deep: #780f31;
+  color: var(--landing-ink);
+  background-color: var(--landing-paper);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E"),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+  font-optical-sizing: auto;
+}
+
+.landing-card {
+  background: var(--landing-card);
+  border: 1px solid color-mix(in oklab, var(--landing-line) 82%, transparent);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.72) inset,
+    0 18px 48px rgba(42, 35, 25, 0.09),
+    0 3px 10px rgba(42, 35, 25, 0.045);
+}
+
+.landing-dark-card {
+  background: #191714;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 20px 54px rgba(42, 35, 25, 0.16),
+    0 3px 12px rgba(42, 35, 25, 0.08);
+}
+
+.landing-outline-word {
+  color: transparent;
+  -webkit-text-stroke: 1px color-mix(in oklab, var(--landing-ink) 30%, transparent);
+}
+
+.landing-grid-lines {
+  background-image:
+    linear-gradient(to right, color-mix(in oklab, var(--landing-line) 58%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklab, var(--landing-line) 58%, transparent) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: linear-gradient(to bottom, black, transparent 76%);
+}
+
+.registration-mark {
+  position: relative;
+  width: 22px;
+  height: 22px;
+  border: 1px solid color-mix(in oklab, var(--landing-ink) 52%, transparent);
+  border-radius: 999px;
+  opacity: 0.56;
+}
+
+.registration-mark::before,
+.registration-mark::after {
+  content: "";
+  position: absolute;
+  background: color-mix(in oklab, var(--landing-ink) 52%, transparent);
+}
+
+.registration-mark::before {
+  width: 30px;
+  height: 1px;
+  left: -5px;
+  top: 10px;
+}
+
+.registration-mark::after {
+  width: 1px;
+  height: 30px;
+  left: 10px;
+  top: -5px;
+}
+
+.landing-ruler {
+  background-image: repeating-linear-gradient(
+    to right,
+    color-mix(in oklab, var(--landing-ink) 30%, transparent) 0 1px,
+    transparent 1px 12px
+  );
+}
+
+.landing-serif-tight {
+  font-family: var(--font-playfair), Georgia, serif;
+  letter-spacing: -0.045em;
+}
+
+.landing-display-tight {
+  font-family: var(--font-inter), system-ui, sans-serif;
+  letter-spacing: -0.058em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .landing-paper *,
+  .landing-paper *::before,
+  .landing-paper *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
