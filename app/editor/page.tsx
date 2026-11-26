@@ -65,7 +65,10 @@ async function resolveSharedMarkdown(mdParam: string | undefined, projectParam: 
     // reading request headers or consuming any of that budget, and ordinary
     // editor visits never enter this branch. Project storage and distributed
     // rate limiting use the same Redis dependency, so a rate-limit failure is
-    // surfaced as temporary project unavailability rather than bypassed.
+    // surfaced as an error rather than bypassed — but a genuine 429 (the
+    // visitor is simply asking too often, retryable within seconds) is told
+    // apart from a 503 (the rate-limit dependency itself is down) because the
+    // advice differs: "try again shortly" versus "storage is not responding".
     // Keep the framework's headers() call outside try/catch so any rendering
     // control-flow exception retains Next.js semantics. Rate-limit enforcement
     // itself handles expected Redis failures by returning a 503 Response; this
@@ -74,7 +77,10 @@ async function resolveSharedMarkdown(mdParam: string | undefined, projectParam: 
     try {
       const rateLimitResponse = await enforceProjectReadRateLimit({ headers: requestHeaders })
       if (rateLimitResponse) {
-        return { status: "error", kind: "project-unavailable" }
+        return {
+          status: "error",
+          kind: rateLimitResponse.status === 429 ? "rate-limited" : "project-unavailable",
+        }
       }
     } catch (error) {
       console.error("Error rate limiting shared project lookup:", error)

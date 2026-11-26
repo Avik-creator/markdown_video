@@ -147,10 +147,25 @@ describe("editor page share-project resolution", () => {
     expect(redisGet).not.toHaveBeenCalled();
   });
 
-  it("shows temporary unavailability and skips Redis when the project lookup is rate limited", async () => {
+  it("shows the rate-limited error and skips Redis when the project lookup hits a 429", async () => {
     enforceProjectReadRateLimit.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
+        headers: { "content-type": "application/json" },
+      })
+    );
+
+    const element = await renderEditor({ project: "abcDEF123-_" });
+
+    expect(element.type).toBe(shareLinkErrorComponent);
+    expect(element.props).toEqual({ kind: "rate-limited", isEmbed: false });
+    expect(redisGet).not.toHaveBeenCalled();
+  });
+
+  it("shows temporary unavailability when rate limiting itself is unavailable (503)", async () => {
+    enforceProjectReadRateLimit.mockResolvedValueOnce(
+      new Response(JSON.stringify({ error: "Rate limiting is unavailable" }), {
+        status: 503,
         headers: { "content-type": "application/json" },
       })
     );
