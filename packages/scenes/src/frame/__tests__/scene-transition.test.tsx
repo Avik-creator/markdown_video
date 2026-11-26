@@ -1,40 +1,25 @@
 // @vitest-environment jsdom
 
-import { afterEach, describe, expect, it, vi } from "vitest";
-
-// Node 22 exposes a localStorage global without backing storage in this test
-// environment. Replace it before zustand's persist middleware initializes.
-vi.hoisted(() => {
-  const data = new Map<string, string>();
-  Object.defineProperty(globalThis, "localStorage", {
-    configurable: true,
-    value: {
-      get length() {
-        return data.size;
-      },
-      clear: () => data.clear(),
-      getItem: (key: string) => (data.has(key) ? data.get(key)! : null),
-      key: (index: number) => Array.from(data.keys())[index] ?? null,
-      removeItem: (key: string) => {
-        data.delete(key);
-      },
-      setItem: (key: string, value: string) => {
-        data.set(key, String(value));
-      },
-    },
-  });
-});
+import { afterEach, describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { cleanup, render, waitFor } from "@testing-library/react";
-import { ScenePreview } from "../../../scene-preview";
-import { useVideoStore } from "@/lib/use-video-store";
+import { parseMarkdown } from "@markdown-video/core";
+import { SceneFrame } from "../SceneFrame.js";
 
-const originalMarkdown = useVideoStore.getState().markdown;
+/**
+ * Transition integration tests against the composed frame. These used to
+ * drive the editor shell through the zustand store; the frame composition is
+ * now the package's contract, so the tests feed it parsed scenes and explicit
+ * scene times directly — the same inputs the shell and headless hosts use.
+ * Shell-level wiring (store markdown to fitted frame) remains covered by the
+ * layout integration tests in the app.
+ */
 
-function renderAtTime(markdown: string, time: number) {
-  useVideoStore.getState().setMarkdown(markdown, false);
-  useVideoStore.getState().seekTo(time);
-  return render(createElement(ScenePreview));
+function renderAtTime(markdown: string, sceneTime: number) {
+  const scene = parseMarkdown(markdown)[0];
+  return render(
+    createElement(SceneFrame, { scene, sceneTime, aspectRatio: "16:9" })
+  );
 }
 
 function sceneTransitionLayer(container: HTMLElement): HTMLElement {
@@ -46,13 +31,9 @@ function sceneTransitionLayer(container: HTMLElement): HTMLElement {
   return layer;
 }
 
-afterEach(() => {
-  cleanup();
-  useVideoStore.getState().setMarkdown(originalMarkdown, false);
-  useVideoStore.getState().seekTo(0);
-});
+afterEach(cleanup);
 
-describe("ScenePreview transition duration integration", () => {
+describe("SceneFrame transition duration integration", () => {
   it("uses a parsed custom transitionDuration for deterministic transition progress", async () => {
     const { container } = renderAtTime(
       `!scene

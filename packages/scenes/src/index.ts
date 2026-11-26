@@ -84,6 +84,12 @@ export {
 } from "./localization.js";
 export type { SceneLocalization } from "./localization.js";
 
+// Logical frame composition: the capture target every host renders, plus
+// the timeline-position helper that resolves a time to (scene, sceneTime).
+export { SceneFrame } from "./frame/SceneFrame.js";
+export type { SceneFrameProps } from "./frame/SceneFrame.js";
+export { getSceneAtTime } from "./frame/getSceneAtTime.js";
+
 // Text/code animation and scene transition variant tables.
 export {
   textSizeClasses,

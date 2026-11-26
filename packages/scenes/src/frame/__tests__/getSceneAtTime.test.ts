@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Scene } from "@markdown-video/core";
-import { getSceneAtTime } from "../scene-preview";
+import { getSceneAtTime } from "../getSceneAtTime.js";
 
 function sceneWithDuration(duration: number, id = `scene-${duration}`): Scene {
   return { id, duration } as unknown as Scene;
