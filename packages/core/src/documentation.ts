@@ -234,9 +234,10 @@ never extends the video duration. \`volume\` is linear gain from 0 to 1;
 \`fade\` is bounded to 30s and renderers also clamp it to half the video
 duration so fade-in and fade-out never overlap. Remote music must use HTTPS.
 Browser export requires the remote server to allow CORS. GIF export cannot
-carry audio, so music is ignored for GIF output. Music is an export feature in
-this step: preview playback remains silent rather than approximating fades and
-loop timing with a separate browser clock.
+carry audio, so music is ignored for GIF output. Editor and embed previews play
+music after the user starts playback, using the same linear volume/fade
+envelope. Browser media-element looping can be slightly less seamless than
+export's ffmpeg stream repetition.
 
 Captions are generated from top-level \`!text\` scenes using the exact scene
 boundaries from the core timeline. Exports provide SRT and WebVTT sidecars;

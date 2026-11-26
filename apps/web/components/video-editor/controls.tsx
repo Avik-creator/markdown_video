@@ -2,9 +2,10 @@
 
 import { advancePlaybackTime, useVideoStore } from "@/lib/use-video-store"
 import { useEffect } from "react"
-import { Play, Pause, SkipBack, SkipForward } from "lucide-react"
+import { Play, Pause, SkipBack, SkipForward, Volume2, VolumeX } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { LocalePicker } from "./scene-preview/components/LocalePicker"
+import { usePreviewMusic } from "./use-preview-music"
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
@@ -27,6 +28,11 @@ export function Controls() {
   const seekTo = useVideoStore((state) => state.seekTo)
   const playbackSpeed = useVideoStore((state) => state.playbackSpeed)
   const setPlaybackSpeed = useVideoStore((state) => state.setPlaybackSpeed)
+  const {
+    hasMusic: hasPreviewMusic,
+    isMuted: isPreviewMusicMuted,
+    toggleMuted: togglePreviewMusicMuted,
+  } = usePreviewMusic()
 
   useEffect(() => {
     if (!isPlaying) return
@@ -127,6 +133,27 @@ export function Controls() {
         >
           <SkipForward className="w-4 h-4" aria-hidden="true" />
         </button>
+
+        {hasPreviewMusic && (
+          <button
+            type="button"
+            onClick={togglePreviewMusicMuted}
+            aria-label={isPreviewMusicMuted ? "Unmute preview music" : "Mute preview music"}
+            aria-pressed={isPreviewMusicMuted}
+            title={isPreviewMusicMuted ? "Unmute preview music" : "Mute preview music"}
+            className={cn(
+              "h-8 w-8 flex items-center justify-center",
+              "text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100",
+              "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            )}
+          >
+            {isPreviewMusicMuted ? (
+              <VolumeX className="w-4 h-4" aria-hidden="true" />
+            ) : (
+              <Volume2 className="w-4 h-4" aria-hidden="true" />
+            )}
+          </button>
+        )}
       </div>
 
       {/* Time display */}
