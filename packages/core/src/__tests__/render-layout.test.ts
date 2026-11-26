@@ -5,8 +5,8 @@ import {
   RENDER_LAYOUT_SHORT_SIDE,
   getRenderLayoutDimensions,
   getSceneAspectRatioDimensions,
-} from "../render-layout";
-import { getRenderLayoutDimensions as getPublicRenderLayoutDimensions } from "../index";
+} from "../render-layout.js";
+import { getRenderLayoutDimensions as getPublicRenderLayoutDimensions } from "../index.js";
 
 describe("render-layout canonical geometry", () => {
   it("uses a 1080px short side in logical composition space", () => {

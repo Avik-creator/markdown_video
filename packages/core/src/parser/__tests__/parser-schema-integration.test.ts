@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getQuickReference } from "../../documentation";
-import { parseMarkdown } from "../index";
+import { getQuickReference } from "../../documentation.js";
+import { parseMarkdown } from "../index.js";
 
 describe("parser/schema integration", () => {
   describe("transitions", () => {

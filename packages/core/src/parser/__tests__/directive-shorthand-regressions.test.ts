@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdown } from "../index";
-import { parseDirective } from "../utils";
+import { parseMarkdown } from "../index.js";
+import { parseDirective } from "../utils.js";
 
 describe("colon-attached directive shorthand", () => {
   it("injects the invoked directive word into a colon-attached first token", () => {

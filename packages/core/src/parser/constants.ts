@@ -46,33 +46,28 @@ import {
   TRANSITION_VALUES,
   getDirectivePositionalDefault,
   getDirectivePropertyDefault,
-} from "../directive-schema";
+} from "../directive-schema.js";
 import type {
   AnimationType,
-  AspectRatio,
   CameraEffect,
   CanonicalDirectiveName,
-  ChartType,
   CodeFontFamily,
   CodeFontSize,
   CountdownStyle,
-  DeviceType,
   EmojiAnimation,
   ExportFormat,
   ImageFit,
   ImagePosition,
-  PanDirection,
   ParticleIntensity,
   ParticleType,
   PresenterPosition,
   PresenterShape,
   PresenterSize,
   ProgressStyle,
-  ShakeIntensity,
   TextFontFamily,
   TextSize,
   TransitionType,
-} from "../directive-schema";
+} from "../directive-schema.js";
 
 export type {
   AnimationType,
@@ -99,7 +94,7 @@ export type {
   TextFontFamily,
   TextSize,
   TransitionType,
-} from "../directive-schema";
+} from "../directive-schema.js";
 
 // Font families
 export const TEXT_FONT_FAMILIES = TEXT_FONT_FAMILY_VALUES;

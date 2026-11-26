@@ -26,7 +26,7 @@ import type {
   TextSize,
   TransitionType as SchemaTransitionType,
   ExportFormat as SchemaExportFormat,
-} from "./directive-schema";
+} from "./directive-schema.js";
 
 export type SceneType =
   | "text"

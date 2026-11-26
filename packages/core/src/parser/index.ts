@@ -8,7 +8,7 @@ import type {
   Scene,
   SceneSourceMap,
   VideoVariables,
-} from "../types";
+} from "../types.js";
 import type {
   AnimationType,
   CalloutArrow,
@@ -35,13 +35,13 @@ import type {
   TextFontFamily,
   TextSize,
   TransitionType,
-} from "../directive-schema";
+} from "../directive-schema.js";
 import {
   assertNever,
   getCameraKeyframeProperty,
   isCanonicalDirectiveName,
   isOneOf,
-} from "../directive-schema";
+} from "../directive-schema.js";
 import {
   ANIMATION_TYPES,
   CALLOUT_ARROWS,
@@ -72,19 +72,19 @@ import {
   TEXT_FONT_FAMILIES,
   TEXT_SIZES,
   TRANSITION_TYPES,
-} from "./constants";
+} from "./constants.js";
 import {
   collectVariableDefinitions,
   generateId,
   isSceneDirective,
   parseDirective,
   substituteVariables,
-} from "./utils";
+} from "./utils.js";
 import {
   isLocalizationToken,
   mergeLocalizationStrings,
   parseLocalizationStringsBlock,
-} from "./i18n";
+} from "./i18n.js";
 import {
   directivePropertyDefault,
   getInlinePropertyValue,
@@ -101,7 +101,7 @@ import {
   parseInlineArguments,
   parseLayoutChildren,
   parseTerminalBlock,
-} from "./parsers";
+} from "./parsers/index.js";
 
 export interface ParseResult {
   scenes: Scene[];
@@ -1381,4 +1381,4 @@ function parseMarkdownInternal(
 }
 
 // Re-export timeline functions
-export { getTimelineSegments, getSceneAtTime } from "./timeline";
+export { getTimelineSegments, getSceneAtTime } from "./timeline.js";

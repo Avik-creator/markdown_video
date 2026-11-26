@@ -3,7 +3,7 @@ import {
   getSyntaxSuggestions,
   quickSyntaxCheck,
   validateMarkdownSyntax,
-} from "../validation";
+} from "../validation.js";
 
 const messages = (items: { message: string }[]) => items.map((i) => i.message);
 

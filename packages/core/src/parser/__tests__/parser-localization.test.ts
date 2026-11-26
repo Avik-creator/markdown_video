@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdownFull } from "../index";
+import { parseMarkdownFull } from "../index.js";
 
 describe("localization parsing", () => {
   it("parses document locales and uses the first valid locale as the default", () => {

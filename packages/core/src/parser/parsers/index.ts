@@ -1,10 +1,10 @@
 // Re-export all parsers
 
-export { parseCodeBlock, parseHighlights, parseAnnotations } from "./code-parser"
-export { parseTerminalBlock } from "./terminal-parser"
-export { parseDiffBlock } from "./diff-parser"
-export { parseChartData } from "./chart-parser"
-export { parseLayoutChildren } from "./layout-parser"
+export { parseCodeBlock, parseHighlights, parseAnnotations } from "./code-parser.js"
+export { parseTerminalBlock } from "./terminal-parser.js"
+export { parseDiffBlock } from "./diff-parser.js"
+export { parseChartData } from "./chart-parser.js"
+export { parseLayoutChildren } from "./layout-parser.js"
 export {
   classifyDirectivePropertyLine,
   directivePositionalDefault,
@@ -17,4 +17,4 @@ export {
   parseDirectivePropertyLine,
   parseInlineArguments,
   parseNumericValue,
-} from "./schema-values"
+} from "./schema-values.js"

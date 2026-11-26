@@ -3,7 +3,7 @@ import {
   resolveEffectiveLocale,
   resolveLocalizedString,
   resolveSceneTextContent,
-} from "../i18n";
+} from "../i18n.js";
 
 const strings = {
   welcome: {

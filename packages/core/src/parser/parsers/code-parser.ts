@@ -1,7 +1,7 @@
 // Code block parsing utilities
 
-import type { CodeHighlight, CodeAnnotation, VideoVariables } from "../../types"
-import { substituteVariables } from "../utils"
+import type { CodeHighlight, CodeAnnotation, VideoVariables } from "../../types.js"
+import { substituteVariables } from "../utils.js"
 
 export function parseCodeBlock(
   lines: string[],

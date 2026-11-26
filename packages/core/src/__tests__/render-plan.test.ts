@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   FIXED_RENDER_LAYOUT_WIDTH,
   getRenderLayoutDimensions,
-} from "../render-layout";
+} from "../render-layout.js";
 import {
   createRenderPlan,
   getExportAspectRatio,
@@ -12,7 +12,7 @@ import {
   getTotalFrameCount,
   normalizeOutputFps,
   validateExportInput,
-} from "../render-plan";
+} from "../render-plan.js";
 
 describe("getExportDimensions", () => {
   it("treats the preset as the short side", () => {

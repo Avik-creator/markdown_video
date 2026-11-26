@@ -1,6 +1,6 @@
 // Diff block parsing
 
-import type { DiffLine } from "../../types"
+import type { DiffLine } from "../../types.js"
 
 export function parseDiffBlock(lines: string[], startIndex: number): { changes: DiffLine[]; endIndex: number } {
   const changes: DiffLine[] = []

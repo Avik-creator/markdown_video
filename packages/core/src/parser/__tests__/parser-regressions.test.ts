@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdown, parseMarkdownFull } from "../index";
+import { parseMarkdown, parseMarkdownFull } from "../index.js";
 
 describe("parser correctness regressions", () => {
   it("preserves colon-bearing text lines and URLs that are not valid text properties", () => {

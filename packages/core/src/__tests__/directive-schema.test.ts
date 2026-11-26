@@ -4,9 +4,9 @@ import {
   getDirectiveProperty,
   getDirectiveSchema,
   getDirectiveValueOptions,
-} from "../directive-schema";
-import { getAllDirectives } from "../documentation";
-import * as C from "../parser/constants";
+} from "../directive-schema.js";
+import { getAllDirectives } from "../documentation.js";
+import * as C from "../parser/constants.js";
 
 const EXPECTED_CANONICAL_DIRECTIVES = [
   "scene",

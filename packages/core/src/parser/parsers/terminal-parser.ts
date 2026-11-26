@@ -1,7 +1,7 @@
 // Terminal block parsing
 
-import type { TerminalCommand, VideoVariables } from "../../types"
-import { substituteVariables } from "../utils"
+import type { TerminalCommand, VideoVariables } from "../../types.js"
+import { substituteVariables } from "../utils.js"
 
 export function parseTerminalBlock(
   lines: string[],

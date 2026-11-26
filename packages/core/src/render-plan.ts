@@ -7,7 +7,7 @@ import {
   LOGICAL_ROOT_FONT_SIZE_PX,
   getRenderLayoutDimensions,
   getSceneAspectRatioDimensions,
-} from "./render-layout"
+} from "./render-layout.js"
 
 const SHORT_SIDE: Record<string, number> = {
   "480p": 480,

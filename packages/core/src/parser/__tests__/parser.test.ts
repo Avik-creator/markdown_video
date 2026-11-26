@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdown, parseMarkdownFull } from "../index";
+import { parseMarkdown, parseMarkdownFull } from "../index.js";
 
 const doc = `!var brand #3b82f6
 

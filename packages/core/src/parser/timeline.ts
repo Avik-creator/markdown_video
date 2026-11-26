@@ -1,7 +1,7 @@
 // Timeline utilities
 
-import type { Scene } from "../types"
-import { SCENE_COLORS } from "./constants"
+import type { Scene } from "../types.js"
+import { SCENE_COLORS } from "./constants.js"
 
 export function getTimelineSegments(scenes: Scene[]): {
   segments: {

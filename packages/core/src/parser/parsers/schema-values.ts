@@ -18,7 +18,7 @@ import {
   isOneOfCaseInsensitive,
   type DirectivePropertySchema,
   type DirectiveValueSchema,
-} from "../../directive-schema";
+} from "../../directive-schema.js";
 
 export interface InlineToken {
   raw: string;

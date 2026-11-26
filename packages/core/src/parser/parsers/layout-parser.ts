@@ -1,16 +1,16 @@
 // Split-layout child content parsing
 
-import type { Scene, VideoVariables } from "../../types"
+import type { Scene, VideoVariables } from "../../types.js"
 import {
   DELIMITERS,
   DIRECTIVE_CASES,
   SPECIAL_VALUES,
-} from "../constants"
+} from "../constants.js"
 import {
   isSceneDirective,
   parseDirective,
   substituteVariables,
-} from "../utils"
+} from "../utils.js"
 
 export type SplitPanel = Omit<Scene, "id" | "duration" | "transition">
 export type LayoutSide = "left" | "right"

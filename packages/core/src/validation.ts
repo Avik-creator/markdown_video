@@ -1,7 +1,7 @@
 // Syntax validation utilities for markdown_video
-import { parseMarkdownFull } from "./parser";
-import { isLocalizationToken } from "./parser/i18n";
-import type { LocalizationStrings, Scene, VideoVariables } from "./types";
+import { parseMarkdownFull } from "./parser/index.js";
+import { isLocalizationToken } from "./parser/i18n.js";
+import type { LocalizationStrings, Scene, VideoVariables } from "./types.js";
 import {
   SCENE_DIRECTIVES,
   ANIMATION_TYPES,
@@ -25,11 +25,9 @@ import {
   CALLOUT_STYLES,
   IMAGE_FIT_OPTIONS,
   IMAGE_POSITIONS,
-  EXPORT_FORMATS,
-  ASPECT_RATIOS,
   DIRECTIVE_CASES,
   KEYWORD_ALIASES,
-} from "./parser/constants";
+} from "./parser/constants.js";
 import {
   assertNever,
   getCameraKeyframeProperty,
@@ -41,17 +39,17 @@ import {
   type AnyDirectiveSchema,
   type CanonicalDirectiveName,
   type DirectiveValueSchema,
-} from "./directive-schema";
+} from "./directive-schema.js";
 import {
   classifyDirectivePropertyLine,
   parseInlineArguments,
   type InlineToken,
-} from "./parser/parsers/schema-values";
+} from "./parser/parsers/schema-values.js";
 import {
   collectVariableDefinitions,
   parseDirective,
   substituteVariables,
-} from "./parser/utils";
+} from "./parser/utils.js";
 
 export interface ValidationError {
   line?: number;
@@ -83,7 +81,6 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
     const result = parseMarkdownFull(markdown);
     const {
       scenes,
-      chapters,
       variables,
       locales,
       localizationStrings,

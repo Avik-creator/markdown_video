@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import type { Scene } from "../../types";
-import { getSceneAtTime, getTimelineSegments } from "../timeline";
+import type { Scene } from "../../types.js";
+import { getSceneAtTime, getTimelineSegments } from "../timeline.js";
 
 const scenes: Scene[] = [
   {

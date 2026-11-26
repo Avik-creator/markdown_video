@@ -9,7 +9,7 @@ import {
   isShareDocumentTooLarge,
   MAX_SHARE_MARKDOWN_BYTES,
   MAX_SHARE_URL_LENGTH,
-} from "../share-link";
+} from "../share-link.js";
 
 const unicodeMarkdown = [
   "!scene",

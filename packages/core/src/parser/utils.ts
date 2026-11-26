@@ -1,7 +1,7 @@
 // Parser utility functions
 
-import { KEYWORD_ALIASES, SCENE_DIRECTIVES } from "./constants"
-import type { VideoVariables } from "../types"
+import { KEYWORD_ALIASES, SCENE_DIRECTIVES } from "./constants.js"
+import type { VideoVariables } from "../types.js"
 
 export function generateId(): string {
   return Math.random().toString(36).substring(2, 9)

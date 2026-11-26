@@ -1,7 +1,7 @@
 // Chart data parsing
 
-import type { ChartDataItem, VideoVariables } from "../../types"
-import { substituteVariables } from "../utils"
+import type { ChartDataItem, VideoVariables } from "../../types.js"
+import { substituteVariables } from "../utils.js"
 
 const CHART_VALUE_PATTERN = /^(.+?):\s*(-?(?:\d+(?:\.\d+)?|\.\d+))(?:\s+(.+))?$/
 

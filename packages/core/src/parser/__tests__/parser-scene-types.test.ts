@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdown, parseMarkdownFull } from "../index";
+import { parseMarkdown, parseMarkdownFull } from "../index.js";
 
 describe("scene type parsing", () => {
   it("parses chart type, animation flag, labels, values, and colors", () => {

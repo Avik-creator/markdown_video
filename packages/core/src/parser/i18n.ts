@@ -11,9 +11,9 @@ import type {
   LocalizationStrings,
   SceneText,
   VideoVariables,
-} from "../types";
-import { DELIMITERS } from "./constants";
-import { substituteVariables } from "./utils";
+} from "../types.js";
+import { DELIMITERS } from "./constants.js";
+import { substituteVariables } from "./utils.js";
 
 export const LOCALIZATION_TOKEN_PATTERN =
   /^[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*$/;
