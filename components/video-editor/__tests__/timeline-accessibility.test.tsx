@@ -1,9 +1,10 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseMarkdown } from "@/lib/parser";
 import { useVideoStore } from "@/lib/use-video-store";
+import { registerActiveEditorFlush } from "@/lib/editor/codemirror/store-sync";
 import { Timeline } from "../timeline";
 
 const TIMELINE_MARKDOWN = [
@@ -45,6 +46,7 @@ describe("Timeline accessibility", () => {
   });
 
   afterEach(() => {
+    registerActiveEditorFlush(null);
     cleanup();
   });
 
@@ -120,5 +122,44 @@ describe("Timeline accessibility", () => {
     expect(screen.getByRole("status").textContent).toContain(
       "Scene is already at the start"
     );
+  });
+
+  it("flushes pending editor text before a keyboard reorder so typing is never clobbered", () => {
+    // Simulates the editor holding uncommitted keystrokes: the flush seam
+    // commits them to the store, which reparses and regenerates every scene
+    // id before the reorder is computed.
+    registerActiveEditorFlush(() => {
+      useVideoStore
+        .getState()
+        .setMarkdown(TIMELINE_MARKDOWN.replace("Alpha", "Alpha edited"));
+      return true;
+    });
+
+    render(<Timeline />);
+    const firstScene = sceneButtons()[0];
+    firstScene.focus();
+
+    fireEvent.keyDown(firstScene, { key: "ArrowRight", ctrlKey: true });
+
+    // The reorder applied on the flushed document: the edit survived and
+    // moved along with its scene instead of being reverted to stale text.
+    expect(parsedTextScenes()).toEqual(["Beta", "Alpha edited", "Gamma"]);
+    expect(screen.getByRole("status").textContent).toContain(
+      "Scene moved to position 2 of 3"
+    );
+  });
+
+  it("invokes the editor flush seam even when there is nothing to commit", () => {
+    const flush = vi.fn(() => false);
+    registerActiveEditorFlush(flush);
+
+    render(<Timeline />);
+    const firstScene = sceneButtons()[0];
+    firstScene.focus();
+
+    fireEvent.keyDown(firstScene, { key: "ArrowRight", ctrlKey: true });
+
+    expect(flush).toHaveBeenCalled();
+    expect(parsedTextScenes()).toEqual(["Beta", "Alpha", "Gamma"]);
   });
 });
