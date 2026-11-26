@@ -101,8 +101,16 @@ function publicOrigin(extra: ToolExtra) {
     try {
       return new URL(configured).origin;
     } catch {
-      // Fall through to request-derived development behavior.
+      if (process.env.NODE_ENV === "production") {
+        throw new Error("NEXT_PUBLIC_SITE_URL is not a valid URL.");
+      }
     }
+  }
+  // Production links must never be host-header derived: a spoofed Host could
+  // otherwise make a private render artifact appear to live on an attacker's
+  // domain. Development/test fallback remains convenient for local MCP use.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("NEXT_PUBLIC_SITE_URL is required for render_video URLs in production.");
   }
 
   const headers = extra.requestInfo?.headers ?? {};
