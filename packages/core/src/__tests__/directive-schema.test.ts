@@ -5,7 +5,7 @@ import {
   getDirectiveSchema,
   getDirectiveValueOptions,
 } from "../directive-schema";
-import { getAllDirectives } from "../mcp/documentation";
+import { getAllDirectives } from "../documentation";
 import * as C from "../parser/constants";
 
 const EXPECTED_CANONICAL_DIRECTIVES = [

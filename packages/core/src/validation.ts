@@ -1,7 +1,7 @@
 // Syntax validation utilities for markdown_video
-import { parseMarkdownFull } from "../parser";
-import { isLocalizationToken } from "../parser/i18n";
-import type { LocalizationStrings, Scene, VideoVariables } from "../types";
+import { parseMarkdownFull } from "./parser";
+import { isLocalizationToken } from "./parser/i18n";
+import type { LocalizationStrings, Scene, VideoVariables } from "./types";
 import {
   SCENE_DIRECTIVES,
   ANIMATION_TYPES,
@@ -29,7 +29,7 @@ import {
   ASPECT_RATIOS,
   DIRECTIVE_CASES,
   KEYWORD_ALIASES,
-} from "../parser/constants";
+} from "./parser/constants";
 import {
   assertNever,
   getCameraKeyframeProperty,
@@ -41,17 +41,17 @@ import {
   type AnyDirectiveSchema,
   type CanonicalDirectiveName,
   type DirectiveValueSchema,
-} from "../directive-schema";
+} from "./directive-schema";
 import {
   classifyDirectivePropertyLine,
   parseInlineArguments,
   type InlineToken,
-} from "../parser/parsers/schema-values";
+} from "./parser/parsers/schema-values";
 import {
   collectVariableDefinitions,
   parseDirective,
   substituteVariables,
-} from "../parser/utils";
+} from "./parser/utils";
 
 export interface ValidationError {
   line?: number;

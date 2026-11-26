@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { validateMarkdownSyntax } from "../syntax-validator";
+import { validateMarkdownSyntax } from "../validation";
 
 const messages = (items: { message: string }[]) => items.map((item) => item.message);
 

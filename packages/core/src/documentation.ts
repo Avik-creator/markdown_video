@@ -9,7 +9,7 @@ import {
   TRANSITION_VALUES,
   type DirectiveSchema,
   type DirectiveValueSchema,
-} from "../directive-schema";
+} from "./directive-schema";
 
 export interface DirectiveDoc {
   name: string;

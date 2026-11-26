@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { getQuickReference } from "../../mcp/documentation";
+import { getQuickReference } from "../../documentation";
 import { parseMarkdown } from "../index";
 
 describe("parser/schema integration", () => {
