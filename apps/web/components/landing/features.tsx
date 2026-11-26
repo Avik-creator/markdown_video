@@ -155,8 +155,9 @@ export function Features() {
                 </h3>
                 <p className="mt-5 text-[17px] leading-[1.5] text-[color:var(--landing-muted)]">
                   Add document-level audio with volume, fade, and loop controls. Text scenes generate SRT and VTT
-                  sidecars, with optional burn-in for players that need captions baked into the pixels (burn-in
-                  requires an ffmpeg build with libass).
+                  sidecars, with optional burn-in for players that need captions baked into the pixels — composited
+                  into the frames at render time, so any ffmpeg build works and every script your fonts
+                  cover renders correctly.
                 </p>
                 <div className="mt-6">
                   <CodeLine>!music ./assets/theme.mp3 volume:0.32 fade:0.7s loop:true</CodeLine>
@@ -181,7 +182,7 @@ export function Features() {
                 </div>
                 <ArtifactCaption>
                   <span>playable demo · real AAC audio + generated VTT</span>
-                  <span>poster: burn-in style preview</span>
+                  <span>poster: real burn-in frame</span>
                 </ArtifactCaption>
               </div>
             </article>
