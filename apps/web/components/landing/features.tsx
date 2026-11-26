@@ -107,7 +107,7 @@ export function Features() {
                 </div>
                 <ArtifactCaption>
                   <span>rendered artifact · MCP terminal flow</span>
-                  <span>20 kb mp4</span>
+                  <span>26 kb mp4</span>
                 </ArtifactCaption>
               </div>
             </article>
