@@ -57,7 +57,7 @@ node apps/cli/dist/cli.js render video.md -o video.mp4 \
 # GIF output uses a generated palette and .gif extension
 node apps/cli/dist/cli.js render video.md -o preview.gif --format gif --fps 12
 
-# Burn generated captions into the video (requires an ffmpeg build with libass)
+# Burn generated captions into the video frames (no ffmpeg build requirements)
 node apps/cli/dist/cli.js render video.md -o video.mp4 --burn-captions
 
 # Replace an existing output or explicitly allow a path outside cwd
@@ -111,12 +111,15 @@ local paths could expose service files and URLs would create egress/SSRF risk.
 When top-level `!text` scenes exist, the CLI writes `<output-stem>.srt` and
 `<output-stem>.vtt` next to the video using the same core timeline math as
 rendering. Existing sidecars are protected by the same overwrite semantics as
-the video. `--burn-captions` additionally renders those captions into frames
-through ffmpeg's `subtitles` filter using a fixed temporary sidecar filename
-and argv-array execution (never shell interpolation). Burn-in is off by
-default and requires a native ffmpeg build with libass; many minimal/Homebrew
-ffmpeg builds do not include that filter, in which case the CLI fails before
-capture with an explicit error.
+the video. `--burn-captions` additionally composites those captions into the
+frames themselves. Burn-in is DOM-composited at capture time: the render page
+generates cues from the same core caption data as the sidecars and renders
+them inside the captured scene, so ffmpeg receives frames that already
+contain the captions. That means burn-in works with any ffmpeg build (no
+libass/`subtitles` filter requirement), cue timing exactly matches the
+half-open sidecar semantics, and non-Latin captions render with the same web
+font coverage as scene text rather than depending on fontconfig. Burn-in is
+off by default.
 
 ## Encoding semantics
 

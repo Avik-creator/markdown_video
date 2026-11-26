@@ -25,8 +25,6 @@ export interface FFmpegCommandInput {
   overwrite: boolean
   /** Prepared local/temporary input file for document music. Ignored for GIF. */
   music?: (Pick<MusicTrack, "volume" | "fade" | "loop"> & { inputPath: string }) | undefined
-  /** Fixed captions filename in the ffmpeg process cwd when burn-in is enabled. */
-  burnCaptionsFileName?: string | undefined
 }
 
 /**
@@ -57,22 +55,13 @@ export function buildFfmpegArgs(input: FFmpegCommandInput): string[] {
     ...(input.music && input.format !== "gif" ? buildMusicInputArgs(input.music, input.music.inputPath) : []),
   ]
 
-  if (input.burnCaptionsFileName !== undefined &&
-      !/^[A-Za-z0-9_.-]+$/.test(input.burnCaptionsFileName)) {
-    throw new RenderError("Internal error: captions filename is not safe for a filter argument.")
-  }
-  const subtitlesFilter = input.burnCaptionsFileName
-    ? `,subtitles=${input.burnCaptionsFileName}`
-    : ""
-
   if (input.format === "gif") {
     // Browsers commonly quantize animated GIFs heavily; a 64-color palette keeps
     // output small and closely parallels the browser exporter's quality=10.
     const gifFps = Math.min(fps, 10)
     const explicitFilter =
       `scale=${plan.width}:${plan.height}:flags=lanczos,` +
-      `fps=${gifFps}` +
-      `${subtitlesFilter},` +
+      `fps=${gifFps},` +
       "split[x][y];[x]palettegen=max_colors=64[p];[y][p]paletteuse=dither=bayer:bayer_scale=2"
     return [
       ...base,
@@ -98,7 +87,7 @@ export function buildFfmpegArgs(input: FFmpegCommandInput): string[] {
     ...base,
     ...musicOutputArgs,
     "-vf",
-    `scale=${plan.width}:${plan.height}:flags=lanczos:out_range=limited,setsar=1${subtitlesFilter}`,
+    `scale=${plan.width}:${plan.height}:flags=lanczos:out_range=limited,setsar=1`,
     "-c:v",
     "libx264",
     "-preset",
