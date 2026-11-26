@@ -4,6 +4,7 @@
 import type {
   CameraKeyframe,
   Chapter,
+  LocalizationStrings,
   Scene,
   SceneSourceMap,
   VideoVariables,
@@ -80,6 +81,11 @@ import {
   substituteVariables,
 } from "./utils";
 import {
+  isLocalizationToken,
+  mergeLocalizationStrings,
+  parseLocalizationStringsBlock,
+} from "./i18n";
+import {
   directivePropertyDefault,
   getInlinePropertyValue,
   parseAnnotations,
@@ -101,6 +107,12 @@ export interface ParseResult {
   scenes: Scene[];
   chapters: Chapter[];
   variables: VideoVariables;
+  /** Locale codes declared by the most recent non-empty document-level `!locales`. */
+  locales: string[];
+  /** Merged translations from every document-level `!strings` block. */
+  localizationStrings: LocalizationStrings;
+  /** First valid locale in `!locales`; no separate default-locale directive exists. */
+  defaultLocale?: string;
 }
 
 function consumeDirectiveTail(lines: string[], startIndex: number): number {
@@ -137,6 +149,8 @@ function parseMarkdownInternal(
 ): ParseResult {
   const scenes: Scene[] = [];
   const chapters: Chapter[] = [];
+  let locales: string[] = [];
+  const localizationStrings: LocalizationStrings = {};
   const lines = markdown.split(/\r?\n/);
   // First pass: collect hoisted variable definitions. Nested layout parsing
   // inherits the parent's variables and can add document-local definitions.
@@ -302,7 +316,9 @@ function parseMarkdownInternal(
               }
 
               // Check for i18n key format: !text i18n:welcome
-              const i18nMatch = directiveArgs.match(/^i18n:(\w+)/i);
+              const i18nMatch = directiveArgs.match(
+                /^i18n:([A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*)(?=\s|$)/i
+              );
               if (i18nMatch) {
                 i18nKey = i18nMatch[1];
               }
@@ -651,6 +667,7 @@ function parseMarkdownInternal(
                 IMAGE_FIT_OPTIONS,
                 directivePropertyDefault<ImageFit>("mockup", "fit", "cover")
               );
+              let i18nKey = getInlinePropertyValue("mockup", directiveArgs, "i18nKey");
               if (imageSrc) {
                 contentType = "image";
               }
@@ -711,6 +728,9 @@ function parseMarkdownInternal(
                         directivePropertyDefault<ImageFit>("mockup", "fit", "cover")
                       );
                       break;
+                    case "i18nKey":
+                      i18nKey = property.value;
+                      break;
                     case "device":
                       break;
                   }
@@ -728,12 +748,13 @@ function parseMarkdownInternal(
                   type: contentType,
                   background: contentBg,
                   text:
-                    contentType === "text" && textContent.length > 0
+                    contentType === "text" && (textContent.length > 0 || i18nKey)
                       ? {
                           content: textContent.join("\n"),
                           color: textColor,
                           size: textSize,
                           align: "center",
+                          i18nKey,
                         }
                       : undefined,
                   image: imageSrc
@@ -1301,19 +1322,38 @@ function parseMarkdownInternal(
       const globalDirectiveName = globalDirective?.canonicalName;
 
       if (globalDirectiveName === DIRECTIVE_CASES.LOCALES) {
-        // !locales en es fr de - defines supported locales
-        // This is handled at the application level, not in parser
+        // !locales en es fr - declares the document locales. There is no
+        // separate !defaultlocale directive in the schema: the first valid
+        // listed locale is the document default. If the directive is repeated,
+        // the most recent non-empty valid list replaces the previous one;
+        // unlike !strings blocks, locale declarations are not merged.
+        const { positional } = parseInlineArguments(globalDirective?.args || "");
+        const declaredLocales: string[] = [];
+        for (const token of positional) {
+          if (isLocalizationToken(token) && !declaredLocales.includes(token)) {
+            declaredLocales.push(token);
+          }
+        }
+        if (declaredLocales.length > 0) {
+          locales = declaredLocales;
+        }
         i++;
       } else if (globalDirectiveName === DIRECTIVE_CASES.STRINGS) {
-        // !strings block - skip for now, handled at application level
+        // !strings blocks are document metadata. Their indentation-sensitive
+        // grammar is parsed from the raw lines; malformed lines are ignored
+        // here and reported by the validator. Multiple blocks merge.
         i++;
-        while (i < lines.length) {
-          const strLine = lines[i].trim();
-          if (strLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || strLine === DELIMITERS.SCENE_SEPARATOR) {
-            break;
-          }
-          i++;
-        }
+        const parsedStrings = parseLocalizationStringsBlock(lines, i, variables);
+        mergeLocalizationStrings(
+          localizationStrings,
+          parsedStrings.localizationStrings
+        );
+        i = parsedStrings.endIndex;
+      } else if (globalDirectiveName === DIRECTIVE_CASES.LOCALE) {
+        // The schema defines !locale as a scene override, not as a document
+        // default. Document-level use is therefore ignored; the default comes
+        // from the first entry in !locales.
+        i++;
       } else if (globalDirectiveName === DIRECTIVE_CASES.EXPORT) {
         // !export block - skip for now, handled at application level
         i++;
@@ -1330,7 +1370,14 @@ function parseMarkdownInternal(
     }
   }
 
-  return { scenes, chapters, variables };
+  return {
+    scenes,
+    chapters,
+    variables,
+    locales,
+    localizationStrings,
+    defaultLocale: locales[0],
+  };
 }
 
 // Re-export timeline functions
