@@ -19,6 +19,7 @@ import {
 } from "@markdown-video/core";
 import { parseMarkdownFull } from "@markdown-video/core";
 import { enforceMcpRateLimit } from "@/lib/rate-limit";
+import { registerRenderTools } from "@/lib/mcp/render-tools";
 
 const MAX_MCP_MARKDOWN_LENGTH = 100_000;
 const MAX_MCP_DIRECTIVE_LENGTH = 100;
@@ -764,6 +765,11 @@ ${template}
         };
       }
     );
+
+    // Tools 11–12: authenticated/expensive server-side rendering. These are
+    // registered in a separate module because they have worker, storage, and
+    // fail-closed rate-limit dependencies unlike the read-only tools above.
+    registerRenderTools(server);
   },
   serverOptions,
   {

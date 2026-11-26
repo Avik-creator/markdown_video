@@ -113,7 +113,8 @@ const result = await renderVideo({
 })
 ```
 
-`renderVideo` accepts an optional `AbortSignal`. Cancellation, render errors,
+The package also exports `renderVideoToBuffer` for in-memory MP4 bytes and
+`renderFrames` for deterministic PNG frame buffers. `renderVideo` accepts an optional `AbortSignal`. Cancellation, render errors,
 and normal completion all close the browser, stop ffmpeg when needed, and close
 the loopback asset server. The CLI maps usage/input errors to exit code 2 and
 rendering failures to exit code 1.

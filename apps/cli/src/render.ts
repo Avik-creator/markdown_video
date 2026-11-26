@@ -1,13 +1,15 @@
-import { mkdir, unlink } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, unlink } from "node:fs/promises"
 import { existsSync } from "node:fs"
+import { tmpdir } from "node:os"
 import path from "node:path"
 import { performance } from "node:perf_hooks"
 
-import { chromium, type Browser, type Page } from "playwright"
+import { chromium, type Browser, type Locator, type Page } from "playwright"
 import {
   createRenderPlan,
   parseMarkdown,
   validateExportInput,
+  type RenderPlan,
 } from "@markdown-video/core"
 
 import { RenderError, throwIfAborted, UsageError } from "./errors.js"
@@ -20,6 +22,7 @@ import {
 } from "./settings.js"
 
 export const MAX_MARKDOWN_BYTES = 512 * 1024
+export const MAX_PREVIEW_FRAME_COUNT = 16
 
 export interface RenderProgress {
   phase: "preparing" | "capturing" | "encoding" | "complete"
@@ -43,6 +46,12 @@ export interface RenderVideoOptions {
   allowOutsideCwd?: boolean | undefined
   ffmpegPath?: string | undefined
   chromiumExecutablePath?: string | undefined
+  /**
+   * Preserve the CLI's document-rendering semantics by default: image scenes
+   * may reference remote URLs. Service embedding the renderer should pass
+   * false so Chromium can only reach the loopback static asset origin.
+   */
+  allowRemoteNetwork?: boolean | undefined
   signal?: AbortSignal | undefined
   onProgress?: ((progress: RenderProgress) => void) | undefined
 }
@@ -54,6 +63,51 @@ export interface RenderVideoResult {
   height: number
   fps: number
   totalFrames: number
+  totalDuration: number
+  elapsedSeconds: number
+}
+
+export type RenderVideoBufferOptions = Omit<
+  RenderVideoOptions,
+  "outputPath" | "cwd" | "format" | "overwrite" | "allowOutsideCwd"
+> & {
+  /** Reject before reading the output into memory when it exceeds this size. */
+  maxOutputBytes?: number | undefined
+}
+
+export interface RenderVideoBufferResult {
+  mp4: Buffer
+  format: "mp4"
+  width: number
+  height: number
+  fps: number
+  totalFrames: number
+  totalDuration: number
+  elapsedSeconds: number
+  sizeBytes: number
+}
+
+export interface RenderFramesOptions {
+  markdown: string
+  times: number[]
+  resolution?: string | undefined
+  aspectRatio?: string | undefined
+  locale?: string | null | undefined
+  chromiumExecutablePath?: string | undefined
+  /** See RenderVideoOptions.allowRemoteNetwork. */
+  allowRemoteNetwork?: boolean | undefined
+  signal?: AbortSignal | undefined
+}
+
+export interface RenderedFrame {
+  time: number
+  png: Buffer
+}
+
+export interface RenderFramesResult {
+  frames: RenderedFrame[]
+  width: number
+  height: number
   totalDuration: number
   elapsedSeconds: number
 }
@@ -101,6 +155,12 @@ declare global {
   }
 }
 
+interface CaptureSession {
+  page: Page
+  captureTarget: Locator
+  close(): Promise<void>
+}
+
 async function closeSilently(close: () => Promise<void>) {
   try {
     await close()
@@ -135,14 +195,129 @@ async function preparePage({
   return page.evaluate((source) => window.__mv!.load(source), markdown)
 }
 
-export async function renderVideo(
-  options: RenderVideoOptions,
-): Promise<RenderVideoResult> {
-  const started = performance.now()
-  validateMarkdown(options.markdown)
-  const settings = resolveRenderSettings(options)
-  const cwd = path.resolve(options.cwd ?? process.cwd())
-  const scenes = parseScenes(options.markdown)
+/**
+ * Restrict page network access to the loopback render-page origin. Image
+ * scenes can contain arbitrary http(s) URLs; in a hosted worker those URLs
+ * would otherwise turn the renderer into an egress/SSRF primitive. Data and
+ * blob URLs do not create network egress and remain available.
+ */
+async function installLoopbackOnlyNetworkPolicy({
+  page,
+  allowedOrigin,
+}: {
+  page: Page
+  allowedOrigin: string
+}) {
+  await page.route("**/*", (route) => {
+    const requestUrl = route.request().url()
+    if (requestUrl.startsWith("data:") || requestUrl.startsWith("blob:")) {
+      return route.continue()
+    }
+
+    try {
+      if (new URL(requestUrl).origin === allowedOrigin) {
+        return route.continue()
+      }
+    } catch {
+      // Malformed browser-internal URLs fall through to the deny response.
+    }
+
+    return route.fulfill({
+      status: 403,
+      contentType: "text/plain; charset=utf-8",
+      body: "Blocked by the markdown-video renderer network policy",
+    })
+  })
+}
+
+async function openCaptureSession({
+  markdown,
+  settings,
+  plan,
+  totalDuration,
+  chromiumExecutablePath,
+  allowRemoteNetwork = true,
+}: {
+  markdown: string
+  settings: RenderSettings
+  plan: RenderPlan
+  totalDuration: number
+  chromiumExecutablePath?: string | undefined
+  allowRemoteNetwork?: boolean | undefined
+}): Promise<CaptureSession> {
+  let server: RenderPageServer | null = null
+  let browser: Browser | null = null
+
+  try {
+    server = await serveRenderPage()
+    browser = await chromium.launch({
+      headless: true,
+      ...(chromiumExecutablePath ? { executablePath: chromiumExecutablePath } : {}),
+      args: [
+        "--disable-background-networking",
+        "--disable-component-update",
+        "--disable-extensions",
+        "--disable-sync",
+        "--hide-scrollbars",
+        "--mute-audio",
+      ],
+    })
+
+    const context = await browser.newContext({
+      viewport: {
+        width: plan.layoutWidth,
+        height: Math.ceil(plan.layoutHeight),
+      },
+      deviceScaleFactor: plan.captureScale,
+      reducedMotion: "reduce",
+      colorScheme: "dark",
+    })
+    const page = await context.newPage()
+    if (!allowRemoteNetwork) {
+      await installLoopbackOnlyNetworkPolicy({
+        page,
+        allowedOrigin: new URL(server.url).origin,
+      })
+    }
+
+    const browserDuration = await preparePage({
+      page,
+      url: server.url,
+      settings,
+      markdown,
+    })
+    if (Math.abs(browserDuration - totalDuration) > 1e-6) {
+      throw new RenderError(
+        `Browser parse duration (${browserDuration}) did not match CLI parse duration (${totalDuration}).`,
+      )
+    }
+
+    const captureTarget = page.locator('[data-scene-preview="true"]')
+    await captureTarget.waitFor({ state: "visible", timeout: 30_000 })
+
+    return {
+      page,
+      captureTarget,
+      async close() {
+        if (browser) await closeSilently(() => browser!.close())
+        if (server) await closeSilently(() => server!.close())
+      },
+    }
+  } catch (error) {
+    if (browser) await closeSilently(() => browser!.close())
+    if (server) await closeSilently(() => server!.close())
+    throw error
+  }
+}
+
+function validateRenderInput({
+  markdown,
+  fps,
+}: {
+  markdown: string
+  fps: number
+}) {
+  const scenes = parseScenes(markdown)
   const totalDuration = scenes.reduce(
     (sum, scene) => sum + scene.duration,
     0,
@@ -150,11 +325,26 @@ export async function renderVideo(
   const validation = validateExportInput({
     sceneCount: scenes.length,
     totalDuration,
-    fps: settings.fps,
+    fps,
   })
   if (!validation.valid) {
     throw new UsageError(validation.reason ?? "Input cannot be exported.")
   }
+
+  return { scenes, totalDuration, validation }
+}
+
+export async function renderVideo(
+  options: RenderVideoOptions,
+): Promise<RenderVideoResult> {
+  const started = performance.now()
+  validateMarkdown(options.markdown)
+  const settings = resolveRenderSettings(options)
+  const cwd = path.resolve(options.cwd ?? process.cwd())
+  const { totalDuration, validation } = validateRenderInput({
+    markdown: options.markdown,
+    fps: settings.fps,
+  })
 
   const fps = validation.outputFps
   const totalFrames = validation.totalFrameCount
@@ -186,8 +376,7 @@ export async function renderVideo(
     overwrite: settings.overwrite,
   })
 
-  let server: RenderPageServer | null = null
-  let browser: Browser | null = null
+  let session: CaptureSession | null = null
   let ffmpeg: FFmpegProcess | null = null
   let encodingStarted = false
 
@@ -200,46 +389,14 @@ export async function renderVideo(
 
   try {
     throwIfAborted(options.signal)
-    server = await serveRenderPage()
-    browser = await chromium.launch({
-      headless: true,
-      ...(options.chromiumExecutablePath
-        ? { executablePath: options.chromiumExecutablePath }
-        : {}),
-      args: [
-        "--disable-background-networking",
-        "--disable-component-update",
-        "--disable-extensions",
-        "--disable-sync",
-        "--hide-scrollbars",
-        "--mute-audio",
-      ],
-    })
-
-    const context = await browser.newContext({
-      viewport: {
-        width: plan.layoutWidth,
-        height: Math.ceil(plan.layoutHeight),
-      },
-      deviceScaleFactor: plan.captureScale,
-      reducedMotion: "reduce",
-      colorScheme: "dark",
-    })
-    const page = await context.newPage()
-    const browserDuration = await preparePage({
-      page,
-      url: server.url,
-      settings,
+    session = await openCaptureSession({
       markdown: options.markdown,
+      settings,
+      plan,
+      totalDuration,
+      chromiumExecutablePath: options.chromiumExecutablePath,
+      allowRemoteNetwork: options.allowRemoteNetwork ?? true,
     })
-    if (Math.abs(browserDuration - totalDuration) > 1e-6) {
-      throw new RenderError(
-        `Browser parse duration (${browserDuration}) did not match CLI parse duration (${totalDuration}).`,
-      )
-    }
-
-    const captureTarget = page.locator('[data-scene-preview="true"]')
-    await captureTarget.waitFor({ state: "visible", timeout: 30_000 })
 
     ffmpeg = startFfmpeg(executable, ffmpegArgs)
     encodingStarted = true
@@ -248,8 +405,8 @@ export async function renderVideo(
     for (let frame = 0; frame < totalFrames; frame += 1) {
       throwIfAborted(options.signal)
       const time = Math.min(frame / fps, totalDuration)
-      await page.evaluate((t) => window.__mv!.seek(t), time)
-      const jpeg = await captureTarget.screenshot({
+      await session.page.evaluate((t) => window.__mv!.seek(t), time)
+      const jpeg = await session.captureTarget.screenshot({
         type: "jpeg",
         quality: jpegQuality,
         scale: "device",
@@ -303,7 +460,157 @@ export async function renderVideo(
     throw error
   } finally {
     if (encodingStarted) ffmpeg?.abort()
-    if (browser) await closeSilently(() => browser!.close())
-    if (server) await closeSilently(() => server!.close())
+    if (session) await closeSilently(() => session!.close())
+  }
+}
+
+/**
+ * Render a browser-quality mp4 without requiring the caller to choose or
+ * protect an output path. The file still passes through a short-lived private
+ * temporary directory because native ffmpeg needs a seekable output target;
+ * the directory is removed before this function returns or rejects.
+ */
+export async function renderVideoToBuffer(
+  options: RenderVideoBufferOptions,
+): Promise<RenderVideoBufferResult> {
+  if (
+    options.maxOutputBytes !== undefined &&
+    (!Number.isFinite(options.maxOutputBytes) || options.maxOutputBytes <= 0)
+  ) {
+    throw new UsageError("maxOutputBytes must be a positive finite number.")
+  }
+
+  const tempDir = await mkdtemp(path.join(tmpdir(), "markdown-video-render-"))
+  try {
+    const result = await renderVideo({
+      ...options,
+      outputPath: "render.mp4",
+      cwd: tempDir,
+      format: "mp4",
+      overwrite: false,
+      allowOutsideCwd: false,
+    })
+    const outputStats = await stat(result.outputPath)
+    if (
+      options.maxOutputBytes !== undefined &&
+      outputStats.size > options.maxOutputBytes
+    ) {
+      throw new RenderError(
+        `Rendered mp4 is ${outputStats.size} bytes; the limit is ${options.maxOutputBytes} bytes.`,
+      )
+    }
+
+    return {
+      mp4: await readFile(result.outputPath),
+      format: "mp4",
+      width: result.width,
+      height: result.height,
+      fps: result.fps,
+      totalFrames: result.totalFrames,
+      totalDuration: result.totalDuration,
+      elapsedSeconds: result.elapsedSeconds,
+      sizeBytes: outputStats.size,
+    }
+  } finally {
+    await rm(tempDir, { recursive: true, force: true })
+  }
+}
+
+/**
+ * Capture lossless PNG screenshots at exact timeline times. This deliberately
+ * does not extract frames from a rendered mp4: direct screenshots avoid a lossy
+ * encode/decode round trip and cost only the requested frames.
+ */
+export async function renderFrames(
+  options: RenderFramesOptions,
+): Promise<RenderFramesResult> {
+  const started = performance.now()
+  validateMarkdown(options.markdown)
+  if (!Array.isArray(options.times) || options.times.length === 0) {
+    throw new UsageError("At least one preview frame time is required.")
+  }
+  if (options.times.length > MAX_PREVIEW_FRAME_COUNT) {
+    throw new UsageError(
+      `At most ${MAX_PREVIEW_FRAME_COUNT} preview frames can be rendered per request.`,
+    )
+  }
+  for (const time of options.times) {
+    if (!Number.isFinite(time) || time < 0) {
+      throw new UsageError("Preview frame times must be finite non-negative numbers.")
+    }
+  }
+
+  const settings = resolveRenderSettings({
+    resolution: options.resolution,
+    aspectRatio: options.aspectRatio,
+    locale: options.locale,
+    quality: "high",
+    speed: "balanced",
+    format: "mp4",
+    fps: 30,
+  })
+  const { totalDuration } = validateRenderInput({
+    markdown: options.markdown,
+    fps: settings.fps,
+  })
+  const plan = createRenderPlan({
+    resolution: settings.resolution,
+    projectAspectRatio: settings.aspectRatio,
+    format: settings.format,
+    quality: settings.quality,
+  })
+
+  for (const time of options.times) {
+    if (time - totalDuration > 1e-9) {
+      throw new UsageError(
+        `Preview frame time ${time}s is beyond the ${totalDuration}s video duration.`,
+      )
+    }
+  }
+
+  let session: CaptureSession | null = null
+  try {
+    throwIfAborted(options.signal)
+    session = await openCaptureSession({
+      markdown: options.markdown,
+      settings,
+      plan,
+      totalDuration,
+      chromiumExecutablePath: options.chromiumExecutablePath,
+      allowRemoteNetwork: options.allowRemoteNetwork ?? true,
+    })
+
+    const frames: RenderedFrame[] = []
+    for (const requestedTime of options.times) {
+      throwIfAborted(options.signal)
+      const time = Math.min(requestedTime, totalDuration)
+      await session.page.evaluate((t) => window.__mv!.seek(t), time)
+      const png = await session.captureTarget.screenshot({
+        type: "png",
+        scale: "device",
+      })
+      if (
+        png.length < 8 ||
+        png[0] !== 0x89 ||
+        png[1] !== 0x50 ||
+        png[2] !== 0x4e ||
+        png[3] !== 0x47
+      ) {
+        throw new RenderError(
+          `Playwright returned invalid PNG data for preview time ${requestedTime}.`,
+        )
+      }
+      frames.push({ time, png })
+    }
+
+    return {
+      frames,
+      width: plan.width,
+      height: plan.height,
+      totalDuration,
+      elapsedSeconds: (performance.now() - started) / 1000,
+    }
+  } finally {
+    if (session) await closeSilently(() => session!.close())
   }
 }
