@@ -9,8 +9,8 @@
 import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import type { Scene } from "@/lib/types";
-import { parseMarkdown } from "@/lib/parser";
+import type { Scene } from "@markdown-video/core";
+import { parseMarkdown } from "@markdown-video/core";
 import { CodeScene } from "../../scenes/CodeScene";
 import { TextScene } from "../../scenes/TextScene";
 import { CountdownScene } from "../../scenes/CountdownScene";

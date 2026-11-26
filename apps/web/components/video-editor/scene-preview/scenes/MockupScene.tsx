@@ -3,7 +3,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { Scene } from "@/lib/types";
+import type { Scene } from "@markdown-video/core";
 import { TextScene } from "./TextScene";
 import { CodeScene } from "./CodeScene";
 import { ImageScene } from "./ImageScene";

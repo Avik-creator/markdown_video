@@ -3,7 +3,7 @@
 import { useId } from "react";
 import { Languages } from "lucide-react";
 import { useVideoStore } from "@/lib/use-video-store";
-import { resolveEffectiveLocale } from "@/lib/parser/i18n";
+import { resolveEffectiveLocale } from "@markdown-video/core";
 import { cn } from "@/lib/utils";
 
 /**

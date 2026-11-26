@@ -13,7 +13,7 @@ import {
   type DecorationSet,
 } from "@codemirror/view";
 import type { Diagnostic } from "@/lib/editor/diagnostics";
-import type { SourceRange } from "@/lib/types";
+import type { SourceRange } from "@markdown-video/core";
 
 /**
  * Line-oriented visual markers shown in the editor: the pink source-range

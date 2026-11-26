@@ -17,7 +17,7 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SourceRange } from "@/lib/types";
+import type { SourceRange } from "@markdown-video/core";
 
 interface ClickablePropertyProps {
   children: React.ReactNode;

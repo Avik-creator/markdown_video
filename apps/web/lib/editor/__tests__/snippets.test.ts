@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDirectiveValueOptions } from "@/lib/directive-schema";
+import { getDirectiveValueOptions } from "@markdown-video/core";
 import { EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
 
 /**

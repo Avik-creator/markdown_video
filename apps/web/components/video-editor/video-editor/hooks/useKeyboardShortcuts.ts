@@ -2,7 +2,7 @@
 
 import { useEffect } from "react"
 import { useVideoStore } from "@/lib/use-video-store"
-import { ZoomLevel } from "@/lib/types"
+import type { ZoomLevel } from "@/lib/types"
 import { ZOOM_LEVELS } from "../utils/constants"
 import {
   DEFAULT_FRAME_RATE,

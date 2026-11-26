@@ -13,7 +13,7 @@ import {
   canUseInlineShareLink,
   isShareDocumentTooLarge,
   MAX_SHARE_MARKDOWN_BYTES,
-} from "@/lib/share-link"
+} from "@markdown-video/core"
 
 interface ShareModalProps {
   open: boolean

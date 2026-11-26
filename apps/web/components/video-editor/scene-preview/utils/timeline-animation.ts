@@ -1,4 +1,4 @@
-import type { AnimationType, TimelineElement } from "@/lib/types";
+import type { AnimationType, TimelineElement } from "@markdown-video/core";
 
 /** Seconds timeline elements spend entering, matching the previous preview. */
 export const TIMELINE_ELEMENT_ENTER_DURATION = 0.3;

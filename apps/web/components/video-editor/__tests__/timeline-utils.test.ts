@@ -9,7 +9,7 @@ import {
   adjacentReorder,
   reorderScenesInMarkdown,
 } from "../timeline-utils";
-import { parseMarkdown } from "@/lib/parser";
+import { parseMarkdown } from "@markdown-video/core";
 import { DEFAULT_MARKDOWN } from "@/lib/default-markdown";
 
 describe("timeAtPosition", () => {

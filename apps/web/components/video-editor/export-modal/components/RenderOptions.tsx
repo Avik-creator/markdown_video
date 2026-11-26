@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
-import type { ExportFormat } from "@/lib/types";
+import type { ExportFormat } from "@markdown-video/core";
 import { ChevronDown, Monitor, Sparkles, Zap, Film, Languages } from "lucide-react";
-import { resolveEffectiveLocale } from "@/lib/parser/i18n";
+import { resolveEffectiveLocale } from "@markdown-video/core";
 import { cn } from "@/lib/utils";
 import CornerMarkers from "@/components/CornerMarkers";
 

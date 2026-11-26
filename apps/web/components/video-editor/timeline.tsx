@@ -6,7 +6,7 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { Bookmark, Trash2 } from "lucide-react"
 import { Reorder, useDragControls } from "framer-motion"
 import { cn } from "@/lib/utils"
-import type { SourceRange, TimelineSegment as TimelineSegmentData } from "@/lib/types"
+import type { SourceRange, TimelineSegment as TimelineSegmentData } from "@markdown-video/core"
 import {
   timeAtPosition,
   positionPercentForTime,

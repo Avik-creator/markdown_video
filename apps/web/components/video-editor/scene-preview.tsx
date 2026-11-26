@@ -7,7 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
-import type { Scene } from "@/lib/types";
+import type { Scene } from "@markdown-video/core";
 import { motion, useAnimation } from "framer-motion";
 import { transitionVariants } from "./scene-preview/utils/constants";
 import { interpolateVariantState } from "./scene-preview/utils/interpolate";
@@ -19,7 +19,7 @@ import {
   LOGICAL_ROOT_FONT_SIZE_PX,
   getRenderLayoutDimensions,
   getSceneAspectRatioDimensions,
-} from "./scene-preview/utils/render-layout";
+} from "@markdown-video/core";
 import {
   calculatePreviewFitTransform,
   previewFitTransformToCss,

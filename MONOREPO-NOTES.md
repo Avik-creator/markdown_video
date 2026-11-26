@@ -5,7 +5,8 @@ This repository is a pnpm workspace orchestrated by Turborepo.
 ```text
 apps/
   web/       # Next.js editor, landing page, API routes, and MCP route
-packages/    # Future shared packages (none are extracted yet)
+packages/
+  core/      # Parser, directive schema, validation/docs, share codec, types, and render geometry
 ```
 
 ## Local commands
@@ -21,7 +22,30 @@ pnpm test
 pnpm build
 ```
 
-The root scripts delegate to workspace package scripts with `turbo run ...`. The same `dev`, `lint`, `typecheck`, `test`, `build`, and `start` scripts also work directly inside `apps/web`.
+The root scripts delegate to workspace package scripts with `turbo run ...`. The same `dev`, `lint`, `typecheck`, `test`, `build`, and `start` scripts also work directly inside `apps/web`; because there is no nested task orchestration when they are invoked that way, they assume `packages/core/dist` already exists (the root Turbo tasks create it automatically, including on a clean checkout). `packages/core` supports `lint`, `typecheck`, `test`, and `build` directly; it is a library and has no `dev`/`start` server script.
+
+## `packages/core` boundaries
+
+`@markdown-video/core` contains only framework-independent TypeScript:
+
+- the markdown parser, parser constants/utilities, timeline math, and localization resolvers;
+- the authoritative directive schema and schema-generated documentation;
+- pure markdown syntax validation (the MCP transport/API route remains in `apps/web`);
+- scene/project/export/template domain types;
+- the isomorphic share-link codec;
+- logical render dimensions, output render plans, fps normalization, and frame-count/validation math.
+
+The store split is deliberate: `apps/web/lib/types.ts` owns the zustand `VideoStore` interface plus editor-only zoom, theme, marker, and history types. It imports scene/export/domain types from core. Browser export capture machinery also stays in the app: DOM clone mutation, html2canvas/ffmpeg.wasm buffer handling, MEMFS artifact naming, warm worker ownership, and render cancellation tracking are not core concerns.
+
+Core is currently private to the workspace and has a single root import surface, `@markdown-video/core`. Do not import files inside the package through relative paths.
+
+## Core build and Next.js interop
+
+Core builds with plain `tsc` as an ESM-only NodeNext package. `tsup` would mainly provide bundling and dual-format output, but this package has no runtime dependencies and modern Next.js/Vite/Node consumers support ESM; preserving the unbundled module graph is simpler, keeps declarations aligned with sources, and avoids duplicate module identity across subpaths. Internal relative imports therefore use explicit `.js` specifiers, as required by Node ESM in the emitted output.
+
+`transpilePackages` is still intentionally not configured in `apps/web/next.config.mjs`. Core is consumed as compiled plain JavaScript, and the Next.js 16 documentation also states that Turbopack automatically transpiles workspace packages under both routers. The dev server, production build, typecheck, and Vitest integration for this extraction all pass without the option.
+
+Turbo builds core before tasks that consume its generated declarations or JavaScript: `build`, `typecheck`, and `test` already use `^build`, and `dev` also depends on `^build` so a clean checkout can start the app. Core's `dist/**` output is part of Turbo's build outputs. Changing core source during a long-lived web dev session requires rerunning the core build (or restarting `pnpm dev`); watch-oriented package development can be added later if it becomes painful.
 
 ## Workspace decisions
 
@@ -30,7 +54,7 @@ The root scripts delegate to workspace package scripts with `turbo run ...`. The
 - `pnpm-workspace.yaml` declares `apps/*` and `packages/*` and also holds `peerDependencyRules`. pnpm 10 workspace settings belong there rather than in a package manifest's `pnpm` field.
 - No hoisting override or custom `.npmrc` is used. The standard pnpm isolated linker works with Next.js 16 in this workspace.
 - `apps/web/next.config.mjs` sets both `turbopack.root` and `outputFileTracingRoot` to the repository root. This lets Turbopack resolve future workspace packages and ensures output-file tracing can include pnpm-linked dependency targets outside `apps/web`.
-- `transpilePackages` is intentionally not configured yet. Next.js 16 automatically transpiles workspace packages for the App Router/Turbopack; add package names later only if the extracted packages need it.
+- `transpilePackages` is intentionally not configured. `@markdown-video/core` ships compiled JavaScript, Next.js 16 automatically transpiles workspace packages for the App Router/Turbopack, and this extraction passed dev/build/typecheck/test verification without the option. Reassess only if a future workspace package ships raw TypeScript or JSX.
 - Turbo's Next.js build outputs cache `.next/**` while excluding `.next/cache/**` and `.next/dev/**`. `.env*` files in `apps/web` are explicit build inputs, and `NEXT_PUBLIC_*` variables participate in build cache keys. Runtime Redis variables are also allowlisted for the uncached `dev` and `start` tasks.
 - There is no root `vercel.json`: the project does not need custom Vercel routing or headers, and the monorepo deployment settings are project settings rather than repository configuration.
 

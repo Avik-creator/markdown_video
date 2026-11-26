@@ -1,4 +1,4 @@
-import type { Template } from "./types"
+import type { Template } from "@markdown-video/core"
 
 export const TEMPLATES: Template[] = [
   {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import type { TimelineElement } from "@/lib/types";
+import type { TimelineElement } from "@markdown-video/core";
 import {
   TIMELINE_ELEMENT_ENTER_DURATION,
   TIMELINE_ELEMENT_EXIT_DURATION,

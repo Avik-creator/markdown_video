@@ -1,15 +1,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { PersistStorage, StorageValue } from "zustand/middleware";
-import { parseMarkdownFull, getTimelineSegments } from "./parser";
+import { parseMarkdownFull, getTimelineSegments } from "@markdown-video/core";
 import { DEFAULT_MARKDOWN } from "./default-markdown";
-import type {
-  AspectRatio,
-  Marker,
-  ThemePreset,
-  VideoStore,
-  SourceRange,
-} from "./types";
+import type { AspectRatio, SourceRange } from "@markdown-video/core";
+import type { Marker, ThemePreset, VideoStore } from "./types";
 
 // Runtime-only markdown mutation metadata. The CodeMirror editor bridge uses
 // this to tell its own commits apart from external mutations (undo/redo,
