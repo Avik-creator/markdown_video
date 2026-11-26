@@ -22,7 +22,7 @@ pnpm test
 pnpm build
 ```
 
-The root scripts delegate to workspace package scripts with `turbo run ...`. The same `dev`, `lint`, `typecheck`, `test`, `build`, and `start` scripts also work directly inside `apps/web`. `packages/core` supports `lint`, `typecheck`, `test`, and `build` directly; it is a library and has no `dev`/`start` server script.
+The root scripts delegate to workspace package scripts with `turbo run ...`. The same `dev`, `lint`, `typecheck`, `test`, `build`, and `start` scripts also work directly inside `apps/web`; because there is no nested task orchestration when they are invoked that way, they assume `packages/core/dist` already exists (the root Turbo tasks create it automatically, including on a clean checkout). `packages/core` supports `lint`, `typecheck`, `test`, and `build` directly; it is a library and has no `dev`/`start` server script.
 
 ## `packages/core` boundaries
 
@@ -54,7 +54,7 @@ Turbo builds core before tasks that consume its generated declarations or JavaSc
 - `pnpm-workspace.yaml` declares `apps/*` and `packages/*` and also holds `peerDependencyRules`. pnpm 10 workspace settings belong there rather than in a package manifest's `pnpm` field.
 - No hoisting override or custom `.npmrc` is used. The standard pnpm isolated linker works with Next.js 16 in this workspace.
 - `apps/web/next.config.mjs` sets both `turbopack.root` and `outputFileTracingRoot` to the repository root. This lets Turbopack resolve future workspace packages and ensures output-file tracing can include pnpm-linked dependency targets outside `apps/web`.
-- `transpilePackages` is intentionally not configured yet. Next.js 16 automatically transpiles workspace packages for the App Router/Turbopack; add package names later only if the extracted packages need it.
+- `transpilePackages` is intentionally not configured. `@markdown-video/core` ships compiled JavaScript, Next.js 16 automatically transpiles workspace packages for the App Router/Turbopack, and this extraction passed dev/build/typecheck/test verification without the option. Reassess only if a future workspace package ships raw TypeScript or JSX.
 - Turbo's Next.js build outputs cache `.next/**` while excluding `.next/cache/**` and `.next/dev/**`. `.env*` files in `apps/web` are explicit build inputs, and `NEXT_PUBLIC_*` variables participate in build cache keys. Runtime Redis variables are also allowlisted for the uncached `dev` and `start` tasks.
 - There is no root `vercel.json`: the project does not need custom Vercel routing or headers, and the monorepo deployment settings are project settings rather than repository configuration.
 
