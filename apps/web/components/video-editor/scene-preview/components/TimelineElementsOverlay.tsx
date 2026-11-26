@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import type { TimelineElement } from "@/lib/types";
+import type { TimelineElement } from "@markdown-video/core";
 import { timelineElementVisualState } from "../utils/timeline-animation";
 
 function TimelineElementRenderer({

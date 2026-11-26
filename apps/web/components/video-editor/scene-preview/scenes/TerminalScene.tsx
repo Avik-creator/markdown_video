@@ -2,7 +2,7 @@
 
 import { motion, useAnimation } from "framer-motion";
 import { useMemo, useEffect } from "react";
-import type { Scene, TerminalCommand } from "@/lib/types";
+import type { Scene, TerminalCommand } from "@markdown-video/core";
 import { computeTerminalCommandStates } from "../utils/animation-math";
 import { TypingCursor } from "../components/TypingCursor";
 

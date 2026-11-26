@@ -1,6 +1,6 @@
-import { getAllDirectives, type DirectiveDoc } from "@/lib/mcp/documentation";
-import { parseLocalizationStringsBlock } from "@/lib/parser/i18n";
-import { normalizeDirective, parseDirective } from "@/lib/parser/utils";
+import { getAllDirectives, type DirectiveDoc } from "@markdown-video/core";
+import { parseLocalizationStringsBlock } from "@markdown-video/core";
+import { normalizeDirective, parseDirective } from "@markdown-video/core";
 
 export interface Completion {
   label: string;

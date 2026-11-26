@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { memoryStorage } from "./memory-storage";
-import { parseMarkdown, getTimelineSegments } from "../../parser";
+import { parseMarkdown, getTimelineSegments } from "@markdown-video/core";
 
 // Total duration: 7s + 5s = 12s.
 const STORED_MARKDOWN = `!scene

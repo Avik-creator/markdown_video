@@ -2,7 +2,7 @@
 
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
-import type { Scene } from "@/lib/types";
+import type { Scene } from "@markdown-video/core";
 
 export function ChartScene({
   scene,

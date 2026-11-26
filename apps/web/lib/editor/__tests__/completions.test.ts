@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { getAllDirectives } from "@/lib/mcp/documentation";
-import * as C from "@/lib/parser/constants";
+import { getAllDirectives } from "@markdown-video/core";
+import * as C from "@markdown-video/core";
 import { getCompletions } from "../completions";
 
 /** Completions with the cursor at "|". */

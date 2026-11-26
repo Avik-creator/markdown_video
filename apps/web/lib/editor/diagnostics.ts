@@ -1,4 +1,4 @@
-import { validateMarkdownSyntax } from "@/lib/mcp/syntax-validator";
+import { validateMarkdownSyntax } from "@markdown-video/core";
 
 export interface Diagnostic {
   /** 1-indexed line, or undefined for problems with the whole document. */

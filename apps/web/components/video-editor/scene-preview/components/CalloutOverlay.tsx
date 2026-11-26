@@ -3,7 +3,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
-import type { SceneCallout } from "@/lib/types";
+import type { SceneCallout } from "@markdown-video/core";
 
 export function CalloutOverlay({
   callout,

@@ -2,7 +2,7 @@
 
 import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { parseMarkdown } from "@/lib/parser";
+import { parseMarkdown } from "@markdown-video/core";
 import { useVideoStore } from "@/lib/use-video-store";
 import { registerActiveEditorFlush } from "@/lib/editor/codemirror/store-sync";
 import { Timeline } from "../timeline";

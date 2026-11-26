@@ -1,10 +1,8 @@
 // @vitest-environment jsdom
 
 import { describe, expect, it } from "vitest";
-import {
-  applyRenderLayoutToClone,
-  createRenderPlan,
-} from "../export-utils";
+import { createRenderPlan } from "@markdown-video/core";
+import { applyRenderLayoutToClone } from "../export-utils";
 
 function createCloneDocument(withPreview = true) {
   const clonedDoc = document.implementation.createHTMLDocument("export clone");

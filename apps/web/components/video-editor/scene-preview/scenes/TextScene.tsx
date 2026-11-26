@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import type { Scene } from "@/lib/types";
+import type { Scene } from "@markdown-video/core";
 import { useTypingEffect } from "../hooks/useTypingEffect";
 import { animationVariants, textSizeClasses } from "../utils/constants";
 import { interpolateVariantState } from "../utils/interpolate";
@@ -16,7 +16,7 @@ import { useVideoStore } from "@/lib/use-video-store";
 import {
   resolveEffectiveLocale,
   resolveSceneTextContent,
-} from "@/lib/parser/i18n";
+} from "@markdown-video/core";
 
 // framer-motion's variant/target types use template-literal index signatures
 // that plain records don't satisfy structurally; the values are always

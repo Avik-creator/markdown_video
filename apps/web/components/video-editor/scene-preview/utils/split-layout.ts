@@ -1,4 +1,4 @@
-import type { Scene } from "@/lib/types";
+import type { Scene } from "@markdown-video/core";
 
 export const DEFAULT_SPLIT_RATIO = 0.5;
 

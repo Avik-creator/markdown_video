@@ -9,7 +9,7 @@ import {
   getCameraTransform,
 } from "../camera-transform";
 import { CameraWrapper } from "../../components/CameraWrapper";
-import type { SceneCamera } from "@/lib/types";
+import type { SceneCamera } from "@markdown-video/core";
 
 describe("getCameraTransform", () => {
   it("returns the complete identity transform when camera is absent", () => {

@@ -1,7 +1,7 @@
 import {
   getDirectiveSchema,
   getDirectiveValueOptions,
-} from "@/lib/directive-schema";
+} from "@markdown-video/core";
 
 /** Canonical directive plus aliases formatted for display in the guide. */
 export function directiveOptions(name: string): readonly string[] {

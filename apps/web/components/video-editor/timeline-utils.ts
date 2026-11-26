@@ -2,8 +2,8 @@
 // click-vs-drag discrimination and scene reordering in markdown source.
 // Kept free of React/DOM dependencies so they can be unit-tested in isolation.
 
-import { SCENE_DIRECTIVES } from "@/lib/parser/constants";
-import type { SourceRange } from "@/lib/types";
+import { SCENE_DIRECTIVES } from "@markdown-video/core";
+import type { SourceRange } from "@markdown-video/core";
 
 /**
  * Convert a horizontal pixel offset within a timeline element to a time in

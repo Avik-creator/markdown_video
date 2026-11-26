@@ -1,7 +1,7 @@
 import type {
   CodeFontFamily,
   TextFontFamily,
-} from "@/lib/directive-schema";
+} from "@markdown-video/core";
 
 export interface FontFamilyStyle {
   fontFamily: string;

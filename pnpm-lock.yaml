@@ -41,6 +41,9 @@ importers:
       '@lezer/highlight':
         specifier: 1.2.5
         version: 1.2.5
+      '@markdown-video/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@modelcontextprotocol/sdk':
         specifier: 1.32.2
         version: 1.32.2(zod@4.6.7)

@@ -17,7 +17,7 @@ import CornerMarkers from "@components/CornerMarkers"
 import { ProjectMenu } from "../../project-menu"
 import { ThemeSelector } from "../../theme-selector"
 import { ASPECT_RATIOS, ZOOM_LEVELS } from "../utils/constants"
-import { ZoomLevel } from "@/lib/types"
+import type { ZoomLevel } from "@/lib/types"
 import Image from "next/image"
 
 interface EditorHeaderProps {

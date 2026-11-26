@@ -6,7 +6,7 @@ import { ShareProjectGate } from "@components/video-editor/share-project-gate"
 import { enforceProjectReadRateLimit } from "@/lib/rate-limit"
 import { parseProjectMarkdown } from "@/lib/project-storage"
 import { redis } from "@/lib/redis"
-import { decodeShareMarkdownPayload } from "@/lib/share-link"
+import { decodeShareMarkdownPayload } from "@markdown-video/core"
 
 export const metadata: Metadata = {
   title: "Editor",

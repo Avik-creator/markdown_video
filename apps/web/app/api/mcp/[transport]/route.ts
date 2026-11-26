@@ -9,15 +9,15 @@ import {
   validateMarkdownSyntax,
   quickSyntaxCheck,
   getSyntaxSuggestions,
-} from "@/lib/mcp/syntax-validator";
+} from "@markdown-video/core";
 import {
   getAllDirectives,
   getDirectiveDoc,
   getQuickReference,
   getExamplesByCategory,
   searchDocumentation,
-} from "@/lib/mcp/documentation";
-import { parseMarkdownFull } from "@/lib/parser";
+} from "@markdown-video/core";
+import { parseMarkdownFull } from "@markdown-video/core";
 import { enforceMcpRateLimit } from "@/lib/rate-limit";
 
 const MAX_MCP_MARKDOWN_LENGTH = 100_000;
