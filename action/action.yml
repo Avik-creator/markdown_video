@@ -1,0 +1,180 @@
+name: markdown-video render
+description: Render a markdown-video document with the canonical markdown-video CLI
+author: markdown-video
+
+inputs:
+  markdown-path:
+    description: Markdown input path, relative to the caller workspace (an absolute path inside the workspace is also accepted)
+    required: false
+    default: release.md
+  output-name:
+    description: Rendered output path/name, relative to the caller workspace; must end in .mp4 for mp4-like formats or .gif for gif
+    required: false
+    default: markdown-video.mp4
+  format:
+    description: "Output format passed to the CLI: mp4, reels, shorts, slides, or gif"
+    required: false
+    default: mp4
+  resolution:
+    description: "Output resolution preset passed to the CLI: 480p, 720p, 1080p, 1440p, or 4k"
+    required: false
+    default: 1080p
+  quality:
+    description: "Encoding quality preset passed to the CLI: low, medium, high, or ultra"
+    required: false
+    default: high
+  speed:
+    description: "Encoder speed preset passed to the CLI: fastest, fast, balanced, slow, or slowest"
+    required: false
+    default: balanced
+  aspect-ratio:
+    description: "Project aspect ratio passed to the CLI: 16:9, 9:16, 1:1, or 4:3"
+    required: false
+    default: 16:9
+  fps:
+    description: Output frames per second passed to the CLI (normalized by the CLI to 1-60)
+    required: false
+    default: "30"
+  locale:
+    description: Optional locale override passed to the CLI, such as en, es, or pt-BR
+    required: false
+    default: ""
+  overwrite:
+    description: Replace an existing output file (true or false)
+    required: false
+    default: "false"
+  allow-remote-network:
+    description: Allow remote http(s) browser requests for image scenes; set false for untrusted markdown (true or false)
+    required: false
+    default: "true"
+  upload-release-asset:
+    description: Upload the rendered file to a GitHub release with gh release upload --clobber (true or false)
+    required: false
+    default: "false"
+  release-tag:
+    description: Release tag used when upload-release-asset is true; defaults to the release event tag
+    required: false
+    default: ""
+  github-token:
+    description: Token used only by the release-upload step; keep contents write permission scoped as narrowly as possible
+    required: false
+    default: "${{ github.token }}"
+
+outputs:
+  output-path:
+    description: Absolute path of the rendered file (mp4 or gif)
+    value: ${{ steps.render.outputs.output-path }}
+  mp4-path:
+    description: Absolute path of the rendered mp4; empty when format is gif
+    value: ${{ steps.render.outputs.mp4-path }}
+  asset-url:
+    description: Browser download URL of the uploaded release asset; empty when upload-release-asset is false
+    value: ${{ steps.upload.outputs.asset-url }}
+
+runs:
+  using: composite
+  steps:
+    - name: Locate renderer sources
+      id: source
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/prepare-source.sh"
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
+
+    - name: Enable pnpm
+      shell: bash
+      working-directory: ${{ steps.source.outputs.renderer-root }}
+      run: |
+        package_manager="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).packageManager")"
+        if [[ "$package_manager" != pnpm@* ]]; then
+          echo "Expected the renderer workspace packageManager to be pnpm@*, got $package_manager" >&2
+          exit 1
+        fi
+        export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+        corepack enable
+        corepack prepare "$package_manager" --activate
+        pnpm --version
+
+    - name: Locate pnpm store
+      id: pnpm-store
+      shell: bash
+      working-directory: ${{ steps.source.outputs.renderer-root }}
+      run: |
+        store_path="$(pnpm store path --silent | tail -n 1)"
+        if [[ -z "$store_path" ]]; then
+          echo "pnpm did not report a store path" >&2
+          exit 1
+        fi
+        echo "pnpm-store-path=$store_path" >> "$GITHUB_OUTPUT"
+        echo "pnpm store: $store_path"
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.pnpm-store.outputs.pnpm-store-path }}
+        key: markdown-video-pnpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.source.outputs.lockfile-sha256 }}
+        restore-keys: |
+          markdown-video-pnpm-${{ runner.os }}-${{ runner.arch }}-
+
+    - name: Cache Playwright Chromium
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/ms-playwright
+        key: markdown-video-playwright-${{ runner.os }}-${{ runner.arch }}-${{ steps.source.outputs.playwright-version }}
+
+    - name: Cache compiled renderer
+      uses: actions/cache@v4
+      with:
+        path: |
+          ${{ steps.source.outputs.renderer-root }}/packages/core/dist
+          ${{ steps.source.outputs.renderer-root }}/packages/scenes/dist
+          ${{ steps.source.outputs.renderer-root }}/apps/render/dist
+          ${{ steps.source.outputs.renderer-root }}/apps/cli/dist
+        key: markdown-video-build-${{ runner.os }}-${{ runner.arch }}-${{ steps.source.outputs.source-sha256 }}
+
+    - name: Install renderer workspace dependencies
+      shell: bash
+      working-directory: ${{ steps.source.outputs.renderer-root }}
+      run: pnpm --filter 'markdown-video...' install --frozen-lockfile --prefer-offline
+
+    - name: Build renderer
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/build-renderer.sh" "${{ steps.source.outputs.renderer-root }}" "${{ steps.source.outputs.source-sha256 }}"
+
+    - name: Install and verify Chromium
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/ensure-chromium.sh" "${{ steps.source.outputs.renderer-root }}"
+
+    - name: Ensure ffmpeg and ffprobe
+      shell: bash
+      run: bash "$GITHUB_ACTION_PATH/scripts/ensure-ffmpeg.sh"
+
+    - name: Render markdown video
+      id: render
+      shell: bash
+      env:
+        MV_MARKDOWN_PATH: ${{ inputs.markdown-path }}
+        MV_OUTPUT_NAME: ${{ inputs.output-name }}
+        MV_FORMAT: ${{ inputs.format }}
+        MV_RESOLUTION: ${{ inputs.resolution }}
+        MV_QUALITY: ${{ inputs.quality }}
+        MV_SPEED: ${{ inputs.speed }}
+        MV_ASPECT_RATIO: ${{ inputs.aspect-ratio }}
+        MV_FPS: ${{ inputs.fps }}
+        MV_LOCALE: ${{ inputs.locale }}
+        MV_OVERWRITE: ${{ inputs.overwrite }}
+        MV_ALLOW_REMOTE_NETWORK: ${{ inputs.allow-remote-network }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/render.sh" "${{ steps.source.outputs.renderer-root }}"
+
+    - name: Upload release asset
+      id: upload
+      shell: bash
+      env:
+        MV_UPLOAD_RELEASE_ASSET: ${{ inputs.upload-release-asset }}
+        MV_RELEASE_TAG: ${{ inputs.release-tag }}
+        MV_OUTPUT_PATH: ${{ steps.render.outputs.output-path }}
+        MV_GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: bash "$GITHUB_ACTION_PATH/scripts/upload-release-asset.sh"

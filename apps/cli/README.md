@@ -60,6 +60,9 @@ node apps/cli/dist/cli.js render video.md -o preview.gif --format gif --fps 12
 # Replace an existing output or explicitly allow a path outside cwd
 node apps/cli/dist/cli.js render video.md -o video.mp4 --overwrite
 node apps/cli/dist/cli.js render video.md -o ../video.mp4 --allow-outside-cwd
+
+# Block remote image/network requests while rendering untrusted markdown
+node apps/cli/dist/cli.js render video.md -o video.mp4 --deny-remote-network
 ```
 
 Run `node apps/cli/dist/cli.js --help` for the complete option list.
@@ -68,6 +71,13 @@ By default output must stay inside the current working directory and must not
 already exist. This protects against accidental path traversal and overwriting;
 both behaviors have explicit opt-in flags. Input and output paths must be
 different files.
+
+The CLI preserves document-rendering semantics by default, so image scenes may
+fetch remote `http(s)` URLs. When rendering untrusted markdown in automation,
+`--deny-remote-network` installs the same loopback-only browser network policy
+used by the render worker: `data:` and `blob:` images still work, but remote
+URLs render as blocked/broken images instead of giving the document network
+egress.
 
 ## Encoding semantics
 

@@ -31,6 +31,7 @@ Options:
       --fps <number>         output frames per second, normalized to 1-60 (default 30)
       --overwrite            replace an existing output file
       --allow-outside-cwd    permit output outside the working directory
+      --deny-remote-network  block all non-loopback browser network requests
       --ffmpeg <path>        ffmpeg executable (default: FFMPEG_BIN or PATH)
       --chromium <path>      Chromium executable (default: Playwright browser)
   -v, --version              print version
@@ -130,6 +131,7 @@ export async function main(argv = process.argv.slice(2)) {
       fps: args.fps,
       overwrite: args.overwrite,
       allowOutsideCwd: args.allowOutsideCwd,
+      allowRemoteNetwork: !args.denyRemoteNetwork,
       ffmpegPath: args.ffmpegPath,
       chromiumExecutablePath: args.chromiumExecutablePath,
       signal: abort.signal,
