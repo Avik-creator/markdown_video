@@ -87,24 +87,44 @@ integration("font contract", () => {
     await page.close()
   }, 60_000)
 
-  it("renders color emoji when fontconfig exposes no system fonts", async () => {
+  it("renders color emoji when fontconfig exposes no system emoji fonts", async () => {
     const tempDir = mkdtempSync(path.join(os.tmpdir(), "mv-empty-fontconfig-"))
     const fontconfigPath = path.join(tempDir, "fonts.conf")
     writeFileSync(
       fontconfigPath,
       `<?xml version="1.0"?>
+<!DOCTYPE fontconfig SYSTEM "urn:fontconfig:fonts.dtd">
 <fontconfig>
-  <dir>${path.join(tempDir, "no-fonts")}</dir>
+  <dir>/usr/share/fonts</dir>
+  <dir>/usr/local/share/fonts</dir>
   <cachedir>${path.join(tempDir, "cache")}</cachedir>
+  <selectfont>
+    <rejectfont>
+      <pattern>
+        <patelt name="family"><string>Noto Color Emoji</string></patelt>
+      </pattern>
+    </rejectfont>
+    <rejectfont>
+      <pattern>
+        <patelt name="family"><string>Noto Emoji</string></patelt>
+      </pattern>
+    </rejectfont>
+  </selectfont>
 </fontconfig>
 `,
     )
 
-    // Chromium resolves platform fonts through fontconfig on Linux. Giving the
-    // browser process a configuration with no real font directories makes this
-    // pixel assertion depend on the bundled webfont rather than the host OS.
-    // macOS Chromium uses CoreText instead, so there the assertion remains a
-    // useful color-render regression test but is not a system-font isolation proof.
+    // Chromium resolves platform fonts through fontconfig on Linux. The config
+    // must stay FUNCTIONAL — an empty fontconfig disables the whole font
+    // pipeline including webfonts — so this keeps the system font directories
+    // but uses selectfont/rejectfont to hide both emoji families (color and
+    // monochrome). Any saturated-yellow emoji pixels in the capture therefore
+    // prove the bundled webfont rendered them. Syntax details verified
+    // empirically in an ubuntu:24.04 container: the DOCTYPE is mandatory, and
+    // rejectfont patterns use patelt (a <test> element invalidates the entire
+    // config, leaving zero fonts). macOS Chromium uses CoreText instead, so
+    // there the assertion remains a useful color-render regression test but is
+    // not a system-font isolation proof.
     const processEnv = Object.fromEntries(
       Object.entries(process.env).filter(([, value]) => value !== undefined),
     ) as Record<string, string>
