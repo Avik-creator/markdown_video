@@ -6,7 +6,7 @@ import {
   getRenderLayoutDimensions,
   getSceneAspectRatioDimensions,
 } from "../render-layout";
-import { getRenderLayoutDimensions as getExportRenderLayoutDimensions } from "../../../export-modal/utils/export-utils";
+import { getRenderLayoutDimensions as getPublicRenderLayoutDimensions } from "../index";
 
 describe("render-layout canonical geometry", () => {
   it("uses a 1080px short side in logical composition space", () => {
@@ -25,7 +25,7 @@ describe("render-layout canonical geometry", () => {
     expect(getRenderLayoutDimensions("21:9")).toEqual({ width: 1920, height: 1080 });
   });
 
-  it("is the same implementation export-utils re-exports", () => {
-    expect(getExportRenderLayoutDimensions).toBe(getRenderLayoutDimensions);
+  it("is the same implementation exposed by the package root", () => {
+    expect(getPublicRenderLayoutDimensions).toBe(getRenderLayoutDimensions);
   });
 });
