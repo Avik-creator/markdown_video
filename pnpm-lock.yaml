@@ -12,6 +12,43 @@ importers:
         specifier: 2.11.13
         version: 2.11.13
 
+  apps/cli:
+    dependencies:
+      '@markdown-video/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@markdown-video/render-page':
+        specifier: workspace:*
+        version: link:../render
+      playwright:
+        specifier: 1.65.1
+        version: 1.65.1
+    devDependencies:
+      '@types/node':
+        specifier: 22.19.3
+        version: 22.19.3
+      '@types/pngjs':
+        specifier: 6.0.5
+        version: 6.0.5
+      eslint:
+        specifier: 9.39.5
+        version: 9.39.5(jiti@2.6.1)
+      pixelmatch:
+        specifier: 8.0.0
+        version: 8.0.0
+      pngjs:
+        specifier: 7.0.0
+        version: 7.0.0
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: 8.74.0
+        version: 8.74.0(eslint@9.39.5(jiti@2.6.1))(typescript@5.9.3)
+      vitest:
+        specifier: 3.2.4
+        version: 3.2.4(@types/node@22.19.3)(jiti@2.6.1)(jsdom@26.1.0)(lightningcss@1.30.2)
+
   apps/render:
     dependencies:
       '@markdown-video/core':
@@ -128,7 +165,7 @@ importers:
         version: 1.41.0
       '@vercel/analytics':
         specifier: 1.3.1
-        version: 1.3.1(next@16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
+        version: 1.3.1(next@16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -146,10 +183,10 @@ importers:
         version: 0.454.0(react@19.2.0)
       mcp-handler:
         specifier: 1.1.0
-        version: 1.1.0(@modelcontextprotocol/sdk@1.32.2(zod@4.6.7))(next@16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))
+        version: 1.1.0(@modelcontextprotocol/sdk@1.32.2(zod@4.6.7))(next@16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))
       next:
         specifier: 16.4.6
-        version: 16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        version: 16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -1719,6 +1756,9 @@ packages:
 
   '@types/node@22.19.3':
     resolution: {integrity: sha512-1N9SBnWYOJTrNZCdh/yJE+t910Y128BoyY+zBLWhL3r0TYzlTmFdXrPwHL9DyFZmlEXNQQolTZh3KHV31QDhyA==}
+
+  '@types/pngjs@6.0.5':
+    resolution: {integrity: sha512-0k5eKfrA83JOZPppLtS2C7OUtyNAl2wKNxfyYl9Q5g9lPkgBl/9hNyAu6HuEH2J4XmIv2znEpkDd0SaZVxW6iQ==}
 
   '@types/react-dom@19.2.3':
     resolution: {integrity: sha512-jp2L/eY6fn+KgVVQAOqYItbF0VY/YApe5Mz2F0aykSO8gx31bYCZyvSeYxCHKvzHG5eZjc+zyaS5BrBWya2+kQ==}
@@ -3353,9 +3393,27 @@ packages:
     resolution: {integrity: sha512-qcJu88Q2IWqJsDD529JKMdwGm/dvInW4HvQnRwiH9JtihJvzGOscDtHE3x1pBKeUOTysQ8kVmLnJ2kJu7yhcGA==}
     engines: {node: '>=12'}
 
+  pixelmatch@8.0.0:
+    resolution: {integrity: sha512-cIqOLfh5k52us715qf3B3+kTOxZv+WDv77HN7xokLScYQGYQHi4m/ynoDIPpvF2LvCyUJGyvzY64i0QCXtzu1g==}
+    hasBin: true
+
   pkce-challenge@5.0.1:
     resolution: {integrity: sha512-wQ0b/W4Fr01qtpHlqSqspcj3EhBvimsdh0KlHhH8HRZnMsEa0ea2fTULOXOS9ccQr3om+GcGRk4e+isrZWV8qQ==}
     engines: {node: '>=16.20.0'}
+
+  playwright-core@1.65.1:
+    resolution: {integrity: sha512-hqPpz7blSMPxWVdoeE1yiBSzXsKiVOd2k+kjCvmUywD2GPO2Dd9HfcWnq9NN0GHbNZDFgZ9JfBFr+X5/BLo0qw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  playwright@1.65.1:
+    resolution: {integrity: sha512-vJ1FuoOrNwOKHUIVEvSt3jT1L+wjjDpwhwIstKtfvTh8XIG4FG4bIFuvNdMxi81LGfAhUgUZleVFaOLY4RIUUw==}
+    engines: {node: '>=20'}
+    hasBin: true
+
+  pngjs@7.0.0:
+    resolution: {integrity: sha512-LKWqWJRhstyYo9pGvgor/ivk2w94eSjE3RGVuzLGlr3NmD8bf7RcYGze1mNdEHRP6TRP6rMuDHk5t44hnTRyow==}
+    engines: {node: '>=14.19.0'}
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -5325,6 +5383,10 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
+  '@types/pngjs@6.0.5':
+    dependencies:
+      '@types/node': 22.19.3
+
   '@types/react-dom@19.2.3(@types/react@19.2.7)':
     dependencies:
       '@types/react': 19.2.7
@@ -5504,11 +5566,11 @@ snapshots:
     dependencies:
       uncrypto: 0.1.3
 
-  '@vercel/analytics@1.3.1(next@16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)':
+  '@vercel/analytics@1.3.1(next@16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)':
     dependencies:
       server-only: 0.0.1
     optionalDependencies:
-      next: 16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      next: 16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react: 19.2.0
 
   '@vitejs/plugin-react@5.1.4(vite@6.4.6(@types/node@22.19.3)(jiti@2.6.1)(lightningcss@1.30.2))':
@@ -6907,14 +6969,14 @@ snapshots:
 
   math-intrinsics@1.1.0: {}
 
-  mcp-handler@1.1.0(@modelcontextprotocol/sdk@1.32.2(zod@4.6.7))(next@16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)):
+  mcp-handler@1.1.0(@modelcontextprotocol/sdk@1.32.2(zod@4.6.7))(next@16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)):
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.2(zod@4.6.7)
       chalk: 5.6.2
       commander: 11.1.0
       redis: 4.7.1
     optionalDependencies:
-      next: 16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      next: 16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
 
   media-typer@1.1.1: {}
 
@@ -6971,7 +7033,7 @@ snapshots:
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
 
-  next@16.4.6(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+  next@16.4.6(@babel/core@7.29.13)(@types/node@22.19.3)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
       '@next/env': 16.4.6
       '@swc/helpers': 0.5.23
@@ -6980,7 +7042,7 @@ snapshots:
       postcss: 8.5.23
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
-      styled-jsx: 5.1.6(react@19.2.0)
+      styled-jsx: 5.1.6(@babel/core@7.29.13)(react@19.2.0)
     optionalDependencies:
       '@next/swc-darwin-arm64': 16.4.6
       '@next/swc-darwin-x64': 16.4.6
@@ -7109,7 +7171,19 @@ snapshots:
 
   picomatch@4.0.7: {}
 
+  pixelmatch@8.0.0:
+    dependencies:
+      pngjs: 7.0.0
+
   pkce-challenge@5.0.1: {}
+
+  playwright-core@1.65.1: {}
+
+  playwright@1.65.1:
+    dependencies:
+      playwright-core: 1.65.1
+
+  pngjs@7.0.0: {}
 
   possible-typed-array-names@1.1.0: {}
 
@@ -7529,10 +7603,12 @@ snapshots:
 
   style-mod@4.1.5: {}
 
-  styled-jsx@5.1.6(react@19.2.0):
+  styled-jsx@5.1.6(@babel/core@7.29.13)(react@19.2.0):
     dependencies:
       client-only: 0.0.1
       react: 19.2.0
+    optionalDependencies:
+      '@babel/core': 7.29.13
 
   supports-color@7.2.0:
     dependencies:
