@@ -1,0 +1,49 @@
+{
+  "name": "markdown-video",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "markdown-video": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "goldens:update": "node scripts/regenerate-goldens.mjs"
+  },
+  "dependencies": {
+    "@markdown-video/core": "workspace:*",
+    "@markdown-video/render-page": "workspace:*",
+    "playwright": "1.65.1"
+  },
+  "devDependencies": {
+    "@types/node": "22.19.3",
+    "@types/pngjs": "6.0.5",
+    "eslint": "9.39.5",
+    "pixelmatch": "8.0.0",
+    "pngjs": "7.0.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.74.0",
+    "vitest": "3.2.4"
+  }
+}

@@ -38,3 +38,22 @@ jobs:
         timeout-minutes: 10
       - run: pnpm build
         timeout-minutes: 15
+      # Browser-dependent golden/ffprobe tests are deliberately separate from
+      # unit tests. Cache the Playwright browser download but still perform the
+      # version-aware install step so a lockfile/browser revision change is picked up.
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: playwright-${{ runner.os }}-
+      - run: pnpm --filter markdown-video exec playwright install chromium
+        timeout-minutes: 10
+      - name: Ensure native ffmpeg/ffprobe
+        run: |
+          if ! command -v ffmpeg >/dev/null || ! command -v ffprobe >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y ffmpeg
+          fi
+        timeout-minutes: 10
+      - run: pnpm --filter markdown-video test:integration
+        timeout-minutes: 10

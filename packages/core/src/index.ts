@@ -185,6 +185,7 @@ export {
   getExportDimensions,
   getExportAspectRatio,
   getFrameEncoding,
+  getVideoEncodingSettings,
   createRenderPlan,
   getFrameFileName,
   normalizeOutputFps,
@@ -193,6 +194,7 @@ export {
 } from "./render-plan.js";
 export type {
   FrameEncoding,
+  VideoEncodingSettings,
   RenderPlan,
   ExportValidationResult,
 } from "./render-plan.js";
