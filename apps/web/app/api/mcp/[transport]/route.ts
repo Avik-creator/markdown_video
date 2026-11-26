@@ -65,8 +65,14 @@ function hasDeclaredOversizedBody(request: Request) {
   return Number.isFinite(contentLength) && contentLength > MAX_MCP_REQUEST_BODY_BYTES;
 }
 
+// The endpoint is also reachable through the clean "/mcp" rewrite in
+// next.config.mjs. Depending on how the runtime surfaces rewritten request
+// URLs, the pathname here may be either spelling; both denote the same
+// streamable-HTTP endpoint, so the body limit must apply to both.
+const STREAMABLE_HTTP_PATHNAMES = new Set([STREAMABLE_HTTP_PATH, "/mcp"]);
+
 function isStreamableHttpPost(request: Request) {
-  return request.method === "POST" && new URL(request.url).pathname === STREAMABLE_HTTP_PATH;
+  return request.method === "POST" && STREAMABLE_HTTP_PATHNAMES.has(new URL(request.url).pathname);
 }
 
 async function readRequestBodyWithLimit(request: Request): Promise<RequestBodyReadResult> {
@@ -128,6 +134,32 @@ function copyRequestWithBody(request: Request, body: Uint8Array) {
     (copy as Request & { auth?: unknown }).auth = auth;
   }
 
+  return copy;
+}
+
+// The "/mcp" proxy rewrite (apps/web/proxy.ts) deliberately preserves the
+// original URL, but mcp-handler routes internally by exact pathname and 404s
+// anything outside its basePath endpoints. Hand it an equivalent request with
+// the canonical streamable-HTTP pathname; every other property is preserved.
+function canonicalizeRewrittenMcpUrl(request: Request): Request {
+  const url = new URL(request.url);
+  if (url.pathname !== "/mcp") {
+    return request;
+  }
+  url.pathname = STREAMABLE_HTTP_PATH;
+  const copy = new Request(url, {
+    method: request.method,
+    headers: new Headers(request.headers),
+    body: request.body,
+    // Required by undici whenever the body is a stream (always true for
+    // POSTs here); harmless for bodiless methods like GET.
+    ...{ duplex: "half" },
+    signal: request.signal,
+  } as RequestInit);
+  const auth = (request as Request & { auth?: unknown }).auth;
+  if (auth !== undefined) {
+    (copy as Request & { auth?: unknown }).auth = auth;
+  }
   return copy;
 }
 
@@ -783,7 +815,8 @@ ${template}
   }
 );
 
-async function handler(request: Request): Promise<Response> {
+async function handler(originalRequest: Request): Promise<Response> {
+  const request = canonicalizeRewrittenMcpUrl(originalRequest);
   const isStreamablePost = isStreamableHttpPost(request);
 
   const rateLimitResponse = await enforceMcpRateLimit(request);

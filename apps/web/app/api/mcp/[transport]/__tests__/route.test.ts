@@ -103,9 +103,20 @@ function oversizedInitializeBody() {
 }
 
 function exactBoundaryInitializeBody() {
-  const emptyPaddingBody = initializeBodyWithPadding("");
-  const overhead = Buffer.byteLength(emptyPaddingBody, "utf8");
-  return initializeBodyWithPadding("x".repeat(MAX_MCP_REQUEST_BODY_BYTES - overhead));
+  // The two-pass overhead calibration this replaces was sensitive to nextId
+  // digit width changing between passes (id 9 vs 10 adds a byte). Iterate to
+  // a fixed point instead: adjust the padding by the exact measured delta,
+  // which converges immediately because ASCII padding is one byte per char.
+  let paddingLength = MAX_MCP_REQUEST_BODY_BYTES;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const body = initializeBodyWithPadding("x".repeat(Math.max(0, paddingLength)));
+    const delta = MAX_MCP_REQUEST_BODY_BYTES - Buffer.byteLength(body, "utf8");
+    if (delta === 0) {
+      return body;
+    }
+    paddingLength += delta;
+  }
+  throw new Error("exactBoundaryInitializeBody did not converge");
 }
 
 async function readRpcPayload(res: Response) {
@@ -156,6 +167,48 @@ describe("MCP route", () => {
     expect(status).toBe(200);
     expect(body.result.capabilities.tools).toBeDefined();
     expect(body.result.serverInfo).toEqual({ name: "markdown-video", version: "1.0.0" });
+  });
+
+  it("accepts requests at the rewritten /mcp public path", async () => {
+    // apps/web/proxy.ts rewrites /mcp to this route while preserving the
+    // original URL, so the handler receives requests whose pathname is /mcp.
+    const request = new Request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body: JSON.stringify({
+        jsonrpc: "2.0",
+        id: nextId++,
+        method: "initialize",
+        params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "test", version: "1.0" } },
+      }),
+    });
+
+    const response = await POST(request);
+    const text = await response.text();
+    const dataLine = text.split("\n").find((line) => line.startsWith("data: "));
+    const body = JSON.parse(dataLine!.slice("data: ".length));
+
+    expect(response.status).toBe(200);
+    expect(body.result.serverInfo).toEqual({ name: "markdown-video", version: "1.0.0" });
+  });
+
+  it("enforces the 512 KiB body cap at the rewritten /mcp public path", async () => {
+    const body = oversizedInitializeBody();
+    const request = new Request("http://localhost/mcp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json, text/event-stream",
+      },
+      body,
+    });
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(413);
   });
 
   it("lists all twelve tools", async () => {
