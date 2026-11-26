@@ -4,6 +4,10 @@ import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 import type { Scene } from "@/lib/types";
 
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
 export function ProgressScene({
   scene,
   sceneTime,
@@ -14,14 +18,19 @@ export function ProgressScene({
   const progressConfig = scene.progress;
   const controls = useAnimation();
 
+  // Deterministic entrance driven by sceneTime. Each style keeps the
+  // entrance it was designed with: scale for circle, fade for semicircle,
+  // fade+rise for bar.
   useEffect(() => {
-    if (sceneTime !== undefined) {
-      const progress = Math.min(sceneTime / 0.5, 1);
+    const progress = clamp01(sceneTime / 0.5);
+    if (progressConfig?.style === "circle") {
       controls.set({ opacity: progress, scale: 0.8 + 0.2 * progress });
+    } else if (progressConfig?.style === "semicircle") {
+      controls.set({ opacity: progress });
     } else {
-      controls.start({ opacity: 1, scale: 1 });
+      controls.set({ opacity: progress, y: 20 * (1 - progress) });
     }
-  }, [sceneTime, controls]);
+  }, [sceneTime, controls, progressConfig?.style]);
 
   if (!progressConfig) return null;
 
@@ -29,7 +38,9 @@ export function ProgressScene({
   const maxValue = progressConfig.max || 100;
   const animate = progressConfig.animate !== false;
 
-  // Animate progress over scene duration
+  // Progress over scene duration, derived purely from sceneTime. The bar/ring
+  // lengths below are set directly (no wall-clock tween), so preview and
+  // export render the same frame at the same sceneTime.
   const currentValue = animate
     ? Math.min(targetValue, (sceneTime / scene.duration) * targetValue * 2)
     : targetValue;
@@ -58,7 +69,7 @@ export function ProgressScene({
               stroke="rgba(255,255,255,0.1)"
               strokeWidth="12"
             />
-            <motion.circle
+            <circle
               cx="90"
               cy="90"
               r={radius}
@@ -67,17 +78,7 @@ export function ProgressScene({
               strokeWidth="12"
               strokeLinecap="round"
               strokeDasharray={circumference}
-              initial={{ strokeDashoffset: circumference }}
-              animate={
-                sceneTime !== undefined
-                  ? { strokeDashoffset }
-                  : { strokeDashoffset }
-              }
-              transition={
-                sceneTime !== undefined
-                  ? { duration: 0 }
-                  : { duration: 0.5, ease: "easeOut" }
-              }
+              strokeDashoffset={strokeDashoffset}
               transform="rotate(-90 90 90)"
             />
           </svg>
@@ -103,7 +104,7 @@ export function ProgressScene({
       <motion.div
         className="flex flex-col items-center justify-center h-full gap-4"
         initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
+        animate={controls}
         exit={{ opacity: 0 }}
       >
         <div className="relative">
@@ -115,16 +116,14 @@ export function ProgressScene({
               strokeWidth="12"
               strokeLinecap="round"
             />
-            <motion.path
+            <path
               d="M 20 100 A 80 80 0 0 1 180 100"
               fill="none"
               stroke={progressConfig.color || "#ec4899"}
               strokeWidth="12"
               strokeLinecap="round"
               strokeDasharray={circumference}
-              initial={{ strokeDashoffset: circumference }}
-              animate={{ strokeDashoffset }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              strokeDashoffset={strokeDashoffset}
             />
           </svg>
           <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
@@ -147,7 +146,7 @@ export function ProgressScene({
     <motion.div
       className="flex flex-col items-center justify-center h-full gap-6 px-16 w-full"
       initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
+      animate={controls}
       exit={{ opacity: 0, y: -20 }}
     >
       {progressConfig.label && (
@@ -157,12 +156,12 @@ export function ProgressScene({
       )}
       <div className="w-full max-w-xl">
         <div className="h-6 bg-white/10 rounded-full overflow-hidden">
-          <motion.div
+          <div
             className="h-full rounded-full"
-            style={{ backgroundColor: progressConfig.color || "#ec4899" }}
-            initial={{ width: 0 }}
-            animate={{ width: `${percentage}%` }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
+            style={{
+              backgroundColor: progressConfig.color || "#ec4899",
+              width: `${percentage}%`,
+            }}
           />
         </div>
         <div className="flex justify-between mt-2 text-white/60 text-sm">

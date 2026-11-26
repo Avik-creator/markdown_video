@@ -1,6 +1,13 @@
-"use server";
+import "server-only";
+
+const REPO_PATTERN = /^[\w.-]+\/[\w.-]+$/;
 
 export async function getGitHubStars(repo: string): Promise<number> {
+  if (!REPO_PATTERN.test(repo)) {
+    console.error("Invalid GitHub repo format:", repo);
+    return 0;
+  }
+
   try {
     const response = await fetch(`https://api.github.com/repos/${repo}`, {
       next: { revalidate: 3600 }, // Cache for 1 hour

@@ -1,9 +1,8 @@
 "use client"
 
-import { useVideoStore } from "@/lib/use-video-store"
-import { useEffect, useRef } from "react"
+import { advancePlaybackTime, useVideoStore } from "@/lib/use-video-store"
+import { useEffect } from "react"
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react"
-import { useState } from "react"
 import { cn } from "@/lib/utils"
 
 function formatTime(seconds: number): string {
@@ -11,6 +10,13 @@ function formatTime(seconds: number): string {
   const secs = Math.floor(seconds % 60)
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`
 }
+
+/**
+ * Largest wall-clock gap applied in a single frame. Tabs stop firing
+ * requestAnimationFrame while hidden, so without a cap the first frame after
+ * returning would jump playback forward by the entire hidden interval.
+ */
+const MAX_FRAME_DELTA_SECONDS = 0.25
 
 export function Controls() {
   const isPlaying = useVideoStore((state) => state.isPlaying)
@@ -21,34 +27,50 @@ export function Controls() {
   const playbackSpeed = useVideoStore((state) => state.playbackSpeed)
   const setPlaybackSpeed = useVideoStore((state) => state.setPlaybackSpeed)
 
-  const intervalRef = useRef<NodeJS.Timeout | null>(null)
-
   useEffect(() => {
-    if (isPlaying) {
-      intervalRef.current = setInterval(() => {
-        const store = useVideoStore.getState()
-        const newTime = store.currentTime + 0.033 * playbackSpeed
+    if (!isPlaying) return
 
-        if (newTime >= store.totalDuration) {
-          store.seekTo(0)
-          store.pause()
-        } else {
-          store.seekTo(newTime)
-        }
-      }, 33)
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
+    let rafId = 0
+    let lastTimestamp: number | null = null
+
+    const tick = (timestamp: number) => {
+      if (lastTimestamp === null) {
+        // First frame only establishes the clock baseline.
+        lastTimestamp = timestamp
+        rafId = requestAnimationFrame(tick)
+        return
       }
+
+      const elapsedSeconds = Math.max(
+        0,
+        Math.min((timestamp - lastTimestamp) / 1000, MAX_FRAME_DELTA_SECONDS)
+      )
+      lastTimestamp = timestamp
+
+      const store = useVideoStore.getState()
+      const result = advancePlaybackTime(
+        store.currentTime,
+        elapsedSeconds,
+        store.playbackSpeed,
+        store.totalDuration
+      )
+
+      if (result.reachedEnd) {
+        store.seekTo(0)
+        store.pause()
+        return
+      }
+
+      store.seekTo(result.time)
+      rafId = requestAnimationFrame(tick)
     }
+
+    rafId = requestAnimationFrame(tick)
 
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-      }
+      cancelAnimationFrame(rafId)
     }
-  }, [isPlaying, playbackSpeed])
+  }, [isPlaying])
 
   const handleSkipBack = () => {
     seekTo(Math.max(0, currentTime - 3))
@@ -59,37 +81,50 @@ export function Controls() {
   }
 
   return (
-    <div className="flex items-center gap-4 px-4 py-3 bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800">
       {/* Playback controls */}
       <div className="flex items-center gap-1">
         <button
+          type="button"
           onClick={handleSkipBack}
+          aria-label="Skip back 3 seconds"
+          title="Skip back 3 seconds"
           className={cn(
             "h-8 w-8 flex items-center justify-center text-gray-600 dark:text-neutral-400",
             "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
           )}
         >
-          <SkipBack className="w-4 h-4" />
+          <SkipBack className="w-4 h-4" aria-hidden="true" />
         </button>
 
         <button
+          type="button"
           onClick={toggle}
+          aria-label={isPlaying ? "Pause" : "Play"}
+          title={isPlaying ? "Pause" : "Play"}
           className={cn(
             "h-10 w-10 flex items-center justify-center text-gray-900 dark:text-neutral-100",
             "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
           )}
         >
-          {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+          {isPlaying ? (
+            <Pause className="w-5 h-5" aria-hidden="true" />
+          ) : (
+            <Play className="w-5 h-5" aria-hidden="true" />
+          )}
         </button>
 
         <button
+          type="button"
           onClick={handleSkipForward}
+          aria-label="Skip forward 3 seconds"
+          title="Skip forward 3 seconds"
           className={cn(
             "h-8 w-8 flex items-center justify-center text-gray-600 dark:text-neutral-400",
             "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
           )}
         >
-          <SkipForward className="w-4 h-4" />
+          <SkipForward className="w-4 h-4" aria-hidden="true" />
         </button>
       </div>
 
@@ -100,13 +135,11 @@ export function Controls() {
         <span className="text-gray-500 dark:text-neutral-500">{formatTime(totalDuration)}</span>
       </div>
 
-      {/* Spacer */}
-      <div className="flex-1" />
-
       {/* Playback speed */}
-      <div className="flex items-center gap-2">
+      <div className="ml-auto flex items-center gap-2">
         <span className="text-xs text-gray-600 dark:text-neutral-400">Speed</span>
         <select
+          aria-label="Playback speed"
           value={playbackSpeed}
           onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
           className={cn(

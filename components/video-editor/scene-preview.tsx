@@ -1,154 +1,28 @@
 "use client";
 
-import { forwardRef, useMemo, useEffect } from "react";
+import { forwardRef, useMemo, useEffect, useSyncExternalStore } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
 import type { Scene } from "@/lib/types";
-import { AnimatePresence, motion, useAnimation } from "framer-motion";
+import { motion, useAnimation } from "framer-motion";
 import { transitionVariants } from "./scene-preview/utils/constants";
+import { interpolateVariantState } from "./scene-preview/utils/interpolate";
+import {
+  normalizeTransitionDuration,
+  transitionProgress,
+} from "./scene-preview/utils/transition";
 import { cn } from "@/lib/utils";
 
 // Import extracted scene components
-import {
-  TextScene,
-  TerminalScene,
-  CodeScene,
-  DiffScene,
-  ChartScene,
-  MockupScene,
-  SplitScene,
-  ImageScene,
-  EmojiScene,
-  QRScene,
-  CountdownScene,
-  ProgressScene,
-} from "./scene-preview/scenes";
+import { EmojiScene, SceneRenderer } from "./scene-preview/scenes";
 import {
   ParticleEffect,
   CameraWrapper,
   CalloutOverlay,
   PresenterOverlay,
+  TimelineElementsOverlay,
 } from "./scene-preview/components";
 
 // Scene router - routes to appropriate scene component based on scene type
-
-import { animationVariants } from "./scene-preview/utils/constants";
-import type { TimelineElement } from "@/lib/types";
-
-// Timeline element renderer
-function TimelineElementRenderer({
-  element,
-  sceneTime,
-}: {
-  element: TimelineElement;
-  sceneTime: number;
-}) {
-  const isVisible =
-    sceneTime >= element.at && sceneTime < element.at + element.duration;
-  const variants =
-    animationVariants[element.animation || "fadeIn"] ||
-    animationVariants.fadeIn;
-
-  const controls = useAnimation();
-
-  useEffect(() => {
-    if (isVisible) {
-      const elementTime = sceneTime - element.at;
-      const progress = Math.min(elementTime / 0.3, 1); // 0.3s fade in
-
-      if (element.animation === "slideUp") {
-        controls.set({
-          opacity: progress,
-          y: 20 * (1 - progress),
-        });
-      } else if (element.animation === "slideDown") {
-        controls.set({
-          opacity: progress,
-          y: -20 * (1 - progress),
-        });
-      } else if (element.animation === "slideLeft") {
-        controls.set({
-          opacity: progress,
-          x: 20 * (1 - progress),
-        });
-      } else if (element.animation === "slideRight") {
-        controls.set({
-          opacity: progress,
-          x: -20 * (1 - progress),
-        });
-      } else if (
-        element.animation === "zoomIn" ||
-        element.animation === "bounceIn"
-      ) {
-        controls.set({
-          opacity: progress,
-          scale: 0.8 + 0.2 * progress,
-        });
-      } else {
-        // Default fadeIn
-        controls.set({
-          opacity: progress,
-        });
-      }
-    }
-  }, [isVisible, sceneTime, element, controls]);
-
-  if (!isVisible) return null;
-
-  if (element.type === "text") {
-    return (
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        initial={variants.initial}
-        animate={controls}
-        exit={variants.exit}
-      >
-        <span className="text-2xl font-bold text-white drop-shadow-lg">
-          {element.content}
-        </span>
-      </motion.div>
-    );
-  }
-
-  if (element.type === "emoji") {
-    return (
-      <motion.div
-        className="absolute inset-0 flex items-center justify-center"
-        initial={{ scale: 0, opacity: 0 }}
-        animate={controls}
-        exit={{ scale: 0, opacity: 0 }}
-      >
-        <span className="text-6xl">{element.content}</span>
-      </motion.div>
-    );
-  }
-
-  return null;
-}
-
-// Timeline elements overlay
-function TimelineElementsOverlay({
-  elements,
-  sceneTime,
-}: {
-  elements: TimelineElement[];
-  sceneTime: number;
-}) {
-  if (!elements || elements.length === 0) return null;
-
-  return (
-    <div className="absolute inset-0 pointer-events-none">
-      <AnimatePresence>
-        {elements.map((element) => (
-          <TimelineElementRenderer
-            key={element.id}
-            element={element}
-            sceneTime={sceneTime}
-          />
-        ))}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 function SceneContentInner({
   scene,
@@ -157,34 +31,7 @@ function SceneContentInner({
   scene: Scene;
   sceneTime: number;
 }) {
-  switch (scene.type) {
-    case "text":
-      return <TextScene scene={scene} sceneTime={sceneTime} />;
-    case "code":
-      return <CodeScene scene={scene} sceneTime={sceneTime} />;
-    case "terminal":
-      return <TerminalScene scene={scene} sceneTime={sceneTime} />;
-    case "diff":
-      return <DiffScene scene={scene} sceneTime={sceneTime} />;
-    case "chart":
-      return <ChartScene scene={scene} sceneTime={sceneTime} />;
-    case "mockup":
-      return <MockupScene scene={scene} sceneTime={sceneTime} />;
-    case "split":
-      return <SplitScene scene={scene} sceneTime={sceneTime} />;
-    case "image":
-      return <ImageScene scene={scene} sceneTime={sceneTime} />;
-    case "emoji":
-      return <EmojiScene scene={scene} sceneTime={sceneTime} />;
-    case "qr":
-      return <QRScene scene={scene} sceneTime={sceneTime} />;
-    case "countdown":
-      return <CountdownScene scene={scene} sceneTime={sceneTime} />;
-    case "progress":
-      return <ProgressScene scene={scene} sceneTime={sceneTime} />;
-    default:
-      return <TextScene scene={scene} sceneTime={sceneTime} />;
-  }
+  return <SceneRenderer scene={scene} sceneTime={sceneTime} />;
 }
 
 function SceneContent({
@@ -196,57 +43,61 @@ function SceneContent({
 }) {
   const transition = scene.transition || "fade";
   const variants = transitionVariants[transition] || transitionVariants.fade;
+  const transitionDuration = normalizeTransitionDuration(
+    scene.transitionDuration
+  );
   const controls = useAnimation();
 
   useEffect(() => {
     if (sceneTime !== undefined) {
-      const duration = 0.5;
-      const progress = Math.min(sceneTime / duration, 1);
+      const progress = transitionProgress(sceneTime, transitionDuration);
 
-      const initial = variants.initial as any;
-      const animate = variants.animate as any;
-
-      const currentState: any = {};
-      for (const key in animate) {
-        if (
-          typeof animate[key] === "number" &&
-          typeof initial[key] === "number"
-        ) {
-          currentState[key] =
-            initial[key] + (animate[key] - initial[key]) * progress;
-        } else if (
-          typeof animate[key] === "string" &&
-          animate[key].includes("%") &&
-          initial[key].includes("%")
-        ) {
-          const start = parseFloat(initial[key]);
-          const end = parseFloat(animate[key]);
-          currentState[key] = `${start + (end - start) * progress}%`;
-        } else {
-          currentState[key] = progress >= 1 ? animate[key] : initial[key];
-        }
-      }
-      controls.set(currentState);
+      // Interpolate each key deterministically from sceneTime. This handles
+      // numbers, percent strings (slide) and numbers embedded in strings such
+      // as clipPath inset() (wipe); incompatible shapes snap at the end.
+      controls.set(
+        interpolateVariantState(
+          variants.initial as Record<string, unknown>,
+          variants.animate as Record<string, unknown>,
+          progress
+        )
+      );
     } else {
       controls.start(variants.animate);
     }
-  }, [sceneTime, variants, controls]);
+  }, [sceneTime, transitionDuration, variants, controls]);
 
   return (
     <motion.div
       className="absolute inset-0"
       initial={variants.initial}
       animate={controls}
-      transition={variants.transition}
+      transition={
+        transition === "none"
+          ? variants.transition
+          : { ...variants.transition, duration: transitionDuration }
+      }
     >
       <SceneContentInner scene={scene} sceneTime={sceneTime} />
     </motion.div>
   );
 }
 
-// True when the editor is rendered inside an iframe (embed mode).
-function isEmbeddedFrame() {
+// Frame embedding cannot change during the lifetime of a document, so there
+// is no external event to subscribe to. useSyncExternalStore still gives us
+// the correct hydration contract: the server snapshot is always false, while
+// the client snapshot is checked after hydration instead of during the first
+// render (which would make embedded and non-embedded markup mismatch).
+function subscribeToFrameEmbedding() {
+  return () => {};
+}
+
+function getEmbeddedClientSnapshot() {
   return typeof window !== "undefined" && window.self !== window.top;
+}
+
+function getEmbeddedServerSnapshot() {
+  return false;
 }
 
 export const ScenePreview = forwardRef<HTMLDivElement, object>(
@@ -255,6 +106,11 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     const currentTime = useVideoStore((state) => state.currentTime);
     const aspectRatio = useVideoStore((state) => state.aspectRatio);
     const zoom = useVideoStore((state) => state.zoom);
+    const isEmbedded = useSyncExternalStore(
+      subscribeToFrameEmbedding,
+      getEmbeddedClientSnapshot,
+      getEmbeddedServerSnapshot
+    );
 
     const { currentScene, sceneTime } = useMemo(() => {
       let accumulatedTime = 0;
@@ -285,7 +141,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     // possible without exceeding the area's height. cqw/cqh are the
     // container's content box, set up by containerType below.
     const fitWidth = `min(100cqw, calc(100cqh * ${ratioW} / ${ratioH})${
-      isEmbeddedFrame() ? "" : ", 56rem"
+      isEmbedded ? "" : ", 56rem"
     })`;
 
     if (!currentScene) {
@@ -295,8 +151,6 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
         </div>
       );
     }
-
-    const isEmbedded = isEmbeddedFrame();
 
     return (
       <div

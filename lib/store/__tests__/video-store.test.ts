@@ -1,0 +1,188 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { memoryStorage } from "./memory-storage";
+import { useVideoStore } from "../../use-video-store";
+
+// Two scenes: 4s + 2s = 6s total.
+const CONTROLLED_MARKDOWN = `!scene
+!duration 4
+!text
+Hello
+
+---
+
+!scene
+!duration 2
+!text
+World
+`;
+
+const STORAGE_KEY = "markdown-video-storage";
+
+function resetStore() {
+  useVideoStore.getState().pause();
+  useVideoStore.getState().setPlaybackSpeed(1);
+  useVideoStore.getState().setTheme("default");
+  useVideoStore.getState().setAspectRatio("16:9");
+  useVideoStore.getState().setExportSettings({ fps: 30 });
+  useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
+  useVideoStore.setState({ currentTime: 0, isPlaying: false, markers: [] });
+}
+
+describe("frame stepping", () => {
+  beforeEach(resetStore);
+
+  it("nextFrame advances exactly one frame at the default 30fps", () => {
+    useVideoStore.setState({ currentTime: 1 });
+    useVideoStore.getState().nextFrame();
+    expect(useVideoStore.getState().currentTime).toBeCloseTo(1 + 1 / 30);
+  });
+
+  it("prevFrame steps back exactly one frame at the default 30fps", () => {
+    useVideoStore.setState({ currentTime: 1 });
+    useVideoStore.getState().prevFrame();
+    expect(useVideoStore.getState().currentTime).toBeCloseTo(1 - 1 / 30);
+  });
+
+  it("steps by the project's configured frame rate", () => {
+    useVideoStore.getState().setExportSettings({ fps: 60 });
+    useVideoStore.setState({ currentTime: 1 });
+    useVideoStore.getState().nextFrame();
+    expect(useVideoStore.getState().currentTime).toBeCloseTo(1 + 1 / 60);
+    useVideoStore.getState().prevFrame();
+    useVideoStore.getState().prevFrame();
+    expect(useVideoStore.getState().currentTime).toBeCloseTo(1 - 1 / 60);
+  });
+
+  it("falls back to 30fps when the configured frame rate is invalid", () => {
+    useVideoStore.getState().setExportSettings({ fps: 0 });
+    useVideoStore.setState({ currentTime: 1 });
+    useVideoStore.getState().nextFrame();
+    expect(useVideoStore.getState().currentTime).toBeCloseTo(1 + 1 / 30);
+  });
+
+  it("clamps nextFrame at totalDuration", () => {
+    useVideoStore.setState({ currentTime: 5.999 });
+    useVideoStore.getState().nextFrame();
+    expect(useVideoStore.getState().currentTime).toBe(6);
+  });
+
+  it("clamps prevFrame at 0", () => {
+    useVideoStore.setState({ currentTime: 0.01 });
+    useVideoStore.getState().prevFrame();
+    expect(useVideoStore.getState().currentTime).toBe(0);
+  });
+});
+
+describe("markdown mutation metadata", () => {
+  beforeEach(() => {
+    resetStore();
+    useVideoStore.setState({ history: { past: [], future: [] } });
+  });
+
+  it("bumps the runtime-only revision and leaves external mutations untagged", () => {
+    const revisionBefore = useVideoStore.getState().markdownRevision;
+
+    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
+
+    expect(useVideoStore.getState().markdownRevision).toBe(revisionBefore + 1);
+    expect(useVideoStore.getState().markdownOrigin).toBeNull();
+  });
+
+  it("tags undo and redo mutations without changing their document behavior", () => {
+    const editedMarkdown = CONTROLLED_MARKDOWN.replace(
+      "!duration 4",
+      "!duration 3",
+    );
+    useVideoStore.getState().setMarkdown(editedMarkdown);
+    const revisionAfterEdit = useVideoStore.getState().markdownRevision;
+
+    useVideoStore.getState().undo();
+    expect(useVideoStore.getState().markdown).toBe(CONTROLLED_MARKDOWN);
+    expect(useVideoStore.getState().markdownOrigin).toBe("undo");
+    expect(useVideoStore.getState().markdownRevision).toBe(revisionAfterEdit + 1);
+
+    useVideoStore.getState().redo();
+    expect(useVideoStore.getState().markdown).toBe(editedMarkdown);
+    expect(useVideoStore.getState().markdownOrigin).toBe("redo");
+    expect(useVideoStore.getState().markdownRevision).toBe(revisionAfterEdit + 2);
+  });
+});
+
+describe("persistence", () => {
+  beforeEach(resetStore);
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("persists project content but not playback-only or derived state", () => {
+    useVideoStore.getState().seekTo(2);
+    useVideoStore.getState().play();
+
+    const raw = memoryStorage.getItem(STORAGE_KEY);
+    expect(raw).toBeTruthy();
+    const stored = JSON.parse(raw as string);
+
+    expect(stored.state).toHaveProperty("markdown", CONTROLLED_MARKDOWN);
+    expect(stored.state).toHaveProperty("aspectRatio");
+    expect(stored.state).toHaveProperty("theme");
+    expect(stored.state).toHaveProperty("markers");
+
+    expect(stored.state).not.toHaveProperty("currentTime");
+    expect(stored.state).not.toHaveProperty("isPlaying");
+    expect(stored.state).not.toHaveProperty("playbackSpeed");
+    expect(stored.state).not.toHaveProperty("scenes");
+    expect(stored.state).not.toHaveProperty("segments");
+    expect(stored.state).not.toHaveProperty("totalDuration");
+    expect(stored.state).not.toHaveProperty("markdownRevision");
+    expect(stored.state).not.toHaveProperty("markdownOrigin");
+    expect(stored.state).not.toHaveProperty("currentLocale");
+    expect(stored.state).not.toHaveProperty("localizationStrings");
+  });
+
+  it("does not expose unfinished localization UI state on the store", () => {
+    const state = useVideoStore.getState() as unknown as Record<string, unknown>;
+
+    expect(state).not.toHaveProperty("currentLocale");
+    expect(state).not.toHaveProperty("localizationStrings");
+    expect(state).not.toHaveProperty("setCurrentLocale");
+    expect(state).not.toHaveProperty("setLocalizationStrings");
+    expect(state).not.toHaveProperty("addLocale");
+    expect(state).not.toHaveProperty("removeLocale");
+  });
+
+  it("does not write to localStorage for playback-only updates", () => {
+    const spy = vi.spyOn(memoryStorage, "setItem");
+    spy.mockClear();
+
+    // Simulate playback ticks plus all playback-only state transitions.
+    useVideoStore.getState().seekTo(1);
+    useVideoStore.getState().seekTo(1.033);
+    useVideoStore.getState().seekTo(1.066);
+    useVideoStore.getState().play();
+    useVideoStore.getState().pause();
+    useVideoStore.getState().toggle();
+    useVideoStore.getState().toggle();
+    useVideoStore.getState().setPlaybackSpeed(2);
+    useVideoStore.setState({ currentTime: 3.5 });
+
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("writes to localStorage when persisted content changes", () => {
+    const spy = vi.spyOn(memoryStorage, "setItem");
+    spy.mockClear();
+
+    useVideoStore
+      .getState()
+      .setMarkdown(`${CONTROLLED_MARKDOWN}\n!scene\n!duration 1\n`, false);
+    expect(spy).toHaveBeenCalled();
+
+    spy.mockClear();
+    useVideoStore.getState().setTheme("dracula");
+    expect(spy).toHaveBeenCalled();
+
+    spy.mockClear();
+    useVideoStore.getState().addMarker(1, "chapter note");
+    expect(spy).toHaveBeenCalled();
+  });
+});

@@ -82,6 +82,133 @@ animation: invalid_animation
     expect(messages(result.warnings)).toEqual(["Scene 1: Text content is empty"]);
   });
 
+  it.each([
+    [
+      "text size",
+      `!scene\n!text\nHello\nsize: huge`,
+      'Scene 1: Invalid text size "huge"',
+    ],
+    [
+      "text font family",
+      `!scene\n!text\nHello\nfontFamily: curly`,
+      'Scene 1: Invalid font family "curly"',
+    ],
+    [
+      "particle intensity",
+      `!scene\n!particles type:confetti intensity:extreme`,
+      'Scene 1: Invalid particle intensity "extreme"',
+    ],
+    [
+      "presenter size",
+      `!scene\n!presenter position:bottom-right size:huge`,
+      'Scene 1: Invalid presenter size "huge"',
+    ],
+    [
+      "presenter shape",
+      `!scene\n!presenter position:bottom-right shape:hexagon`,
+      'Scene 1: Invalid presenter shape "hexagon"',
+    ],
+    [
+      "code font size",
+      `!scene\n!code\nfontSize: huge\n\`\`\`js\nconst x = 1;\n\`\`\``,
+      'Scene 1: Invalid code font size "huge"',
+    ],
+    [
+      "code font family",
+      `!scene\n!code\nfontFamily: curly\n\`\`\`js\nconst x = 1;\n\`\`\``,
+      'Scene 1: Invalid code font family "curly"',
+    ],
+    [
+      "callout style",
+      `!scene\n!callout "Important" style:neon`,
+      'Scene 1: Invalid callout style "neon"',
+    ],
+    [
+      "callout arrow",
+      `!scene\n!callout "Important" arrow:diagonal`,
+      'Scene 1: Invalid callout arrow "diagonal"',
+    ],
+    [
+      "emoji size",
+      `!scene\n!emoji 🎉 size:enormous`,
+      'Scene 1: Invalid emoji size "enormous"',
+    ],
+    [
+      "emoji animation",
+      `!scene\n!emoji 🎉 animate:wobble`,
+      'Scene 1: Invalid emoji animation "wobble"',
+    ],
+    [
+      "image fit",
+      `!scene\n!image src:https://example.com/a.png fit:stretch`,
+      'Scene 1: Invalid image fit "stretch"',
+    ],
+    [
+      "camera effect",
+      `!scene\n!camera rotate:2`,
+      'Scene 1: Invalid camera effect "rotate"',
+    ],
+    [
+      "countdown style",
+      `!scene\n!countdown from:5 style:analog`,
+      'Scene 1: Invalid countdown style "analog"',
+    ],
+    [
+      "progress style",
+      `!scene\n!progress value:50 style:spiral`,
+      'Scene 1: Invalid progress style "spiral"',
+    ],
+    [
+      "export format",
+      `!export\nformat: vr`,
+      'Invalid export format "vr"',
+    ],
+  ] as const)("rejects an invalid %s even when the parser would coerce or ignore it", (_name, markdown, message) => {
+    const result = validateMarkdownSyntax(markdown);
+    expect(result.valid).toBe(false);
+    expect(messages(result.errors)).toContain(message);
+  });
+
+  it("accepts font property keys case-insensitively", () => {
+    const result = validateMarkdownSyntax(`!scene
+!code
+FontSize: md
+FONTFAMILY: jetbrains
+\`\`\`js
+const x = 1;
+\`\`\`
+`);
+    expect(messages(result.errors)).toEqual([]);
+  });
+
+  it("points schema-backed value errors at the exact property line", () => {
+    const result = validateMarkdownSyntax(`!scene
+!text
+Hello
+animation: fadeIn
+size: huge
+`);
+    expect(result.errors).toContainEqual(
+      expect.objectContaining({
+        line: 5,
+        message: 'Scene 1: Invalid text size "huge"',
+      })
+    );
+  });
+
+  it("validates constrained camera keyframe values", () => {
+    const result = validateMarkdownSyntax(`!scene
+!camera
+- at:0s zoom:1 pan:diagonal shakeIntensity:extreme
+`);
+    expect(messages(result.errors)).toEqual(
+      expect.arrayContaining([
+        'Scene 1: Invalid camera pan direction "diagonal"',
+        'Scene 1: Invalid shake intensity "extreme"',
+      ])
+    );
+  });
+
   it("accepts a scene using every major feature", () => {
     const result = validateMarkdownSyntax(`!var brandColor #3b82f6
 
@@ -173,6 +300,11 @@ Scene 3
     expect(result.hasScenes).toBe(true);
     expect(result.sceneCount).toBe(3);
     expect(result.issues).toHaveLength(0);
+  });
+
+  it("does not count the section-title chapter alias as a scene", () => {
+    const result = quickSyntaxCheck("!scene\n!section-title \"Intro\"\n!text\nHi");
+    expect(result.sceneCount).toBe(1);
   });
 
   it("reports an unclosed code block", () => {

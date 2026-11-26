@@ -1,5 +1,33 @@
 // Scene types for the markdown-to-video editor
 
+import type {
+  AnimationType as SchemaAnimationType,
+  AspectRatio as SchemaAspectRatio,
+  CalloutArrow,
+  CalloutStyle,
+  CameraEffect as SchemaCameraEffect,
+  ChartType as SchemaChartType,
+  CodeFontFamily,
+  CodeFontSize,
+  CountdownStyle,
+  DeviceType as SchemaDeviceType,
+  EmojiAnimation,
+  ImageFit,
+  ImagePosition,
+  PanDirection as SchemaPanDirection,
+  ParticleIntensity,
+  ParticleType as SchemaParticleType,
+  PresenterPosition as SchemaPresenterPosition,
+  PresenterShape,
+  PresenterSize,
+  ProgressStyle,
+  ShakeIntensity,
+  TextFontFamily,
+  TextSize,
+  TransitionType as SchemaTransitionType,
+  ExportFormat as SchemaExportFormat,
+} from "./directive-schema";
+
 export type SceneType =
   | "text"
   | "code"
@@ -15,51 +43,22 @@ export type SceneType =
   | "progress"
   | "emoji";
 
-export type TransitionType =
-  | "fade"
-  | "slide"
-  | "wipe"
-  | "zoom"
-  | "magic"
-  | "none";
 
-export type AnimationType =
-  | "fadeIn"
-  | "slideUp"
-  | "slideDown"
-  | "slideLeft"
-  | "slideRight"
-  | "bounceIn"
-  | "zoomIn"
-  | "typewriter"
-  | "none";
+
+// Directive-backed unions are derived from the authoritative schema so the
+// runtime scene types cannot drift from parser constants and documentation.
+export type TransitionType = SchemaTransitionType;
+export type AnimationType = SchemaAnimationType;
+export type ParticleType = SchemaParticleType;
+export type DeviceType = SchemaDeviceType;
+export type ChartType = SchemaChartType;
+export type CameraEffect = SchemaCameraEffect;
+export type PresenterPosition = SchemaPresenterPosition;
+export type PanDirection = SchemaPanDirection;
+export type ExportFormat = SchemaExportFormat;
+export type AspectRatioType = SchemaAspectRatio;
 
 export type TextAlign = "left" | "center" | "right";
-
-export type ParticleType =
-  | "confetti"
-  | "snow"
-  | "rain"
-  | "sparkles"
-  | "fireworks";
-
-export type DeviceType = "iphone" | "ipad" | "macbook" | "browser" | "android";
-
-export type ChartType = "bar" | "line" | "pie" | "donut";
-
-export type CameraEffect = "zoom" | "pan" | "shake";
-
-export type PresenterPosition =
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
-
-export type PanDirection = "left" | "right" | "up" | "down";
-
-export type ExportFormat = "mp4" | "reels" | "shorts" | "slides" | "gif";
-
-export type AspectRatioType = "16:9" | "9:16" | "1:1" | "4:3";
 
 export interface CodeHighlight {
   lines: number[];
@@ -74,12 +73,12 @@ export interface CodeAnnotation {
 
 export interface SceneText {
   content: string;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: TextSize;
   align?: TextAlign;
   animation?: AnimationType;
   delay?: number;
   color?: string;
-  fontFamily?: "serif" | "sans" | "mono" | "display";
+  fontFamily?: TextFontFamily;
   i18nKey?: string; // Localization key
   stagger?: number; // Stagger delay between lines in seconds
 }
@@ -92,16 +91,10 @@ export interface SceneCode {
   showLineNumbers?: boolean;
   typing?: boolean; // Added typing animation support
   typingSpeed?: number; // Characters per second
-  fontSize?: "xs" | "sm" | "md" | "lg"; // Font size
+  fontSize?: CodeFontSize; // Font size
   height?: number; // Height in pixels
   width?: number; // Width in pixels
-  fontFamily?:
-    | "mono"
-    | "jetbrains"
-    | "fira"
-    | "source"
-    | "inconsolata"
-    | "courier"; // Font family options
+  fontFamily?: CodeFontFamily; // Font family options
 }
 
 export interface SceneTerminal {
@@ -148,8 +141,8 @@ export interface SceneMockup {
 export interface SceneCallout {
   text: string;
   target?: string; // "line:3" or coordinates
-  arrow?: "up" | "down" | "left" | "right";
-  style?: "info" | "warning" | "error" | "success";
+  arrow?: CalloutArrow;
+  style?: CalloutStyle;
 }
 
 export interface TimelineElement {
@@ -169,7 +162,7 @@ export interface CameraKeyframe {
   pan?: PanDirection;
   panAmount?: number; // Pan distance
   shake?: boolean;
-  shakeIntensity?: "low" | "medium" | "high";
+  shakeIntensity?: ShakeIntensity;
 }
 
 export interface SceneCamera {
@@ -181,14 +174,14 @@ export interface SceneCamera {
 
 export interface SceneParticles {
   type: ParticleType;
-  intensity?: "low" | "medium" | "high";
+  intensity?: ParticleIntensity;
   duration?: number;
 }
 
 export interface ScenePresenter {
   position: PresenterPosition;
-  size?: "sm" | "md" | "lg";
-  shape?: "circle" | "square" | "rounded";
+  size?: PresenterSize;
+  shape?: PresenterShape;
 }
 
 export interface Chapter {
@@ -204,14 +197,14 @@ export interface VideoVariables {
 export interface SceneImage {
   src: string;
   alt?: string;
-  fit?: "cover" | "contain" | "fill";
-  position?: "center" | "top" | "bottom" | "left" | "right";
+  fit?: ImageFit;
+  position?: ImagePosition;
 }
 
 export interface SceneEmoji {
   emoji: string;
-  size?: "sm" | "md" | "lg" | "xl" | "2xl";
-  animate?: "bounce" | "spin" | "pulse" | "shake" | "none";
+  size?: TextSize;
+  animate?: EmojiAnimation;
 }
 
 export interface SceneQR {
@@ -224,7 +217,7 @@ export interface SceneQR {
 
 export interface SceneCountdown {
   from: number;
-  style?: "digital" | "circle" | "minimal";
+  style?: CountdownStyle;
   color?: string;
 }
 
@@ -232,7 +225,7 @@ export interface SceneProgress {
   value: number;
   max?: number;
   animate?: boolean;
-  style?: "bar" | "circle" | "semicircle";
+  style?: ProgressStyle;
   color?: string;
   label?: string;
 }
@@ -357,7 +350,7 @@ export interface HistoryState {
   future: string[];
 }
 
-export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3";
+export type AspectRatio = SchemaAspectRatio;
 
 export type ZoomLevel = 50 | 75 | 100 | 125 | 150;
 
@@ -428,12 +421,4 @@ export interface VideoStore {
   // Export settings
   exportSettings: ExportSettings;
   setExportSettings: (settings: Partial<ExportSettings>) => void;
-
-  // Localization
-  currentLocale: string;
-  setCurrentLocale: (locale: string) => void;
-  localizationStrings: LocalizationStrings;
-  setLocalizationStrings: (strings: LocalizationStrings) => void;
-  addLocale: (locale: string) => void;
-  removeLocale: (locale: string) => void;
 }

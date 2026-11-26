@@ -2,44 +2,98 @@
 // Parses custom markdown syntax into scene objects
 
 import type {
-  Scene,
-  TransitionType,
-  AnimationType,
-  ChartType,
-  ParticleType,
-  DeviceType,
-  CameraEffect,
-  PresenterPosition,
+  CameraKeyframe,
   Chapter,
-  VideoVariables,
+  Scene,
   SceneSourceMap,
+  VideoVariables,
 } from "../types";
+import type {
+  AnimationType,
+  CalloutArrow,
+  CalloutStyle,
+  CameraEffect,
+  ChartType,
+  CodeFontFamily,
+  CodeFontSize,
+  CountdownStyle,
+  DeviceType,
+  EmojiAnimation,
+  ImageFit,
+  ImagePosition,
+  LayoutSplitDirection,
+  MockupContentType,
+  PanDirection,
+  ParticleIntensity,
+  ParticleType,
+  PresenterPosition,
+  PresenterShape,
+  PresenterSize,
+  ProgressStyle,
+  ShakeIntensity,
+  TextFontFamily,
+  TextSize,
+  TransitionType,
+} from "../directive-schema";
 import {
-  SCENE_COLORS,
-  SCENE_DIRECTIVES,
-  TEXT_FONT_FAMILIES,
+  assertNever,
+  getCameraKeyframeProperty,
+  isCanonicalDirectiveName,
+  isOneOf,
+} from "../directive-schema";
+import {
+  ANIMATION_TYPES,
+  CALLOUT_ARROWS,
+  CALLOUT_STYLES,
+  CAMERA_EFFECTS,
+  CHART_TYPES,
   CODE_FONT_FAMILIES,
-  DEFAULTS,
-  REGEX_PATTERNS,
-  DELIMITERS,
-  PROPERTY_KEYS,
-  SPECIAL_VALUES,
-  CASE_SENSITIVE_VALUES,
+  CODE_FONT_SIZES,
+  COUNTDOWN_STYLES,
+  DEVICE_TYPES,
   DIRECTIVE_CASES,
+  DEFAULTS,
+  DELIMITERS,
+  EMOJI_ANIMATIONS,
+  IMAGE_FIT_OPTIONS,
+  IMAGE_POSITIONS,
+  LAYOUT_SPLIT_DIRECTIONS,
+  MOCKUP_CONTENT_TYPES,
+  PAN_DIRECTIONS,
+  PARTICLE_INTENSITIES,
+  PARTICLE_TYPES,
+  PRESENTER_POSITIONS,
+  PRESENTER_SHAPES,
+  PRESENTER_SIZES,
+  PROGRESS_STYLES,
+  SCENE_COLORS,
+  SHAKE_INTENSITIES,
+  TEXT_FONT_FAMILIES,
+  TEXT_SIZES,
+  TRANSITION_TYPES,
 } from "./constants";
 import {
   generateId,
-  normalizeDirective,
-  parseKeyValue,
+  isSceneDirective,
+  parseDirective,
   substituteVariables,
 } from "./utils";
 import {
-  parseCodeBlock,
-  parseHighlights,
+  directivePropertyDefault,
+  getInlinePropertyValue,
   parseAnnotations,
-  parseTerminalBlock,
-  parseDiffBlock,
+  parseBooleanValue,
   parseChartData,
+  parseCodeBlock,
+  parseDiffBlock,
+  parseDirectiveEnum,
+  parseDirectiveEnumOrDefault,
+  parseDirectiveNumericValue,
+  parseDirectivePropertyLine,
+  parseHighlights,
+  parseInlineArguments,
+  parseLayoutChildren,
+  parseTerminalBlock,
 } from "./parsers";
 
 export interface ParseResult {
@@ -48,23 +102,52 @@ export interface ParseResult {
   variables: VideoVariables;
 }
 
+function consumeDirectiveTail(lines: string[], startIndex: number): number {
+  let index = startIndex;
+  while (index < lines.length) {
+    const nextLine = lines[index].trim();
+    if (
+      nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
+      nextLine === DELIMITERS.SCENE_SEPARATOR
+    ) {
+      break;
+    }
+    index++;
+  }
+  return index;
+}
+
+function firstInlineValue(values: readonly string[], index: number): string | undefined {
+  return values[index];
+}
+
 export function parseMarkdown(markdown: string): Scene[] {
   const result = parseMarkdownFull(markdown);
   return result.scenes;
 }
 
 export function parseMarkdownFull(markdown: string): ParseResult {
+  return parseMarkdownInternal(markdown);
+}
+
+function parseMarkdownInternal(
+  markdown: string,
+  inheritedVariables: VideoVariables = {}
+): ParseResult {
   const scenes: Scene[] = [];
   const chapters: Chapter[] = [];
-  const variables: VideoVariables = {};
-  const lines = markdown.split("\n");
+  const variables: VideoVariables = { ...inheritedVariables };
+  const lines = markdown.split(/\r?\n/);
   let i = 0;
   let colorIndex = 0;
   let currentTime = 0;
 
   // First pass: collect variables
   for (const line of lines) {
-    const match = line.match(REGEX_PATTERNS.VAR_DECLARATION);
+    const directive = parseDirective(line.trim());
+    if (directive?.canonicalName !== DIRECTIVE_CASES.VAR) continue;
+
+    const match = directive.args.match(/^(\w+)\s+(.+)$/);
     if (match) {
       variables[match[1]] = match[2].trim();
     }
@@ -76,12 +159,10 @@ export function parseMarkdownFull(markdown: string): ParseResult {
     // Variable substitution
     line = substituteVariables(line, variables);
 
-    // Check for scene directive (with aliases)
-    const isSceneDirective = SCENE_DIRECTIVES.some((dir) =>
-      line.startsWith(`!${dir}`)
-    );
+    // Check for complete scene directive words (with aliases)
+    const sceneDirective = isSceneDirective(line);
 
-    if (isSceneDirective) {
+    if (sceneDirective) {
       const sceneStartLine = i + 1; // 1-indexed
       const sourceMap: SceneSourceMap = {
         scene: { startLine: sceneStartLine, endLine: sceneStartLine },
@@ -89,7 +170,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
       const scene: Scene = {
         id: generateId(),
         type: "text",
-        duration: 3,
+        duration: DEFAULTS.sceneDuration,
         background: SCENE_COLORS[colorIndex % SCENE_COLORS.length],
         sourceMap,
       };
@@ -100,24 +181,29 @@ export function parseMarkdownFull(markdown: string): ParseResult {
       while (i < lines.length) {
         const currentLine = substituteVariables(lines[i].trim(), variables);
 
-        // End of scene or next scene (check for all scene aliases)
-        const isNextScene = SCENE_DIRECTIVES.some((dir) =>
-          currentLine.startsWith(`!${dir}`)
-        );
-        if (isNextScene || currentLine === "---") {
+        // End of scene or next scene (check for complete scene aliases)
+        const isNextScene = isSceneDirective(currentLine);
+        if (isNextScene || currentLine === DELIMITERS.SCENE_SEPARATOR) {
           break;
         }
 
         // Parse directives
         if (currentLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX)) {
-          const directiveMatch = currentLine.match(REGEX_PATTERNS.DIRECTIVE);
-          const rawDirective = directiveMatch ? directiveMatch[1] : "";
-          const directive = normalizeDirective(rawDirective);
+          const parsedDirective = parseDirective(currentLine);
+          const canonicalName = parsedDirective?.canonicalName;
+          const directiveArgs = parsedDirective?.args || "";
+
+          if (!canonicalName || !isCanonicalDirectiveName(canonicalName)) {
+            i++;
+            continue;
+          }
+
+          const directive = canonicalName;
 
           switch (directive) {
             case DIRECTIVE_CASES.CHAPTER: {
               const chapterLine = i + 1;
-              const match = currentLine.match(REGEX_PATTERNS.CHAPTER);
+              const match = directiveArgs.match(/^"([^"]+)"/);
               if (match) {
                 scene.chapter = match[1];
                 chapters.push({
@@ -127,49 +213,43 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 });
               }
               i++;
-              // Consume properties if any
-              while (i < lines.length) {
-                const nextLine = lines[i].trim();
-                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
-                i++;
-              }
+              i = consumeDirectiveTail(lines, i);
               sourceMap.chapter = { startLine: chapterLine, endLine: i };
               break;
             }
 
             case DIRECTIVE_CASES.TRANSITION: {
               const transitionLine = i + 1;
-              const match = currentLine.match(REGEX_PATTERNS.TRANSITION);
-              if (match) {
-                scene.transition = match[1] as TransitionType;
-                if (match[2]) {
-                  scene.transitionDuration = Number.parseFloat(match[2]);
-                }
+              const { positional } = parseInlineArguments(directiveArgs);
+              const transitionType = parseDirectiveEnum<TransitionType>(
+                "transition",
+                "type",
+                firstInlineValue(positional, 0),
+                TRANSITION_TYPES
+              );
+
+              if (transitionType) {
+                scene.transition = transitionType;
+                scene.transitionDuration =
+                  parseDirectiveNumericValue("transition", "duration", firstInlineValue(positional, 1)) ??
+                  DEFAULTS.transitionDuration;
               }
+
               i++;
-              // Consume properties if any
-              while (i < lines.length) {
-                const nextLine = lines[i].trim();
-                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
-                i++;
-              }
+              i = consumeDirectiveTail(lines, i);
               sourceMap.transition = { startLine: transitionLine, endLine: i };
               break;
             }
 
             case DIRECTIVE_CASES.DURATION: {
               const durationLine = i + 1;
-              const match = currentLine.match(REGEX_PATTERNS.DURATION);
-              if (match) {
-                scene.duration = Number.parseFloat(match[1]);
+              const { positional } = parseInlineArguments(directiveArgs);
+              const duration = parseDirectiveNumericValue("duration", "seconds", firstInlineValue(positional, 0));
+              if (duration !== undefined) {
+                scene.duration = duration;
               }
               i++;
-              // Consume properties if any
-              while (i < lines.length) {
-                const nextLine = lines[i].trim();
-                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
-                i++;
-              }
+              i = consumeDirectiveTail(lines, i);
               sourceMap.duration = { startLine: durationLine, endLine: i };
               break;
             }
@@ -179,27 +259,39 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               scene.type = "text";
               sourceMap.type = { startLine: textStartLine, endLine: textStartLine };
               const textContent: string[] = [];
-              let animation: AnimationType = "fadeIn";
-              let size: "sm" | "md" | "lg" | "xl" | "2xl" = "lg";
+              let animation: AnimationType = DEFAULTS.textAnimation;
+              let size: TextSize = DEFAULTS.textSize;
               let color: string | undefined;
-              let fontFamily: "serif" | "sans" | "mono" | "display" | undefined;
+              let fontFamily: TextFontFamily | undefined;
               let stagger: number | undefined;
               let at: number | undefined;
               let duration: number | undefined;
               let i18nKey: string | undefined;
 
               // Check for inline format: !text "content" at:0s duration:1.5s
-              const inlineMatch = currentLine.match(REGEX_PATTERNS.TEXT_INLINE);
+              const inlineMatch = directiveArgs.match(/^"([^"]+)"(.*)$/);
               if (inlineMatch) {
                 const inlineContent = inlineMatch[1];
                 const inlineParams = inlineMatch[2];
-                const atMatch = inlineParams.match(REGEX_PATTERNS.TIME_VALUE);
-                const durationMatch = inlineParams.match(
-                  REGEX_PATTERNS.DURATION_VALUE
+                const inlineAt = parseDirectiveNumericValue(
+                  "text",
+                  "at",
+                  getInlinePropertyValue("text", inlineParams, "at")
                 );
-                const animMatch = inlineParams.match(REGEX_PATTERNS.ANIMATION);
+                const inlineDuration = parseDirectiveNumericValue(
+                  "text",
+                  "duration",
+                  getInlinePropertyValue("text", inlineParams, "duration")
+                );
+                const inlineAnimation = parseDirectiveEnumOrDefault<AnimationType>(
+                  "text",
+                  "animation",
+                  getInlinePropertyValue("text", inlineParams, "animation"),
+                  ANIMATION_TYPES,
+                  DEFAULTS.textAnimation
+                );
 
-                if (atMatch && durationMatch) {
+                if (inlineAt !== undefined && inlineDuration !== undefined) {
                   if (!scene.timelineElements) {
                     scene.timelineElements = [];
                   }
@@ -207,11 +299,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                     id: generateId(),
                     type: "text",
                     content: inlineContent,
-                    at: Number.parseFloat(atMatch[1]),
-                    duration: Number.parseFloat(durationMatch[1]),
-                    animation: animMatch
-                      ? (animMatch[1] as AnimationType)
-                      : "fadeIn",
+                    at: inlineAt,
+                    duration: inlineDuration,
+                    animation: inlineAnimation,
                   });
                   sourceMap.text = { startLine: textStartLine, endLine: textStartLine };
                   i++;
@@ -220,7 +310,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               }
 
               // Check for i18n key format: !text i18n:welcome
-              const i18nMatch = currentLine.match(REGEX_PATTERNS.TEXT_I18N);
+              const i18nMatch = directiveArgs.match(/^i18n:(\w+)/i);
               if (i18nMatch) {
                 i18nKey = i18nMatch[1];
               }
@@ -243,34 +333,52 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                 // Update endLine whenever we process a line within this block
                 textEndLine = i + 1;
 
-                const kv = parseKeyValue(textLine);
-                if (kv) {
-                  if (kv.key === PROPERTY_KEYS.ANIMATION)
-                    animation = kv.value as AnimationType;
-                  if (kv.key === PROPERTY_KEYS.SIZE)
-                    size = kv.value as "sm" | "md" | "lg" | "xl" | "2xl";
-                  if (kv.key === PROPERTY_KEYS.COLOR) color = kv.value;
-                  if (kv.key === PROPERTY_KEYS.FONT_FAMILY) {
-                    const fontValue = kv.value.toLowerCase();
-                    if (TEXT_FONT_FAMILIES.includes(fontValue as any)) {
-                      fontFamily = fontValue as
-                        | "serif"
-                        | "sans"
-                        | "mono"
-                        | "display";
-                    }
+                const property = parseDirectivePropertyLine("text", textLine);
+                if (property) {
+                  switch (property.name) {
+                    case "animation":
+                      animation = parseDirectiveEnumOrDefault<AnimationType>(
+                        "text",
+                        "animation",
+                        property.value,
+                        ANIMATION_TYPES,
+                        DEFAULTS.textAnimation
+                      );
+                      break;
+                    case "size":
+                      size = parseDirectiveEnumOrDefault<TextSize>(
+                        "text",
+                        "size",
+                        property.value,
+                        TEXT_SIZES,
+                        DEFAULTS.textSize
+                      );
+                      break;
+                    case "color":
+                      color = property.value;
+                      break;
+                    case "fontFamily":
+                      fontFamily = parseDirectiveEnumOrDefault<TextFontFamily>(
+                        "text",
+                        "fontFamily",
+                        property.value,
+                        TEXT_FONT_FAMILIES,
+                        DEFAULTS.textFontFamily
+                      );
+                      break;
+                    case "stagger":
+                      stagger = parseDirectiveNumericValue("text", "stagger", property.value);
+                      break;
+                    case "at":
+                      at = parseDirectiveNumericValue("text", "at", property.value);
+                      break;
+                    case "duration":
+                      duration = parseDirectiveNumericValue("text", "duration", property.value);
+                      break;
+                    case "i18nKey":
+                      i18nKey = property.value;
+                      break;
                   }
-                  if (kv.key === PROPERTY_KEYS.STAGGER)
-                    stagger = Number.parseFloat(kv.value);
-                  if (kv.key === PROPERTY_KEYS.AT)
-                    at = Number.parseFloat(kv.value);
-                  if (kv.key === PROPERTY_KEYS.DURATION)
-                    duration = Number.parseFloat(kv.value);
-                  if (
-                    kv.key === PROPERTY_KEYS.I18N ||
-                    kv.key === PROPERTY_KEYS.I18N_KEY
-                  )
-                    i18nKey = kv.value;
                 } else if (textLine) {
                   textContent.push(textLine);
                 }
@@ -315,16 +423,10 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               i++;
               let highlights: { lines: number[] } | undefined;
               let annotations: Array<{ line: number; text: string }> = [];
-              let typing = false;
-              let typingSpeed = 50;
-              let fontSize: "xs" | "sm" | "md" | "lg" = "sm";
-              let fontFamily:
-                | "mono"
-                | "jetbrains"
-                | "fira"
-                | "source"
-                | "inconsolata"
-                | "courier" = "mono";
+              let typing = directivePropertyDefault<boolean>("code", "typing", false);
+              let typingSpeed = DEFAULTS.codeTypingSpeed;
+              let fontSize: CodeFontSize = DEFAULTS.codeFontSize;
+              let fontFamily: CodeFontFamily = DEFAULTS.codeFontFamily;
               let height: number | undefined;
               let width: number | undefined;
 
@@ -334,8 +436,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   variables
                 );
 
-                if (codeLine.startsWith(CASE_SENSITIVE_VALUES.CODE_FENCE)) {
-                  const parsed = parseCodeBlock(lines, i);
+                if (codeLine.startsWith(DELIMITERS.CODE_FENCE)) {
+                  const parsed = parseCodeBlock(lines, i, variables);
                   scene.code = {
                     language: parsed.language,
                     content: parsed.code,
@@ -352,63 +454,60 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   i = parsed.endIndex;
                   sourceMap.code = { startLine: codeStartLine, endLine: i };
                   break;
-                } else if (
-                  codeLine.startsWith(CASE_SENSITIVE_VALUES.HIGHLIGHT)
-                ) {
-                  highlights = parseHighlights(codeLine.substring(10));
-                  i++;
-                } else if (
-                  codeLine.startsWith(CASE_SENSITIVE_VALUES.ANNOTATIONS)
-                ) {
+                }
+
+                if (/^annotations\s*:\s*$/i.test(codeLine)) {
                   i++;
                   const parsed = parseAnnotations(lines, i);
                   annotations = parsed.annotations;
                   i = parsed.endIndex;
-                } else if (codeLine.startsWith(CASE_SENSITIVE_VALUES.TYPING)) {
-                  typing =
-                    codeLine.substring(7).trim() ===
-                    CASE_SENSITIVE_VALUES.TRUE_VALUE;
-                  i++;
-                } else if (codeLine.startsWith(CASE_SENSITIVE_VALUES.SPEED)) {
-                  typingSpeed = Number.parseInt(
-                    codeLine.substring(6).trim(),
-                    10
-                  );
-                  i++;
-                } else if (
-                  codeLine.startsWith(CASE_SENSITIVE_VALUES.FONT_SIZE)
-                ) {
-                  fontSize = codeLine.substring(9).trim() as
-                    | "xs"
-                    | "sm"
-                    | "md"
-                    | "lg";
-                  i++;
-                } else if (
-                  codeLine
-                    .toLowerCase()
-                    .startsWith(CASE_SENSITIVE_VALUES.FONT_FAMILY)
-                ) {
-                  const fontValue = codeLine.substring(11).trim().toLowerCase();
-                  if (CODE_FONT_FAMILIES.includes(fontValue as any)) {
-                    fontFamily = fontValue as
-                      | "mono"
-                      | "jetbrains"
-                      | "fira"
-                      | "source"
-                      | "inconsolata"
-                      | "courier";
-                  }
-                  i++;
-                } else if (codeLine.startsWith(CASE_SENSITIVE_VALUES.HEIGHT)) {
-                  height = Number.parseInt(codeLine.substring(7).trim(), 10);
-                  i++;
-                } else if (codeLine.startsWith(CASE_SENSITIVE_VALUES.WIDTH)) {
-                  width = Number.parseInt(codeLine.substring(6).trim(), 10);
-                  i++;
-                } else {
-                  i++;
+                  continue;
                 }
+
+                const property = parseDirectivePropertyLine("code", codeLine);
+                if (property) {
+                  switch (property.name) {
+                    case "highlight":
+                      highlights = parseHighlights(property.value);
+                      break;
+                    case "typing":
+                      typing =
+                        parseBooleanValue(property.value) ??
+                        directivePropertyDefault<boolean>("code", "typing", false);
+                      break;
+                    case "speed":
+                      typingSpeed =
+                        parseDirectiveNumericValue("code", "speed", property.value) ?? DEFAULTS.codeTypingSpeed;
+                      break;
+                    case "fontSize":
+                      fontSize = parseDirectiveEnumOrDefault<CodeFontSize>(
+                        "code",
+                        "fontSize",
+                        property.value,
+                        CODE_FONT_SIZES,
+                        DEFAULTS.codeFontSize
+                      );
+                      break;
+                    case "fontFamily":
+                      fontFamily = parseDirectiveEnumOrDefault<CodeFontFamily>(
+                        "code",
+                        "fontFamily",
+                        property.value,
+                        CODE_FONT_FAMILIES,
+                        DEFAULTS.codeFontFamily
+                      );
+                      break;
+                    case "height":
+                      height = parseDirectiveNumericValue("code", "height", property.value);
+                      break;
+                    case "width":
+                      width = parseDirectiveNumericValue("code", "width", property.value);
+                      break;
+                    case "annotations":
+                      break;
+                  }
+                }
+                i++;
               }
               break;
             }
@@ -418,35 +517,28 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               scene.type = "terminal";
               sourceMap.type = { startLine: terminalStartLine, endLine: terminalStartLine };
               i++;
-              let typing = true;
-              let typingSpeed = 30;
+              let typing = directivePropertyDefault<boolean>("terminal", "typing", true);
+              let typingSpeed = directivePropertyDefault<number>("terminal", "speed", 30);
 
               while (i < lines.length) {
-                const termLine = lines[i].trim();
-                if (
-                  termLine.startsWith(CASE_SENSITIVE_VALUES.TERMINAL_TYPING)
-                ) {
+                const termLine = substituteVariables(lines[i].trim(), variables);
+                const property = parseDirectivePropertyLine("terminal", termLine);
+
+                if (property?.name === "typing") {
                   typing =
-                    termLine.substring(7).trim() ===
-                    CASE_SENSITIVE_VALUES.TRUE_VALUE;
+                    parseBooleanValue(property.value) ??
+                    directivePropertyDefault<boolean>("terminal", "typing", true);
+                  i++;
+                } else if (property?.name === "speed") {
+                  typingSpeed =
+                    parseDirectiveNumericValue("terminal", "speed", property.value) ??
+                    directivePropertyDefault<number>("terminal", "speed", 30);
                   i++;
                 } else if (
-                  termLine.startsWith(CASE_SENSITIVE_VALUES.TERMINAL_SPEED)
+                  termLine.startsWith(DELIMITERS.TERMINAL_PROMPT_DOLLAR) ||
+                  termLine.startsWith(DELIMITERS.TERMINAL_PROMPT_ARROW)
                 ) {
-                  typingSpeed = Number.parseInt(
-                    termLine.substring(6).trim(),
-                    10
-                  );
-                  i++;
-                } else if (
-                  termLine.startsWith(
-                    CASE_SENSITIVE_VALUES.TERMINAL_PROMPT_DOLLAR
-                  ) ||
-                  termLine.startsWith(
-                    CASE_SENSITIVE_VALUES.TERMINAL_PROMPT_ARROW
-                  )
-                ) {
-                  const parsed = parseTerminalBlock(lines, i);
+                  const parsed = parseTerminalBlock(lines, i, variables);
                   scene.terminal = {
                     commands: parsed.commands,
                     typing,
@@ -471,12 +563,12 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const diffStartLine = i + 1;
               scene.type = "diff";
               sourceMap.type = { startLine: diffStartLine, endLine: diffStartLine };
-              const langMatch = currentLine.match(/!diff\s+(\w+)?/);
+              const { positional } = parseInlineArguments(directiveArgs);
               i++;
 
               const parsed = parseDiffBlock(lines, i);
               scene.diff = {
-                language: langMatch?.[1] || "text",
+                language: firstInlineValue(positional, 0) || "text",
                 changes: parsed.changes,
               };
               i = parsed.endIndex;
@@ -488,15 +580,28 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const chartStartLine = i + 1;
               scene.type = "chart";
               sourceMap.type = { startLine: chartStartLine, endLine: chartStartLine };
-              const typeMatch = currentLine.match(/type:(\w+)/);
-              const animateMatch = currentLine.match(/animate:(true|false)/);
+              const chartTypeDefault = directivePropertyDefault<ChartType>(
+                "chart",
+                "type",
+                "bar"
+              );
+              const chartType = parseDirectiveEnumOrDefault<ChartType>(
+                "chart",
+                "type",
+                getInlinePropertyValue("chart", directiveArgs, "type"),
+                CHART_TYPES,
+                chartTypeDefault
+              );
+              const animate =
+                parseBooleanValue(getInlinePropertyValue("chart", directiveArgs, "animate")) ??
+                directivePropertyDefault<boolean>("chart", "animate", true);
               i++;
 
-              const parsed = parseChartData(lines, i);
+              const parsed = parseChartData(lines, i, variables);
               scene.chart = {
-                type: (typeMatch?.[1] || "bar") as ChartType,
+                type: chartType,
                 data: parsed.data,
-                animate: animateMatch?.[1] !== "false",
+                animate,
               };
               i = parsed.endIndex;
               sourceMap.chart = { startLine: chartStartLine, endLine: i };
@@ -507,18 +612,56 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const mockupStartLine = i + 1;
               scene.type = "mockup";
               sourceMap.type = { startLine: mockupStartLine, endLine: mockupStartLine };
-              const deviceMatch = currentLine.match(/device:(\w+)/);
-              const bgMatch = currentLine.match(/bg:(\S+)/);
+              const deviceDefault = directivePropertyDefault<DeviceType>(
+                "mockup",
+                "device",
+                "browser"
+              );
+              const device = parseDirectiveEnumOrDefault<DeviceType>(
+                "mockup",
+                "device",
+                getInlinePropertyValue("mockup", directiveArgs, "device"),
+                DEVICE_TYPES,
+                deviceDefault
+              );
+              let contentBg =
+                getInlinePropertyValue("mockup", directiveArgs, "bg") ??
+                directivePropertyDefault<string>("mockup", "bg", "#ffffff");
               i++;
 
-              // Parse mockup content
-              let contentType: "text" | "code" | "image" = "text";
-              let contentBg = bgMatch?.[1] || "#ffffff";
+              // Parse mockup content. Inline properties supply initial values;
+              // following block property lines use the same schema keys and win.
+              let contentType = parseDirectiveEnumOrDefault<MockupContentType>(
+                "mockup",
+                "content",
+                getInlinePropertyValue("mockup", directiveArgs, "content"),
+                MOCKUP_CONTENT_TYPES,
+                directivePropertyDefault<MockupContentType>(
+                  "mockup",
+                  "content",
+                  "text"
+                )
+              );
               const textContent: string[] = [];
-              let textColor: string | undefined;
-              let textSize: "sm" | "md" | "lg" | "xl" | "2xl" = "md";
-              let imageSrc: string | undefined;
-              let imageFit: "cover" | "contain" | "fill" = "cover";
+              let textColor = getInlinePropertyValue("mockup", directiveArgs, "color");
+              let textSize = parseDirectiveEnumOrDefault<TextSize>(
+                "mockup",
+                "size",
+                getInlinePropertyValue("mockup", directiveArgs, "size"),
+                TEXT_SIZES,
+                directivePropertyDefault<TextSize>("mockup", "size", "md")
+              );
+              let imageSrc = getInlinePropertyValue("mockup", directiveArgs, "src");
+              let imageFit = parseDirectiveEnumOrDefault<ImageFit>(
+                "mockup",
+                "fit",
+                getInlinePropertyValue("mockup", directiveArgs, "fit"),
+                IMAGE_FIT_OPTIONS,
+                directivePropertyDefault<ImageFit>("mockup", "fit", "cover")
+              );
+              if (imageSrc) {
+                contentType = "image";
+              }
 
               while (i < lines.length) {
                 const mockupLine = substituteVariables(
@@ -532,27 +675,53 @@ export function parseMarkdownFull(markdown: string): ParseResult {
                   break;
                 }
 
-                const kv = parseKeyValue(mockupLine);
-                if (kv) {
-                  if (kv.key === PROPERTY_KEYS.CONTENT)
-                    contentType = kv.value as "text" | "code" | "image";
-                  if (
-                    kv.key === PROPERTY_KEYS.BG ||
-                    kv.key === PROPERTY_KEYS.BACKGROUND
-                  )
-                    contentBg = kv.value;
-                  if (kv.key === PROPERTY_KEYS.COLOR) textColor = kv.value;
-                  if (kv.key === PROPERTY_KEYS.SIZE)
-                    textSize = kv.value as "sm" | "md" | "lg" | "xl" | "2xl";
-                  if (
-                    kv.key === PROPERTY_KEYS.SRC ||
-                    kv.key === PROPERTY_KEYS.IMAGE
-                  ) {
-                    imageSrc = kv.value;
-                    contentType = CASE_SENSITIVE_VALUES.CONTENT_IMAGE;
+                const property = parseDirectivePropertyLine("mockup", mockupLine);
+                if (property) {
+                  switch (property.name) {
+                    case "content":
+                      contentType = parseDirectiveEnumOrDefault<MockupContentType>(
+                        "mockup",
+                        "content",
+                        property.value,
+                        MOCKUP_CONTENT_TYPES,
+                        directivePropertyDefault<MockupContentType>(
+                          "mockup",
+                          "content",
+                          "text"
+                        )
+                      );
+                      break;
+                    case "bg":
+                      contentBg = property.value;
+                      break;
+                    case "color":
+                      textColor = property.value;
+                      break;
+                    case "size":
+                      textSize = parseDirectiveEnumOrDefault<TextSize>(
+                        "mockup",
+                        "size",
+                        property.value,
+                        TEXT_SIZES,
+                        directivePropertyDefault<TextSize>("mockup", "size", "md")
+                      );
+                      break;
+                    case "src":
+                      imageSrc = property.value;
+                      contentType = "image";
+                      break;
+                    case "fit":
+                      imageFit = parseDirectiveEnumOrDefault<ImageFit>(
+                        "mockup",
+                        "fit",
+                        property.value,
+                        IMAGE_FIT_OPTIONS,
+                        directivePropertyDefault<ImageFit>("mockup", "fit", "cover")
+                      );
+                      break;
+                    case "device":
+                      break;
                   }
-                  if (kv.key === PROPERTY_KEYS.FIT)
-                    imageFit = kv.value as "cover" | "contain" | "fill";
                 } else if (mockupLine) {
                   textContent.push(mockupLine);
                 }
@@ -562,24 +731,24 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               sourceMap.mockup = { startLine: mockupStartLine, endLine: i };
 
               scene.mockup = {
-                device: (deviceMatch?.[1] || "browser") as DeviceType,
+                device,
                 content: {
                   type: contentType,
                   background: contentBg,
                   text:
                     contentType === "text" && textContent.length > 0
                       ? {
-                        content: textContent.join("\n"),
-                        color: textColor,
-                        size: textSize,
-                        align: "center",
-                      }
+                          content: textContent.join("\n"),
+                          color: textColor,
+                          size: textSize,
+                          align: "center",
+                        }
                       : undefined,
                   image: imageSrc
                     ? {
-                      src: imageSrc,
-                      fit: imageFit,
-                    }
+                        src: imageSrc,
+                        fit: imageFit,
+                      }
                     : undefined,
                 },
               };
@@ -587,19 +756,27 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.CALLOUT: {
-              const arrowMatch = currentLine.match(/arrow:(\w+)/);
-              const targetMatch = currentLine.match(/target:(\S+)/);
-              const textMatch = currentLine.match(/"([^"]+)"/);
+              const { positional } = parseInlineArguments(directiveArgs);
+              const arrow = parseDirectiveEnumOrDefault<CalloutArrow>(
+                "callout",
+                "arrow",
+                getInlinePropertyValue("callout", directiveArgs, "arrow"),
+                CALLOUT_ARROWS,
+                directivePropertyDefault<CalloutArrow>("callout", "arrow", "down")
+              );
+              const style = parseDirectiveEnumOrDefault<CalloutStyle>(
+                "callout",
+                "style",
+                getInlinePropertyValue("callout", directiveArgs, "style"),
+                CALLOUT_STYLES,
+                directivePropertyDefault<CalloutStyle>("callout", "style", "info")
+              );
 
               scene.callout = {
-                text: textMatch?.[1] || "",
-                arrow: (arrowMatch?.[1] || "down") as
-                  | "up"
-                  | "down"
-                  | "left"
-                  | "right",
-                target: targetMatch?.[1],
-                style: "info",
+                text: firstInlineValue(positional, 0) || "",
+                arrow,
+                target: getInlinePropertyValue("callout", directiveArgs, "target"),
+                style,
               };
               i++;
               break;
@@ -607,75 +784,140 @@ export function parseMarkdownFull(markdown: string): ParseResult {
 
             case DIRECTIVE_CASES.PARTICLES: {
               const particlesLine = i + 1;
-              const typeMatch = currentLine.match(/type:(\w+)/);
-              const intensityMatch = currentLine.match(/intensity:(\w+)/);
+              let particleType = parseDirectiveEnumOrDefault<ParticleType>(
+                "particles",
+                "type",
+                getInlinePropertyValue("particles", directiveArgs, "type"),
+                PARTICLE_TYPES,
+                DEFAULTS.particleType
+              );
+              let intensity = parseDirectiveEnumOrDefault<ParticleIntensity>(
+                "particles",
+                "intensity",
+                getInlinePropertyValue("particles", directiveArgs, "intensity"),
+                PARTICLE_INTENSITIES,
+                DEFAULTS.particleIntensity
+              );
 
-              scene.particles = {
-                type: (typeMatch?.[1] || "confetti") as ParticleType,
-                intensity: (intensityMatch?.[1] || "medium") as
-                  | "low"
-                  | "medium"
-                  | "high",
-              };
               i++;
               // Consume separate property lines if any
               while (i < lines.length) {
                 const nextLine = substituteVariables(lines[i].trim(), variables);
-                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+                if (
+                  nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
+                  nextLine === DELIMITERS.SCENE_SEPARATOR
+                ) {
+                  break;
+                }
 
-                const kv = parseKeyValue(nextLine);
-                if (kv && kv.key === PROPERTY_KEYS.INTENSITY) {
-                  scene.particles.intensity = kv.value as any;
-                } else if (kv && kv.key === PROPERTY_KEYS.TYPE) {
-                  scene.particles.type = kv.value as any;
+                const property = parseDirectivePropertyLine("particles", nextLine);
+                if (property?.name === "intensity") {
+                  intensity = parseDirectiveEnumOrDefault<ParticleIntensity>(
+                    "particles",
+                    "intensity",
+                    property.value,
+                    PARTICLE_INTENSITIES,
+                    DEFAULTS.particleIntensity
+                  );
+                } else if (property?.name === "type") {
+                  particleType = parseDirectiveEnumOrDefault<ParticleType>(
+                    "particles",
+                    "type",
+                    property.value,
+                    PARTICLE_TYPES,
+                    DEFAULTS.particleType
+                  );
                 }
                 i++;
               }
+
+              scene.particles = {
+                type: particleType,
+                intensity,
+              };
               sourceMap.particles = { startLine: particlesLine, endLine: i };
               break;
             }
 
             case DIRECTIVE_CASES.CAMERA: {
               const cameraStartLine = i + 1;
-              const effectMatch = currentLine.match(/(zoom|pan|shake)/);
-              const valueMatch = currentLine.match(/:([\d.]+)/);
-              const durationMatch = currentLine.match(/duration:([\d.]+)s?/);
+              const { tokens, positional } = parseInlineArguments(directiveArgs);
+              const effectToken = tokens.find(
+                (token) => token.key !== undefined && isOneOf(CAMERA_EFFECTS, token.key)
+              );
+              const effectRaw = effectToken?.key ?? firstInlineValue(positional, 0);
+              const valueRaw = effectToken?.value ?? firstInlineValue(positional, 1);
+              const effect = parseDirectiveEnumOrDefault<CameraEffect>(
+                "camera",
+                "effect",
+                effectRaw,
+                CAMERA_EFFECTS,
+                DEFAULTS.cameraEffect
+              );
+              const value =
+                parseDirectiveNumericValue("camera", "value", valueRaw) ?? DEFAULTS.cameraZoom;
+              const durationRaw =
+                getInlinePropertyValue("camera", directiveArgs, "duration") ??
+                firstInlineValue(positional, 2);
+              const cameraDuration =
+                parseDirectiveNumericValue("camera", "duration", durationRaw) ?? DEFAULTS.cameraDuration;
 
-              // Check if this is a keyframe-based camera (starts with -)
-              const keyframes = [];
+              const keyframes: CameraKeyframe[] = [];
               i++;
 
               while (i < lines.length) {
                 const cameraLine = lines[i].trim();
                 if (cameraLine.startsWith(DELIMITERS.KEYFRAME_PREFIX)) {
-                  // Parse keyframe: - at:0s zoom:1 pan:left
-                  const atMatch = cameraLine.match(REGEX_PATTERNS.KEYFRAME_AT);
-                  const zoomMatch = cameraLine.match(
-                    REGEX_PATTERNS.KEYFRAME_ZOOM
+                  const keyframeArguments = parseInlineArguments(
+                    cameraLine.replace(/^-\s*/, "")
                   );
-                  const panMatch = cameraLine.match(
-                    REGEX_PATTERNS.KEYFRAME_PAN
-                  );
-                  const shakeMatch = cameraLine.match(
-                    REGEX_PATTERNS.KEYFRAME_SHAKE
-                  );
-                  const shakeIntensityMatch = cameraLine.match(
-                    REGEX_PATTERNS.KEYFRAME_SHAKE_INTENSITY
-                  );
+                  let at: number | undefined;
+                  let zoom: number | undefined;
+                  let pan: PanDirection | undefined;
+                  let shake: boolean | undefined;
+                  let shakeIntensity: ShakeIntensity | undefined;
 
-                  if (atMatch) {
+                  for (const token of keyframeArguments.tokens) {
+                    if (!token.key || token.value === undefined) continue;
+                    const property = getCameraKeyframeProperty(token.key);
+                    if (!property) continue;
+
+                    switch (property.name) {
+                      case "at":
+                        at = parseDirectiveNumericValue("camera", "at", token.value);
+                        break;
+                      case "zoom":
+                        zoom = parseDirectiveNumericValue("camera", "zoom", token.value);
+                        break;
+                      case "pan":
+                        pan = parseDirectiveEnum<PanDirection>(
+                          "camera",
+                          "pan",
+                          token.value,
+                          PAN_DIRECTIONS
+                        );
+                        break;
+                      case "shake":
+                        shake = parseBooleanValue(token.value);
+                        break;
+                      case "shakeIntensity":
+                        shakeIntensity = parseDirectiveEnum<ShakeIntensity>(
+                          "camera",
+                          "shakeIntensity",
+                          token.value,
+                          SHAKE_INTENSITIES
+                        );
+                        break;
+                    }
+                  }
+
+                  if (at !== undefined) {
                     keyframes.push({
-                      at: Number.parseFloat(atMatch[1]),
-                      zoom: zoomMatch
-                        ? Number.parseFloat(zoomMatch[1])
-                        : undefined,
-                      pan: panMatch ? (panMatch[1] as any) : undefined,
-                      shake: shakeMatch
-                        ? shakeMatch[1] === CASE_SENSITIVE_VALUES.TRUE_VALUE
-                        : undefined,
-                      shakeIntensity: shakeIntensityMatch
-                        ? (shakeIntensityMatch[1] as any)
-                        : undefined,
+                      at,
+                      zoom,
+                      pan,
+                      shake,
+                      shakeIntensity,
                     });
                   }
                   i++;
@@ -692,11 +934,9 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               sourceMap.camera = { startLine: cameraStartLine, endLine: i };
 
               scene.camera = {
-                effect: (effectMatch?.[1] || "zoom") as CameraEffect,
-                value: valueMatch ? Number.parseFloat(valueMatch[1]) : 1.5,
-                duration: durationMatch
-                  ? Number.parseFloat(durationMatch[1])
-                  : 1,
+                effect,
+                value,
+                duration: cameraDuration,
                 keyframes: keyframes.length > 0 ? keyframes : undefined,
               };
               break;
@@ -704,48 +944,106 @@ export function parseMarkdownFull(markdown: string): ParseResult {
 
             case DIRECTIVE_CASES.PRESENTER: {
               const presenterLine = i + 1;
-              const posMatch = currentLine.match(/position:(\S+)/);
-              const sizeMatch = currentLine.match(/size:(\w+)/);
-              const shapeMatch = currentLine.match(/shape:(\w+)/);
+              let position = parseDirectiveEnumOrDefault<PresenterPosition>(
+                "presenter",
+                "position",
+                getInlinePropertyValue("presenter", directiveArgs, "position"),
+                PRESENTER_POSITIONS,
+                DEFAULTS.presenterPosition
+              );
+              let presenterSize = parseDirectiveEnumOrDefault<PresenterSize>(
+                "presenter",
+                "size",
+                getInlinePropertyValue("presenter", directiveArgs, "size"),
+                PRESENTER_SIZES,
+                DEFAULTS.presenterSize
+              );
+              let shape = parseDirectiveEnumOrDefault<PresenterShape>(
+                "presenter",
+                "shape",
+                getInlinePropertyValue("presenter", directiveArgs, "shape"),
+                PRESENTER_SHAPES,
+                DEFAULTS.presenterShape
+              );
 
-              scene.presenter = {
-                position: (posMatch?.[1] ||
-                  "bottom-right") as PresenterPosition,
-                size: (sizeMatch?.[1] || "md") as "sm" | "md" | "lg",
-                shape: (shapeMatch?.[1] || "circle") as
-                  | "circle"
-                  | "square"
-                  | "rounded",
-              };
               i++;
               // Consume separate property lines if any
               while (i < lines.length) {
                 const nextLine = substituteVariables(lines[i].trim(), variables);
-                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
+                if (
+                  nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
+                  nextLine === DELIMITERS.SCENE_SEPARATOR
+                ) {
+                  break;
+                }
 
-                const kv = parseKeyValue(nextLine);
-                if (kv) {
-                  if (kv.key === PROPERTY_KEYS.POSITION) scene.presenter.position = kv.value as any;
-                  if (kv.key === PROPERTY_KEYS.SIZE) scene.presenter.size = kv.value as any;
-                  if (kv.key === PROPERTY_KEYS.SHAPE) scene.presenter.shape = kv.value as any;
+                const property = parseDirectivePropertyLine("presenter", nextLine);
+                if (property?.name === "position") {
+                  position = parseDirectiveEnumOrDefault<PresenterPosition>(
+                    "presenter",
+                    "position",
+                    property.value,
+                    PRESENTER_POSITIONS,
+                    DEFAULTS.presenterPosition
+                  );
+                } else if (property?.name === "size") {
+                  presenterSize = parseDirectiveEnumOrDefault<PresenterSize>(
+                    "presenter",
+                    "size",
+                    property.value,
+                    PRESENTER_SIZES,
+                    DEFAULTS.presenterSize
+                  );
+                } else if (property?.name === "shape") {
+                  shape = parseDirectiveEnumOrDefault<PresenterShape>(
+                    "presenter",
+                    "shape",
+                    property.value,
+                    PRESENTER_SHAPES,
+                    DEFAULTS.presenterShape
+                  );
                 }
                 i++;
               }
+
+              scene.presenter = {
+                position,
+                size: presenterSize,
+                shape,
+              };
               sourceMap.presenter = { startLine: presenterLine, endLine: i };
               break;
             }
 
             case DIRECTIVE_CASES.LAYOUT: {
               scene.type = "split";
-              const dirMatch = currentLine.match(/split:(\w+)/);
+              const direction = parseDirectiveEnumOrDefault<LayoutSplitDirection>(
+                "layout",
+                "split",
+                getInlinePropertyValue("layout", directiveArgs, "split"),
+                LAYOUT_SPLIT_DIRECTIONS,
+                directivePropertyDefault<LayoutSplitDirection>(
+                  "layout",
+                  "split",
+                  "horizontal"
+                )
+              );
+              i++;
+
+              const parsedLayout = parseLayoutChildren(
+                lines,
+                i,
+                variables,
+                (childMarkdown, childVariables) =>
+                  parseMarkdownInternal(childMarkdown, childVariables).scenes[0]
+              );
               scene.split = {
-                left: { type: "text", background: "#1e1e2e" },
-                right: { type: "text", background: "#1e1e2e" },
-                direction:
-                  dirMatch?.[1] === "vertical" ? "vertical" : "horizontal",
+                left: parsedLayout.left,
+                right: parsedLayout.right,
+                direction,
                 ratio: 0.5,
               };
-              i++;
+              i = parsedLayout.endIndex;
               break;
             }
 
@@ -753,24 +1051,26 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const imageLine = i + 1;
               scene.type = "image";
               sourceMap.type = { startLine: imageLine, endLine: imageLine };
-              const srcMatch = currentLine.match(/src:(\S+)/);
-              const fitMatch = currentLine.match(/fit:(cover|contain|fill)/);
-              const posMatch = currentLine.match(
-                /position:(center|top|bottom|left|right)/
+              const fit = parseDirectiveEnumOrDefault<ImageFit>(
+                "image",
+                "fit",
+                getInlinePropertyValue("image", directiveArgs, "fit"),
+                IMAGE_FIT_OPTIONS,
+                DEFAULTS.imageFit
               );
-              const altMatch = currentLine.match(/alt:"([^"]+)"/);
+              const position = parseDirectiveEnumOrDefault<ImagePosition>(
+                "image",
+                "position",
+                getInlinePropertyValue("image", directiveArgs, "position"),
+                IMAGE_POSITIONS,
+                DEFAULTS.imagePosition
+              );
 
               scene.image = {
-                src: srcMatch?.[1] || "",
-                fit: (fitMatch?.[1] as "cover" | "contain" | "fill") || "cover",
-                position:
-                  (posMatch?.[1] as
-                    | "center"
-                    | "top"
-                    | "bottom"
-                    | "left"
-                    | "right") || "center",
-                alt: altMatch?.[1],
+                src: getInlinePropertyValue("image", directiveArgs, "src") || "",
+                fit,
+                position,
+                alt: getInlinePropertyValue("image", directiveArgs, "alt"),
               };
               sourceMap.image = { startLine: imageLine, endLine: imageLine };
               i++;
@@ -781,39 +1081,51 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const emojiLine = i + 1;
               scene.type = "emoji";
               sourceMap.type = { startLine: emojiLine, endLine: emojiLine };
-              const emojiMatch = currentLine.match(/!emoji\s+(\S+)/);
-              const sizeMatch = currentLine.match(/size:(sm|md|lg|xl|2xl)/);
-              const animateMatch = currentLine.match(
-                /animate:(bounce|spin|pulse|shake|none)/
+              const { positional } = parseInlineArguments(directiveArgs);
+              const emoji = firstInlineValue(positional, 0) || "🎉";
+              const emojiSize = parseDirectiveEnumOrDefault<TextSize>(
+                "emoji",
+                "size",
+                getInlinePropertyValue("emoji", directiveArgs, "size"),
+                TEXT_SIZES,
+                DEFAULTS.emojiSize
               );
-              const atMatch = currentLine.match(/at:([\d.]+)s?/);
-              const durationMatch = currentLine.match(/duration:([\d.]+)s?/);
+              const emojiAnimation = parseDirectiveEnumOrDefault<EmojiAnimation>(
+                "emoji",
+                "animate",
+                getInlinePropertyValue("emoji", directiveArgs, "animate"),
+                EMOJI_ANIMATIONS,
+                DEFAULTS.emojiAnimation
+              );
+              const at = parseDirectiveNumericValue(
+                "emoji",
+                "at",
+                getInlinePropertyValue("emoji", directiveArgs, "at")
+              );
+              const duration = parseDirectiveNumericValue(
+                "emoji",
+                "duration",
+                getInlinePropertyValue("emoji", directiveArgs, "duration")
+              );
 
               scene.emoji = {
-                emoji: emojiMatch?.[1] || "🎉",
-                size:
-                  (sizeMatch?.[1] as "sm" | "md" | "lg" | "xl" | "2xl") || "xl",
-                animate:
-                  (animateMatch?.[1] as
-                    | "bounce"
-                    | "spin"
-                    | "pulse"
-                    | "shake"
-                    | "none") || "none",
+                emoji,
+                size: emojiSize,
+                animate: emojiAnimation,
               };
               sourceMap.emoji = { startLine: emojiLine, endLine: emojiLine };
 
               // If at: and duration: are specified, add to timelineElements
-              if (atMatch && durationMatch) {
+              if (at !== undefined && duration !== undefined) {
                 if (!scene.timelineElements) {
                   scene.timelineElements = [];
                 }
                 scene.timelineElements.push({
                   id: generateId(),
                   type: "emoji",
-                  content: emojiMatch?.[1] || "🎉",
-                  at: Number.parseFloat(atMatch[1]),
-                  duration: Number.parseFloat(durationMatch[1]),
+                  content: emoji,
+                  at,
+                  duration,
                 });
               }
               i++;
@@ -824,18 +1136,24 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const qrLine = i + 1;
               scene.type = "qr";
               sourceMap.type = { startLine: qrLine, endLine: qrLine };
-              const urlMatch = currentLine.match(/url:(\S+)/);
-              const sizeMatch = currentLine.match(/size:(\d+)/);
-              const colorMatch = currentLine.match(/color:(\S+)/);
-              const bgMatch = currentLine.match(/bg:(\S+)/);
-              const labelMatch = currentLine.match(/label:"([^"]+)"/);
 
               scene.qr = {
-                url: urlMatch?.[1] || "https://example.com",
-                size: sizeMatch ? Number.parseInt(sizeMatch[1], 10) : 200,
-                color: colorMatch?.[1] || "#ffffff",
-                bgColor: bgMatch?.[1] || "transparent",
-                label: labelMatch?.[1],
+                url:
+                  getInlinePropertyValue("qr", directiveArgs, "url") ||
+                  "https://example.com",
+                size:
+                  parseDirectiveNumericValue(
+                    "qr",
+                    "size",
+                    getInlinePropertyValue("qr", directiveArgs, "size")
+                  ) ?? directivePropertyDefault<number>("qr", "size", 200),
+                color:
+                  getInlinePropertyValue("qr", directiveArgs, "color") ||
+                  directivePropertyDefault<string>("qr", "color", "#ffffff"),
+                bgColor:
+                  getInlinePropertyValue("qr", directiveArgs, "bg") ||
+                  directivePropertyDefault<string>("qr", "bg", "transparent"),
+                label: getInlinePropertyValue("qr", directiveArgs, "label"),
               };
               sourceMap.qr = { startLine: qrLine, endLine: qrLine };
               i++;
@@ -846,18 +1164,25 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const countdownLine = i + 1;
               scene.type = "countdown";
               sourceMap.type = { startLine: countdownLine, endLine: countdownLine };
-              const fromMatch = currentLine.match(/from:(\d+)/);
-              const styleMatch = currentLine.match(
-                /style:(digital|circle|minimal)/
+              const style = parseDirectiveEnumOrDefault<CountdownStyle>(
+                "countdown",
+                "style",
+                getInlinePropertyValue("countdown", directiveArgs, "style"),
+                COUNTDOWN_STYLES,
+                DEFAULTS.countdownStyle
               );
-              const colorMatch = currentLine.match(/color:(\S+)/);
 
               scene.countdown = {
-                from: fromMatch ? Number.parseInt(fromMatch[1], 10) : 10,
-                style:
-                  (styleMatch?.[1] as "digital" | "circle" | "minimal") ||
-                  "digital",
-                color: colorMatch?.[1] || "#ec4899",
+                from:
+                  parseDirectiveNumericValue(
+                    "countdown",
+                    "from",
+                    getInlinePropertyValue("countdown", directiveArgs, "from")
+                  ) ?? DEFAULTS.countdownFrom,
+                style,
+                color:
+                  getInlinePropertyValue("countdown", directiveArgs, "color") ||
+                  directivePropertyDefault<string>("countdown", "color", "#ec4899"),
               };
               sourceMap.countdown = { startLine: countdownLine, endLine: countdownLine };
               i++;
@@ -868,23 +1193,36 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               const progressLine = i + 1;
               scene.type = "progress";
               sourceMap.type = { startLine: progressLine, endLine: progressLine };
-              const valueMatch = currentLine.match(/value:(\d+)/);
-              const maxMatch = currentLine.match(/max:(\d+)/);
-              const animateMatch = currentLine.match(/animate:(true|false)/);
-              const styleMatch = currentLine.match(
-                /style:(bar|circle|semicircle)/
+              const style = parseDirectiveEnumOrDefault<ProgressStyle>(
+                "progress",
+                "style",
+                getInlinePropertyValue("progress", directiveArgs, "style"),
+                PROGRESS_STYLES,
+                DEFAULTS.progressStyle
               );
-              const colorMatch = currentLine.match(/color:(\S+)/);
-              const labelMatch = currentLine.match(/label:"([^"]+)"/);
 
               scene.progress = {
-                value: valueMatch ? Number.parseInt(valueMatch[1], 10) : 50,
-                max: maxMatch ? Number.parseInt(maxMatch[1], 10) : 100,
-                animate: animateMatch?.[1] !== "false",
-                style:
-                  (styleMatch?.[1] as "bar" | "circle" | "semicircle") || "bar",
-                color: colorMatch?.[1] || "#ec4899",
-                label: labelMatch?.[1],
+                value:
+                  parseDirectiveNumericValue(
+                    "progress",
+                    "value",
+                    getInlinePropertyValue("progress", directiveArgs, "value")
+                  ) ?? DEFAULTS.progressValue,
+                max:
+                  parseDirectiveNumericValue(
+                    "progress",
+                    "max",
+                    getInlinePropertyValue("progress", directiveArgs, "max")
+                  ) ?? DEFAULTS.progressMax,
+                animate:
+                  parseBooleanValue(
+                    getInlinePropertyValue("progress", directiveArgs, "animate")
+                  ) ?? directivePropertyDefault<boolean>("progress", "animate", true),
+                style,
+                color:
+                  getInlinePropertyValue("progress", directiveArgs, "color") ||
+                  directivePropertyDefault<string>("progress", "color", "#ec4899"),
+                label: getInlinePropertyValue("progress", directiveArgs, "label"),
               };
               sourceMap.progress = { startLine: progressLine, endLine: progressLine };
               i++;
@@ -893,20 +1231,11 @@ export function parseMarkdownFull(markdown: string): ParseResult {
 
             case DIRECTIVE_CASES.BACKGROUND: {
               const backgroundLine = i + 1;
-              const match = currentLine.match(/!background\s+(.+)/);
-              if (match) {
-                scene.background = substituteVariables(
-                  match[1].trim(),
-                  variables
-                );
+              if (directiveArgs) {
+                scene.background = directiveArgs;
               }
               i++;
-              // Consume properties if any
-              while (i < lines.length) {
-                const nextLine = lines[i].trim();
-                if (nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || nextLine === DELIMITERS.SCENE_SEPARATOR) break;
-                i++;
-              }
+              i = consumeDirectiveTail(lines, i);
               sourceMap.background = { startLine: backgroundLine, endLine: i };
               break;
             }
@@ -917,9 +1246,10 @@ export function parseMarkdownFull(markdown: string): ParseResult {
             }
 
             case DIRECTIVE_CASES.LOCALE: {
-              const match = currentLine.match(/!locale\s+(\w+)/);
-              if (match) {
-                scene.locale = match[1];
+              const { positional } = parseInlineArguments(directiveArgs);
+              const locale = firstInlineValue(positional, 0);
+              if (locale) {
+                scene.locale = locale;
               }
               i++;
               break;
@@ -930,7 +1260,7 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               i++;
               while (i < lines.length) {
                 const exportLine = lines[i].trim();
-                if (exportLine.startsWith("!") || exportLine === "---") {
+                if (exportLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || exportLine === DELIMITERS.SCENE_SEPARATOR) {
                   break;
                 }
                 i++;
@@ -938,8 +1268,17 @@ export function parseMarkdownFull(markdown: string): ParseResult {
               break;
             }
 
-            default:
+            case DIRECTIVE_CASES.SCENE:
+            case DIRECTIVE_CASES.LOCALES:
+            case DIRECTIVE_CASES.STRINGS: {
+              // Scene boundaries are handled by the outer loop. Global blocks
+              // inside a scene are ignored consistently with unknown metadata.
               i++;
+              break;
+            }
+
+            default:
+              assertNever(directive);
           }
         } else {
           i++;
@@ -955,26 +1294,29 @@ export function parseMarkdownFull(markdown: string): ParseResult {
       scenes.push(scene);
     } else {
       // Handle global directives outside of scenes
-      if (line.startsWith("!locales")) {
+      const globalDirective = parseDirective(line);
+      const globalDirectiveName = globalDirective?.canonicalName;
+
+      if (globalDirectiveName === DIRECTIVE_CASES.LOCALES) {
         // !locales en es fr de - defines supported locales
         // This is handled at the application level, not in parser
         i++;
-      } else if (line.startsWith("!strings")) {
+      } else if (globalDirectiveName === DIRECTIVE_CASES.STRINGS) {
         // !strings block - skip for now, handled at application level
         i++;
         while (i < lines.length) {
           const strLine = lines[i].trim();
-          if (strLine.startsWith("!") || strLine === "---") {
+          if (strLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || strLine === DELIMITERS.SCENE_SEPARATOR) {
             break;
           }
           i++;
         }
-      } else if (line.startsWith("!export")) {
+      } else if (globalDirectiveName === DIRECTIVE_CASES.EXPORT) {
         // !export block - skip for now, handled at application level
         i++;
         while (i < lines.length) {
           const exportLine = lines[i].trim();
-          if (exportLine.startsWith("!") || exportLine === "---") {
+          if (exportLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) || exportLine === DELIMITERS.SCENE_SEPARATOR) {
             break;
           }
           i++;

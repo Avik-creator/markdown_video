@@ -12,190 +12,182 @@ export const SCENE_COLORS = [
 ];
 
 // ============================================
-// FONT FAMILIES
+// SCHEMA-DERIVED VALUE TABLES
 // ============================================
 
-// Text scene font families
-export const TEXT_FONT_FAMILIES = ["serif", "sans", "mono", "display"] as const;
-export type TextFontFamily = (typeof TEXT_FONT_FAMILIES)[number];
+import {
+  ANIMATION_VALUES,
+  ASPECT_RATIO_VALUES,
+  CAMERA_EFFECT_VALUES,
+  CALLOUT_ARROW_VALUES,
+  CALLOUT_STYLE_VALUES,
+  CHART_TYPE_VALUES,
+  CODE_FONT_FAMILY_VALUES,
+  CODE_FONT_SIZE_VALUES,
+  COUNTDOWN_STYLE_VALUES,
+  DEVICE_TYPE_VALUES,
+  DIRECTIVE_SCHEMAS,
+  EMOJI_ANIMATION_VALUES,
+  EXPORT_FORMAT_VALUES,
+  EXPORT_QUALITY_VALUES,
+  IMAGE_FIT_VALUES,
+  IMAGE_POSITION_VALUES,
+  INTENSITY_VALUES,
+  LAYOUT_SPLIT_VALUES,
+  MOCKUP_CONTENT_TYPE_VALUES,
+  PAN_DIRECTION_VALUES,
+  PARTICLE_TYPE_VALUES,
+  PRESENTER_POSITION_VALUES,
+  PRESENTER_SHAPE_VALUES,
+  PRESENTER_SIZE_VALUES,
+  PROGRESS_STYLE_VALUES,
+  TEXT_FONT_FAMILY_VALUES,
+  TEXT_SIZE_VALUES,
+  TRANSITION_VALUES,
+  getDirectivePositionalDefault,
+  getDirectivePropertyDefault,
+} from "../directive-schema";
+import type {
+  AnimationType,
+  AspectRatio,
+  CameraEffect,
+  CanonicalDirectiveName,
+  ChartType,
+  CodeFontFamily,
+  CodeFontSize,
+  CountdownStyle,
+  DeviceType,
+  EmojiAnimation,
+  ExportFormat,
+  ImageFit,
+  ImagePosition,
+  PanDirection,
+  ParticleIntensity,
+  ParticleType,
+  PresenterPosition,
+  PresenterShape,
+  PresenterSize,
+  ProgressStyle,
+  ShakeIntensity,
+  TextFontFamily,
+  TextSize,
+  TransitionType,
+} from "../directive-schema";
 
-// Code scene font families
-export const CODE_FONT_FAMILIES = [
-  "mono",
-  "jetbrains",
-  "fira",
-  "source",
-  "inconsolata",
-  "courier",
-] as const;
-export type CodeFontFamily = (typeof CODE_FONT_FAMILIES)[number];
+export type {
+  AnimationType,
+  AspectRatio,
+  CameraEffect,
+  CanonicalDirectiveName,
+  ChartType,
+  CodeFontFamily,
+  CodeFontSize,
+  CountdownStyle,
+  DeviceType,
+  EmojiAnimation,
+  ExportFormat,
+  ImageFit,
+  ImagePosition,
+  PanDirection,
+  ParticleIntensity,
+  ParticleType,
+  PresenterPosition,
+  PresenterShape,
+  PresenterSize,
+  ProgressStyle,
+  ShakeIntensity,
+  TextFontFamily,
+  TextSize,
+  TransitionType,
+} from "../directive-schema";
 
-// ============================================
-// ANIMATIONS
-// ============================================
+// Font families
+export const TEXT_FONT_FAMILIES = TEXT_FONT_FAMILY_VALUES;
+export const CODE_FONT_FAMILIES = CODE_FONT_FAMILY_VALUES;
 
-export const ANIMATION_TYPES = [
-  "fadeIn",
-  "slideUp",
-  "slideDown",
-  "slideLeft",
-  "slideRight",
-  "bounceIn",
-  "zoomIn",
-  "typewriter",
-  "none",
-] as const;
-export type AnimationType = (typeof ANIMATION_TYPES)[number];
+// Animations
+export const ANIMATION_TYPES = ANIMATION_VALUES;
 
-// ============================================
-// TRANSITIONS
-// ============================================
+// Transitions
+export const TRANSITION_TYPES = TRANSITION_VALUES;
 
-export const TRANSITION_TYPES = [
-  "fade",
-  "slide",
-  "wipe",
-  "zoom",
-  "magic",
-  "none",
-] as const;
-export type TransitionType = (typeof TRANSITION_TYPES)[number];
+// Sizes
+export const TEXT_SIZES = TEXT_SIZE_VALUES;
+export const CODE_FONT_SIZES = CODE_FONT_SIZE_VALUES;
 
-// ============================================
-// SIZES
-// ============================================
+// Particles
+export const PARTICLE_TYPES = PARTICLE_TYPE_VALUES;
+export const PARTICLE_INTENSITIES = INTENSITY_VALUES;
 
-export const TEXT_SIZES = ["sm", "md", "lg", "xl", "2xl"] as const;
-export type TextSize = (typeof TEXT_SIZES)[number];
+// Devices (for mockups)
+export const DEVICE_TYPES = DEVICE_TYPE_VALUES;
 
-export const CODE_FONT_SIZES = ["xs", "sm", "md", "lg"] as const;
-export type CodeFontSize = (typeof CODE_FONT_SIZES)[number];
+// Charts
+export const CHART_TYPES = CHART_TYPE_VALUES;
 
-// ============================================
-// PARTICLES
-// ============================================
+// Camera
+export const CAMERA_EFFECTS = CAMERA_EFFECT_VALUES;
+export const PAN_DIRECTIONS = PAN_DIRECTION_VALUES;
+export const SHAKE_INTENSITIES = INTENSITY_VALUES;
 
-export const PARTICLE_TYPES = [
-  "confetti",
-  "snow",
-  "rain",
-  "sparkles",
-  "fireworks",
-] as const;
-export type ParticleType = (typeof PARTICLE_TYPES)[number];
+// Presenter
+export const PRESENTER_POSITIONS = PRESENTER_POSITION_VALUES;
+export const PRESENTER_SIZES = PRESENTER_SIZE_VALUES;
+export const PRESENTER_SHAPES = PRESENTER_SHAPE_VALUES;
 
-export const PARTICLE_INTENSITIES = ["low", "medium", "high"] as const;
-export type ParticleIntensity = (typeof PARTICLE_INTENSITIES)[number];
+// Emoji
+export const EMOJI_ANIMATIONS = EMOJI_ANIMATION_VALUES;
 
-// ============================================
-// DEVICES (for mockups)
-// ============================================
+// Countdown
+export const COUNTDOWN_STYLES = COUNTDOWN_STYLE_VALUES;
 
-export const DEVICE_TYPES = [
-  "iphone",
-  "ipad",
-  "macbook",
-  "browser",
-  "android",
-] as const;
-export type DeviceType = (typeof DEVICE_TYPES)[number];
+// Progress
+export const PROGRESS_STYLES = PROGRESS_STYLE_VALUES;
 
-// ============================================
-// CHARTS
-// ============================================
+// Callouts and layout
+export const CALLOUT_ARROWS = CALLOUT_ARROW_VALUES;
+export const CALLOUT_STYLES = CALLOUT_STYLE_VALUES;
+export const LAYOUT_SPLIT_DIRECTIONS = LAYOUT_SPLIT_VALUES;
+export const MOCKUP_CONTENT_TYPES = MOCKUP_CONTENT_TYPE_VALUES;
 
-export const CHART_TYPES = ["bar", "line", "pie", "donut"] as const;
-export type ChartType = (typeof CHART_TYPES)[number];
+// Image
+export const IMAGE_FIT_OPTIONS = IMAGE_FIT_VALUES;
+export const IMAGE_POSITIONS = IMAGE_POSITION_VALUES;
 
-// ============================================
-// CAMERA
-// ============================================
+// Export
+export const EXPORT_FORMATS = EXPORT_FORMAT_VALUES;
+export const ASPECT_RATIOS = ASPECT_RATIO_VALUES;
+export const EXPORT_QUALITIES = EXPORT_QUALITY_VALUES;
 
-export const CAMERA_EFFECTS = ["zoom", "pan", "shake"] as const;
-export type CameraEffect = (typeof CAMERA_EFFECTS)[number];
+function requiredSchemaDefault<T extends string | number | boolean>(
+  value: T | undefined,
+  label: string
+): T {
+  if (value === undefined) {
+    throw new Error(`Directive schema is missing a default for ${label}`);
+  }
+  return value;
+}
 
-export const PAN_DIRECTIONS = ["left", "right", "up", "down"] as const;
-export type PanDirection = (typeof PAN_DIRECTIONS)[number];
+function propertyDefault<T extends string | number | boolean>(
+  directive: string,
+  property: string
+): T {
+  return requiredSchemaDefault(
+    getDirectivePropertyDefault<T>(directive, property),
+    `${directive}.${property}`
+  );
+}
 
-export const SHAKE_INTENSITIES = ["low", "medium", "high"] as const;
-export type ShakeIntensity = (typeof SHAKE_INTENSITIES)[number];
-
-// ============================================
-// PRESENTER
-// ============================================
-
-export const PRESENTER_POSITIONS = [
-  "top-left",
-  "top-right",
-  "bottom-left",
-  "bottom-right",
-] as const;
-export type PresenterPosition = (typeof PRESENTER_POSITIONS)[number];
-
-export const PRESENTER_SIZES = ["sm", "md", "lg"] as const;
-export type PresenterSize = (typeof PRESENTER_SIZES)[number];
-
-export const PRESENTER_SHAPES = ["circle", "square", "rounded"] as const;
-export type PresenterShape = (typeof PRESENTER_SHAPES)[number];
-
-// ============================================
-// EMOJI
-// ============================================
-
-export const EMOJI_ANIMATIONS = [
-  "bounce",
-  "spin",
-  "pulse",
-  "shake",
-  "none",
-] as const;
-export type EmojiAnimation = (typeof EMOJI_ANIMATIONS)[number];
-
-// ============================================
-// COUNTDOWN
-// ============================================
-
-export const COUNTDOWN_STYLES = ["digital", "circle", "minimal"] as const;
-export type CountdownStyle = (typeof COUNTDOWN_STYLES)[number];
-
-// ============================================
-// PROGRESS
-// ============================================
-
-export const PROGRESS_STYLES = ["bar", "circle", "semicircle"] as const;
-export type ProgressStyle = (typeof PROGRESS_STYLES)[number];
-
-// ============================================
-// IMAGE
-// ============================================
-
-export const IMAGE_FIT_OPTIONS = ["cover", "contain", "fill"] as const;
-export type ImageFit = (typeof IMAGE_FIT_OPTIONS)[number];
-
-export const IMAGE_POSITIONS = [
-  "center",
-  "top",
-  "bottom",
-  "left",
-  "right",
-] as const;
-export type ImagePosition = (typeof IMAGE_POSITIONS)[number];
-
-// ============================================
-// EXPORT
-// ============================================
-
-export const EXPORT_FORMATS = [
-  "mp4",
-  "reels",
-  "shorts",
-  "slides",
-  "gif",
-] as const;
-export type ExportFormat = (typeof EXPORT_FORMATS)[number];
-
-export const ASPECT_RATIOS = ["16:9", "9:16", "1:1", "4:3"] as const;
-export type AspectRatio = (typeof ASPECT_RATIOS)[number];
+function positionalDefault<T extends string | number | boolean>(
+  directive: string,
+  argument: string
+): T {
+  return requiredSchemaDefault(
+    getDirectivePositionalDefault<T>(directive, argument),
+    `${directive}.${argument}`
+  );
+}
 
 // ============================================
 // DEFAULTS
@@ -203,56 +195,57 @@ export type AspectRatio = (typeof ASPECT_RATIOS)[number];
 
 export const DEFAULTS = {
   // Text
-  textFontFamily: "sans" as TextFontFamily,
-  textSize: "lg" as TextSize,
-  textAnimation: "fadeIn" as AnimationType,
+  textFontFamily: propertyDefault<TextFontFamily>("text", "fontFamily"),
+  textSize: propertyDefault<TextSize>("text", "size"),
+  textAnimation: propertyDefault<AnimationType>("text", "animation"),
   textAlign: "center" as const,
 
   // Code
-  codeFontFamily: "mono" as CodeFontFamily,
-  codeFontSize: "sm" as CodeFontSize,
-  codeTypingSpeed: 50,
+  codeFontFamily: propertyDefault<CodeFontFamily>("code", "fontFamily"),
+  codeFontSize: propertyDefault<CodeFontSize>("code", "fontSize"),
+  codeTypingSpeed: propertyDefault<number>("code", "speed"),
 
   // Scene
-  sceneDuration: 3,
+  sceneDuration: positionalDefault<number>("duration", "seconds"),
   sceneTransition: "fade" as TransitionType,
+  transitionDuration: positionalDefault<number>("transition", "duration"),
 
   // Particles
-  particleType: "confetti" as ParticleType,
-  particleIntensity: "medium" as ParticleIntensity,
+  particleType: propertyDefault<ParticleType>("particles", "type"),
+  particleIntensity: propertyDefault<ParticleIntensity>("particles", "intensity"),
 
   // Camera
-  cameraEffect: "zoom" as CameraEffect,
-  cameraZoom: 1.5,
-  cameraDuration: 1,
+  cameraEffect: positionalDefault<CameraEffect>("camera", "effect"),
+  cameraZoom: positionalDefault<number>("camera", "value"),
+  cameraDuration: positionalDefault<number>("camera", "duration"),
 
   // Presenter
-  presenterPosition: "bottom-right" as PresenterPosition,
-  presenterSize: "md" as PresenterSize,
-  presenterShape: "circle" as PresenterShape,
+  presenterPosition: propertyDefault<PresenterPosition>("presenter", "position"),
+  presenterSize: propertyDefault<PresenterSize>("presenter", "size"),
+  presenterShape: propertyDefault<PresenterShape>("presenter", "shape"),
 
   // Emoji
-  emojiSize: "xl" as TextSize,
-  emojiAnimation: "none" as EmojiAnimation,
+  emojiSize: propertyDefault<TextSize>("emoji", "size"),
+  emojiAnimation: propertyDefault<EmojiAnimation>("emoji", "animate"),
 
   // Countdown
-  countdownFrom: 10,
-  countdownStyle: "digital" as CountdownStyle,
+  countdownFrom: propertyDefault<number>("countdown", "from"),
+  countdownStyle: propertyDefault<CountdownStyle>("countdown", "style"),
   countdownColor: "#ec4899",
 
   // Progress
-  progressValue: 50,
-  progressMax: 100,
-  progressStyle: "bar" as ProgressStyle,
+  progressValue: propertyDefault<number>("progress", "value"),
+  progressMax: propertyDefault<number>("progress", "max"),
+  progressStyle: propertyDefault<ProgressStyle>("progress", "style"),
   progressColor: "#ec4899",
 
   // Image
-  imageFit: "cover" as ImageFit,
-  imagePosition: "center" as ImagePosition,
+  imageFit: propertyDefault<ImageFit>("image", "fit"),
+  imagePosition: propertyDefault<ImagePosition>("image", "position"),
 
   // Export
-  exportFormat: "mp4" as ExportFormat,
-  exportFps: 30,
+  exportFormat: propertyDefault<ExportFormat>("export", "format"),
+  exportFps: propertyDefault<number>("export", "fps"),
   exportCaptureWaitTime: 500,
 } as const;
 
@@ -545,31 +538,24 @@ export const SPECIAL_VALUES = {
 // DIRECTIVE CASE LABELS
 // ============================================
 
-export const DIRECTIVE_CASES = {
-  CHAPTER: "chapter",
-  TRANSITION: "transition",
-  DURATION: "duration",
-  TEXT: "text",
-  CODE: "code",
-  TERMINAL: "terminal",
-  DIFF: "diff",
-  CHART: "chart",
-  MOCKUP: "mockup",
-  CALLOUT: "callout",
-  PARTICLES: "particles",
-  CAMERA: "camera",
-  PRESENTER: "presenter",
-  LAYOUT: "layout",
-  IMAGE: "image",
-  EMOJI: "emoji",
-  QR: "qr",
-  COUNTDOWN: "countdown",
-  PROGRESS: "progress",
-  BACKGROUND: "background",
-  VAR: "var",
-  LOCALE: "locale",
-  EXPORT: "export",
-} as const;
+function constantCase(name: string): string {
+  return name.replace(/-/g, "_").toUpperCase();
+}
+
+/**
+ * Parser switch labels generated from the schema's canonical directive names.
+ * `scene`, `locales`, and `strings` are included even though the parser handles
+ * them structurally rather than through the main switch.
+ */
+type DirectiveCaseMap = {
+  readonly [Name in CanonicalDirectiveName as Uppercase<Name>]: Name;
+};
+
+export const DIRECTIVE_CASES = Object.freeze(
+  Object.fromEntries(
+    DIRECTIVE_SCHEMAS.map((directive) => [constantCase(directive.name), directive.name])
+  )
+) as DirectiveCaseMap;
 
 // ============================================
 // CASE-SENSITIVE MATCHING VALUES
@@ -764,107 +750,21 @@ export const CASE_SENSITIVE_VALUES = {
   ASPECT_4_3: "4:3",
 } as const;
 
-// Keyword aliases - allows alternative keywords to avoid conflicts
-export const KEYWORD_ALIASES: Record<string, string> = {
-  // Scene aliases
-  slide: "scene",
-  frame: "scene",
-  section: "scene",
-  page: "scene",
+// Keyword aliases generated from the authoritative directive schema.
+export const KEYWORD_ALIASES = Object.freeze(
+  Object.fromEntries(
+    DIRECTIVE_SCHEMAS.flatMap((directive) =>
+      directive.aliases.map((alias) => [alias.toLowerCase(), directive.name])
+    )
+  )
+) as Readonly<Record<string, CanonicalDirectiveName>>;
 
-  // Text aliases
-  heading: "text",
-  title: "text",
-  h1: "text",
-  h2: "text",
-  h3: "text",
-  paragraph: "text",
-  p: "text",
+const sceneSchema = DIRECTIVE_SCHEMAS.find((directive) => directive.name === "scene");
+if (!sceneSchema) {
+  throw new Error("Directive schema is missing the scene directive");
+}
 
-  // Code aliases
-  snippet: "code",
-  block: "code",
-  codeblock: "code",
-  syntax: "code",
-
-  // Terminal aliases
-  shell: "terminal",
-  cli: "terminal",
-  console: "terminal",
-  cmd: "terminal",
-  bash: "terminal",
-
-  // Chart aliases
-  graph: "chart",
-  plot: "chart",
-  data: "chart",
-
-  // Mockup aliases
-  device: "mockup",
-  screen: "mockup",
-  preview: "mockup",
-
-  // Image aliases
-  img: "image",
-  photo: "image",
-  picture: "image",
-
-  // Layout/Split aliases
-  split: "layout",
-  "two-column": "layout",
-  columns: "layout",
-
-  // Duration aliases
-  time: "duration",
-  length: "duration",
-  dur: "duration",
-
-  // Background aliases
-  bg: "background",
-  color: "background",
-  fill: "background",
-
-  // Transition aliases
-  trans: "transition",
-  effect: "transition",
-  animation: "transition",
-
-  // Chapter aliases
-  "section-title": "chapter",
-  "heading-title": "chapter",
-  "section-heading": "chapter",
-
-  // Particles aliases
-  effects: "particles",
-  fx: "particles",
-  sparkles: "particles",
-
-  // Camera aliases
-  zoom: "camera",
-  pan: "camera",
-  move: "camera",
-
-  // Presenter aliases
-  avatar: "presenter",
-  person: "presenter",
-  speaker: "presenter",
-
-  // Callout aliases
-  note: "callout",
-  tip: "callout",
-  info: "callout",
-  annotation: "callout",
-
-  // Variable aliases
-  variable: "var",
-  v: "var",
-  const: "var",
-};
-
-export const SCENE_DIRECTIVES = [
-  "scene",
-  "slide",
-  "frame",
-  "section",
-  "page",
-] as const;
+export const SCENE_DIRECTIVES = Object.freeze([
+  sceneSchema.name,
+  ...sceneSchema.aliases,
+]);

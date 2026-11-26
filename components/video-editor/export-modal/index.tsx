@@ -1,7 +1,5 @@
 "use client";
 
-import type React from "react";
-import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -10,20 +8,14 @@ import {
   DialogDescription,
 } from "@components/ui/dialog";
 import { Film } from "lucide-react";
-import { useVideoStore } from "@/lib/use-video-store";
-import { ExportList } from "./components";
+import ExportList from "./components/ExportList";
 
 interface ExportModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  previewRef?: React.RefObject<HTMLDivElement | null>;
 }
 
-export function ExportModal({
-  open,
-  onOpenChange,
-  previewRef,
-}: ExportModalProps) {
+export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">

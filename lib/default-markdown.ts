@@ -1,4 +1,4 @@
-/** The document a new project starts with. */
+/** The rich demo document the editor starts with on first load. */
 export const DEFAULT_MARKDOWN = `!var brandColor #3b82f6
 
 !scene
@@ -84,3 +84,14 @@ size: xl
 !duration 4s
 !background #ec4899
 !transition zoom`;
+
+/** The simple starter document used by the explicit New Project action. */
+export const NEW_PROJECT_MARKDOWN = `!scene
+!text
+Hello World
+animation: bounceIn
+size: 2xl
+
+!duration 3s
+!background #3b82f6
+!transition fade`;

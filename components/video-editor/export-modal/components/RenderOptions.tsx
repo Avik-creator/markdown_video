@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useVideoStore } from "@/lib/use-video-store";
+import type { ExportFormat } from "@/lib/types";
 import { ChevronDown, Monitor, Sparkles, Zap, Film } from "lucide-react";
 import { cn } from "@/lib/utils";
 import CornerMarkers from "@/components/CornerMarkers";
@@ -123,7 +124,7 @@ export default function RenderOptions() {
   const setExportSettings = useVideoStore((state) => state.setExportSettings);
 
   const formatOptions: DropdownOption[] = [
-    { value: "mp4", label: "MP4 - Standard (16:9)" },
+    { value: "mp4", label: "MP4 - Project aspect" },
     { value: "reels", label: "Instagram Reels (9:16)" },
     { value: "shorts", label: "YouTube Shorts (9:16)" },
     { value: "gif", label: "Animated GIF" },
@@ -157,7 +158,7 @@ export default function RenderOptions() {
         icon={<Film className="w-3.5 h-3.5" />}
         value={exportSettings.format || "mp4"}
         options={formatOptions}
-        onChange={(value) => setExportSettings({ format: value as any })}
+        onChange={(value) => setExportSettings({ format: value as ExportFormat })}
       />
 
       <CustomDropdown

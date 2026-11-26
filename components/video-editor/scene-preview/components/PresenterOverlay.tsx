@@ -12,6 +12,20 @@ export function PresenterOverlay({
   presenter: Scene["presenter"];
   sceneTime: number;
 }) {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (sceneTime !== undefined) {
+      const progress = Math.min(Math.max((sceneTime - 0.3) / 0.5, 0), 1);
+      controls.set({
+        scale: progress,
+        opacity: progress,
+      });
+    } else {
+      controls.start({ scale: 1, opacity: 1 });
+    }
+  }, [sceneTime, controls]);
+
   if (!presenter) return null;
 
   const positionClasses = {
@@ -32,20 +46,6 @@ export function PresenterOverlay({
     square: "rounded-none",
     rounded: "rounded-xl",
   };
-
-  const controls = useAnimation();
-
-  useEffect(() => {
-    if (sceneTime !== undefined) {
-      const progress = Math.min(Math.max((sceneTime - 0.3) / 0.5, 0), 1);
-      controls.set({
-        scale: progress,
-        opacity: progress,
-      });
-    } else {
-      controls.start({ scale: 1, opacity: 1 });
-    }
-  }, [sceneTime, controls]);
 
   return (
     <motion.div

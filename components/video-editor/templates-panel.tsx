@@ -6,6 +6,7 @@ import { X, Play, Sparkles, Code, Monitor, LogOut, Settings } from "lucide-react
 import { TEMPLATES } from "@/lib/templates"
 import type { Template } from "@/lib/types"
 import { useVideoStore } from "@/lib/use-video-store"
+import { flushPendingEditorText } from "@/lib/editor/codemirror/store-sync"
 import { cn } from "@/lib/utils"
 
 interface TemplatesPanelProps {
@@ -69,6 +70,7 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
     activeCategory === "all" ? TEMPLATES : TEMPLATES.filter((t) => t.category === activeCategory)
 
   const handleSelectTemplate = (template: Template) => {
+    flushPendingEditorText()
     setMarkdown(template.markdown)
     onClose()
   }

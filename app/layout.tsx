@@ -1,21 +1,87 @@
 import type React from "react";
 import type { Metadata, Viewport } from "next";
-import { Inter, Geist_Mono, Playfair_Display } from "next/font/google";
+import {
+  Fira_Code,
+  Geist_Mono,
+  IBM_Plex_Mono,
+  Inconsolata,
+  Inter,
+  JetBrains_Mono,
+  Merriweather,
+  Playfair_Display,
+  Source_Code_Pro,
+} from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@components/theme-provider";
+import { Toaster } from "@components/ui/sonner";
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  fallback: ["system-ui", "sans-serif"],
+});
+
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
 });
+
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
+  fallback: ["Georgia", "serif"],
 });
 
-const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "https://markdownvideo.avikmukherjee.com";
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-family",
+  preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+});
+
+const firaCode = Fira_Code({
+  subsets: ["latin"],
+  variable: "--font-fira-family",
+  preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+});
+
+const sourceCodePro = Source_Code_Pro({
+  subsets: ["latin"],
+  variable: "--font-source-code-family",
+  preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+});
+
+const inconsolata = Inconsolata({
+  subsets: ["latin"],
+  variable: "--font-inconsolata-family",
+  preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+});
+
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: ["400", "500", "600", "700"],
+  subsets: ["latin"],
+  variable: "--font-ibm-plex-family",
+  preload: false,
+  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+});
+
+const merriweather = Merriweather({
+  subsets: ["latin"],
+  variable: "--font-merriweather-family",
+  preload: false,
+  fallback: ["Georgia", "serif"],
+});
+
+const fallbackSiteUrl = "https://markdownvideo.avikmukherjee.com";
+const siteUrl = new URL(
+  process.env.NEXT_PUBLIC_SITE_URL?.trim() || fallbackSiteUrl,
+).origin;
+const ogImageUrl = new URL("/og-image.png", `${siteUrl}/`).toString();
 const siteName = "Markdown Video";
 const title = "Markdown Video - Create Stunning Videos with Markdown";
 const description =
@@ -60,26 +126,31 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: "/og-image.png",
+        url: ogImageUrl,
         width: 1200,
         height: 630,
-        alt: "Markdown Video - Create videos with Markdown syntax",
+        alt: "Markdown Video editor showing a markdown-generated video scene",
         type: "image/png",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "Avik Mukherjee",
-    description:
-      "Avik Mukherjee is a developer who loves to code and build things.",
-    images: ["https://markdownvideo.avikmukherjee.com/og-image.png"],
+    title,
+    description,
+    images: [
+      {
+        url: ogImageUrl,
+        width: 1200,
+        height: 630,
+        alt: "Markdown Video editor showing a markdown-generated video scene",
+      },
+    ],
     creator: "@avikm744",
     site: "@avikm744",
-    siteId: "@avikm744",
   },
   alternates: {
-    canonical: "https://markdownvideo.avikmukherjee.com",
+    canonical: siteUrl,
   },
   robots: {
     index: true,
@@ -95,10 +166,13 @@ export const metadata: Metadata = {
   icons: {
     icon: [
       { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png" },
+      { url: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { url: "/icon-512.png", type: "image/png", sizes: "512x512" },
     ],
-    shortcut: "/icon.png",
-    apple: "/icon.png",
+    shortcut: "/favicon.ico",
+    apple: [
+      { url: "/apple-icon.png", type: "image/png", sizes: "180x180" },
+    ],
   },
   manifest: "/site.webmanifest",
   category: "technology",
@@ -120,13 +194,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body
-        className={`${inter.variable} ${geistMono.variable} ${playfair.variable} font-sans antialiased`}
-      >
+    <html
+      lang="en"
+      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable}`}
+      suppressHydrationWarning
+    >
+      <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           {children}
+          <Toaster position="bottom-right" closeButton />
         </ThemeProvider>
+        <Analytics />
       </body>
     </html>
   );

@@ -5,6 +5,8 @@ import { useMemo, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import type { Scene } from "@/lib/types";
 import { highlightSyntax } from "../utils/code-highlighting";
+import { codeFontFamilyStyles } from "../utils/fonts";
+import { TypingCursor } from "../components/TypingCursor";
 
 function CodeBlock({
   code,
@@ -66,14 +68,7 @@ function CodeBlock({
     lg: "text-lg",
   };
 
-  const fontFamilyStyles: Record<string, React.CSSProperties> = {
-    mono: { fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace" },
-    jetbrains: { fontFamily: "'JetBrains Mono', monospace" },
-    fira: { fontFamily: "'Fira Code', monospace" },
-    source: { fontFamily: "'Source Code Pro', monospace" },
-    inconsolata: { fontFamily: "'Inconsolata', monospace" },
-    courier: { fontFamily: "'Courier New', monospace" },
-  };
+  const fontFamilyStyles = codeFontFamilyStyles;
 
   return (
     <div
@@ -126,7 +121,10 @@ function CodeBlock({
               <span className="text-gray-300">
                 {highlightSyntax(displayLine, language)}
                 {isTyping && (
-                  <span className="inline-block w-2 h-4 bg-gray-100 ml-0.5 animate-pulse" />
+                  <TypingCursor
+                    sceneTime={sceneTime}
+                    className="inline-block w-2 h-4 bg-gray-100 ml-0.5"
+                  />
                 )}
               </span>
             </div>

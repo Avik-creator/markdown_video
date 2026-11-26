@@ -1,6 +1,7 @@
 "use client";
 
 import { CodeExample, Section, DirectiveDoc } from "../components";
+import { directiveOptions, schemaValues } from "../schema";
 
 export function BasicsTab() {
   return (
@@ -72,20 +73,18 @@ size: lg
           <DirectiveDoc
             directive="!scene"
             description="Starts a new scene block"
-            options={["!scene", "!slide", "!frame", "!section", "!page"]}
+            options={directiveOptions("scene")}
           />
           <DirectiveDoc
             directive="!duration Xs"
             description="Scene duration in seconds"
-            options={["!duration", "!time", "!length"]}
+            options={directiveOptions("duration")}
           />
           <DirectiveDoc
             directive="!background"
             description="Background color or gradient"
             options={[
-              "!background",
-              "!bg",
-              "!color",
+              ...directiveOptions("background"),
               "#3b82f6",
               "linear-gradient(...)",
             ]}
@@ -94,15 +93,8 @@ size: lg
             directive="!transition"
             description="Transition effect"
             options={[
-              "!transition",
-              "!trans",
-              "!effect",
-              "fade",
-              "slide",
-              "wipe",
-              "zoom",
-              "magic",
-              "none",
+              ...directiveOptions("transition"),
+              ...schemaValues("transition", "type"),
             ]}
           />
           <DirectiveDoc
@@ -145,31 +137,17 @@ fontFamily: sans
           <DirectiveDoc
             directive="!text"
             description="Text content directive"
-            options={[
-              "!text",
-              "!heading",
-              "!title",
-              "!h1",
-              "!h2",
-              "!paragraph",
-              "!p",
-            ]}
+            options={directiveOptions("text")}
           />
           <DirectiveDoc
             directive="animation:"
             description="Text animation"
-            options={[
-              "fadeIn",
-              "slideUp",
-              "slideDown",
-              "bounceIn",
-              "typewriter",
-            ]}
+            options={schemaValues("text", "animation")}
           />
           <DirectiveDoc
             directive="size:"
             description="Text size"
-            options={["sm", "md", "lg", "xl", "2xl"]}
+            options={schemaValues("text", "size")}
           />
           <DirectiveDoc
             directive="color:"
@@ -179,7 +157,7 @@ fontFamily: sans
           <DirectiveDoc
             directive="fontFamily:"
             description="Text font family"
-            options={["serif", "sans", "mono", "display"]}
+            options={schemaValues("text", "fontFamily")}
           />
         </div>
         <p className="text-xs text-muted-foreground mt-2">
@@ -230,7 +208,7 @@ function createVideo(markdown) {
           <DirectiveDoc
             directive="!code"
             description="Code block directive"
-            options={["!code", "!snippet", "!block", "!codeblock", "!syntax"]}
+            options={directiveOptions("code")}
           />
           <DirectiveDoc
             directive="highlight:"
@@ -248,19 +226,12 @@ function createVideo(markdown) {
           <DirectiveDoc
             directive="fontSize:"
             description="Code font size"
-            options={["xs", "sm", "md", "lg"]}
+            options={schemaValues("code", "fontSize")}
           />
           <DirectiveDoc
             directive="fontFamily:"
             description="Code font family"
-            options={[
-              "mono",
-              "jetbrains",
-              "fira",
-              "source",
-              "inconsolata",
-              "courier",
-            ]}
+            options={schemaValues("code", "fontFamily")}
           />
           <DirectiveDoc
             directive="height:"
@@ -356,18 +327,18 @@ stagger: 0.3s
           <DirectiveDoc
             directive="!image"
             description="Image scene directive"
-            options={["!image", "!img", "!photo", "!picture"]}
+            options={directiveOptions("image")}
           />
           <DirectiveDoc directive="src:" description="Image URL (required)" />
           <DirectiveDoc
             directive="fit:"
             description="Image fit mode"
-            options={["cover", "contain", "fill"]}
+            options={schemaValues("image", "fit")}
           />
           <DirectiveDoc
             directive="position:"
             description="Image position"
-            options={["center", "top", "bottom", "left", "right"]}
+            options={schemaValues("image", "position")}
           />
           <DirectiveDoc
             directive='alt:"text"'

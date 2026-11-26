@@ -1,50 +1,71 @@
 // Terminal block parsing
 
-import type { TerminalCommand } from "../../types"
+import type { TerminalCommand, VideoVariables } from "../../types"
+import { substituteVariables } from "../utils"
 
-export function parseTerminalBlock(lines: string[], startIndex: number): { commands: TerminalCommand[]; endIndex: number } {
+export function parseTerminalBlock(
+  lines: string[],
+  startIndex: number,
+  variables: VideoVariables = {}
+): { commands: TerminalCommand[]; endIndex: number } {
   const commands: TerminalCommand[] = []
   let i = startIndex
+  let currentPrompt: string | null = null
+  let currentCommand = ""
+  let outputLines: string[] = []
+
+  const flushCommand = () => {
+    if (currentPrompt === null) return
+
+    commands.push({
+      prompt: currentPrompt,
+      command: currentCommand,
+      output: outputLines.join("\n") || undefined,
+    })
+    currentPrompt = null
+    currentCommand = ""
+    outputLines = []
+  }
 
   while (i < lines.length) {
-    const line = lines[i].trim()
+    const rawLine = lines[i]
+    const line = substituteVariables(rawLine.trim(), variables)
 
     if (line.startsWith("!") || line === "---" || line.startsWith("```")) {
       break
     }
 
-    if (line.startsWith("$") || line.startsWith(">")) {
-      const prompt = line[0]
-      const command = line.substring(1).trim()
-      const outputLines: string[] = []
+    if (line.startsWith("$")) {
+      flushCommand()
+      currentPrompt = "$"
+      currentCommand = line.substring(1).trim()
       i++
-
-      // Collect output until next command or end
-      while (i < lines.length) {
-        const outputLine = lines[i]
-        if (
-          outputLine.trim().startsWith("$") ||
-          outputLine.trim().startsWith(">") ||
-          outputLine.trim().startsWith("!") ||
-          outputLine.trim() === "---"
-        ) {
-          break
-        }
-        if (outputLine.trim()) {
-          outputLines.push(outputLine)
-        }
-        i++
-      }
-
-      commands.push({
-        prompt,
-        command,
-        output: outputLines.join("\n") || undefined,
-      })
-    } else {
-      i++
+      continue
     }
+
+    if (line.startsWith(">")) {
+      // In the documented terminal syntax, '>' lines following a '$' command
+      // are output. A '>' is a command prompt only when the block itself is
+      // using '>' as its prompt (or when no command has started yet).
+      if (currentPrompt === "$") {
+        if (rawLine.trim()) {
+          outputLines.push(substituteVariables(rawLine, variables))
+        }
+      } else {
+        flushCommand()
+        currentPrompt = ">"
+        currentCommand = line.substring(1).trim()
+      }
+      i++
+      continue
+    }
+
+    if (currentPrompt !== null && rawLine.trim()) {
+      outputLines.push(substituteVariables(rawLine, variables))
+    }
+    i++
   }
 
+  flushCommand()
   return { commands, endIndex: i }
 }

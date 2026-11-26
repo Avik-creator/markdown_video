@@ -37,8 +37,8 @@ const features = [
   },
   {
     icon: Video,
-    title: "One-Click Export",
-    description: "Export to WebM or MP4 directly from your browser.",
+    title: "Browser Export",
+    description: "Render and download MP4 videos or animated GIFs in your browser.",
   },
   {
     icon: Zap,
@@ -49,11 +49,18 @@ const features = [
 
 export function Features() {
   return (
-    <section className="py-24 px-6 border-t border-gray-200 dark:border-neutral-800">
+    <section
+      id="features"
+      aria-labelledby="features-heading"
+      className="py-24 px-6 border-t border-gray-200 dark:border-neutral-800 scroll-mt-14"
+    >
       <div className="max-w-6xl mx-auto">
         {/* Section header */}
         <div className="mb-16 animate-[slideFadeUp_0.4s_ease-out]">
-          <h2 className="text-2xl font-serif font-semibold text-gray-900 dark:text-neutral-100 mb-4">
+          <h2
+            id="features-heading"
+            className="text-2xl font-serif font-semibold text-gray-900 dark:text-neutral-100 mb-4"
+          >
             Features
           </h2>
           <p className="mt-2 text-gray-600 dark:text-neutral-400 leading-relaxed">
@@ -76,7 +83,7 @@ export function Features() {
               <CornerMarkers />
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">
-                  <feature.icon className="w-5 h-5 text-gray-600 dark:text-neutral-500" />
+                  <feature.icon aria-hidden="true" className="w-5 h-5 shrink-0 text-gray-600 dark:text-neutral-500" />
                   <h3 className="font-medium text-gray-800 dark:text-neutral-200 underline decoration-gray-400 dark:decoration-neutral-600/50 underline-offset-[3px] transition-colors">
                     {feature.title}
                   </h3>

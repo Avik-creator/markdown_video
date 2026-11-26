@@ -336,10 +336,6 @@ export function MockupScene({
   scene: Scene;
   sceneTime: number;
 }) {
-  const mockup = scene.mockup;
-  if (!mockup) return null;
-
-  const style = deviceStyles[mockup.device] || deviceStyles.browser;
   const controls = useAnimation();
 
   useEffect(() => {
@@ -354,6 +350,11 @@ export function MockupScene({
       controls.start({ opacity: 1, y: 0, scale: 1 });
     }
   }, [sceneTime, controls]);
+
+  const mockup = scene.mockup;
+  if (!mockup) return null;
+
+  const style = deviceStyles[mockup.device] || deviceStyles.browser;
 
   const renderDevice = () => {
     switch (mockup.device) {

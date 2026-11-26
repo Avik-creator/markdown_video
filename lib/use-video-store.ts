@@ -1,12 +1,47 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { createJSONStorage, persist } from "zustand/middleware";
+import type { PersistStorage, StorageValue } from "zustand/middleware";
 import { parseMarkdown, getTimelineSegments } from "./parser";
 import { DEFAULT_MARKDOWN } from "./default-markdown";
 import type {
+  AspectRatio,
   Marker,
+  ThemePreset,
   VideoStore,
   SourceRange,
 } from "./types";
+
+// Runtime-only markdown mutation metadata. The CodeMirror editor bridge uses
+// this to tell its own commits apart from external mutations (undo/redo,
+// project open, find/replace) without comparing document text alone. These
+// fields are never persisted: `partializeState` only picks document keys.
+declare module "./types" {
+  interface VideoStore {
+    /** Monotonic counter bumped on every markdown mutation. Runtime-only. */
+    markdownRevision: number;
+    /**
+     * Origin tag of the most recent markdown mutation: "editor" for live
+     * typing commits, "undo"/"redo" for history navigation, or null for
+     * untagged external mutations. Runtime-only.
+     */
+    markdownOrigin: string | null;
+  }
+}
+
+// One-shot origin tag consumed by the next setMarkdown call. Keeping this
+// side-channel module-scoped (instead of widening the setMarkdown signature)
+// is what makes the metadata backwards-compatible: every existing caller of
+// setMarkdown/undo/redo keeps working unchanged.
+let pendingMarkdownOrigin: string | null = null;
+
+/**
+ * Tag the next markdown mutation with an origin. The tag applies to exactly
+ * one setMarkdown call and is then cleared, so callers must set it immediately
+ * before committing in the same synchronous tick.
+ */
+export function tagNextMarkdownOrigin(origin: string): void {
+  pendingMarkdownOrigin = origin;
+}
 
 
 function parseAndComputeSegments(markdown: string) {
@@ -19,6 +54,109 @@ function generateId(): string {
   return Math.random().toString(36).substring(2, 9);
 }
 
+/** Frame rate used for frame stepping when the project doesn't configure one. */
+export const DEFAULT_FRAME_RATE = 30;
+
+/**
+ * Duration of a single frame in seconds for the given frame rate.
+ * Falls back to {@link DEFAULT_FRAME_RATE} when the frame rate is missing
+ * or not a positive finite number.
+ */
+export function getFrameDuration(fps?: number | null): number {
+  if (typeof fps === "number" && Number.isFinite(fps) && fps > 0) {
+    return 1 / fps;
+  }
+  return 1 / DEFAULT_FRAME_RATE;
+}
+
+export interface PlaybackAdvance {
+  time: number;
+  reachedEnd: boolean;
+}
+
+/**
+ * Pure clock-delta playback advance.
+ *
+ * `deltaSeconds` is the real elapsed time since the previous frame (measured
+ * with a clock such as `performance.now()`), so playback speed tracks wall
+ * time instead of assuming a fixed step per timer tick.
+ */
+export function advancePlaybackTime(
+  currentTime: number,
+  deltaSeconds: number,
+  playbackSpeed: number,
+  totalDuration: number,
+): PlaybackAdvance {
+  const newTime = currentTime + deltaSeconds * playbackSpeed;
+  if (newTime >= totalDuration) {
+    return { time: totalDuration, reachedEnd: true };
+  }
+  return { time: Math.max(0, newTime), reachedEnd: false };
+}
+
+/** The subset of the store written to localStorage. */
+interface PersistedProjectState {
+  markdown: string;
+  aspectRatio: AspectRatio;
+  theme: ThemePreset;
+  markers: Marker[];
+}
+
+function partializeState(state: VideoStore): PersistedProjectState {
+  return {
+    markdown: state.markdown,
+    aspectRatio: state.aspectRatio,
+    theme: state.theme,
+    markers: state.markers,
+  };
+}
+
+/**
+ * JSON storage that skips the localStorage write when the partialized state
+ * is unchanged. zustand's persist middleware calls `setItem` on *every* store
+ * update — including playback ticks at 30-60fps — so without this the same
+ * payload would be serialized and written dozens of times per second.
+ *
+ * The partialized values are immutable snapshots (strings, arrays replaced
+ * rather than mutated), so reference equality per key means the serialized
+ * payload would be identical and the write can be skipped safely.
+ */
+function createDedupedJSONStorage():
+  | PersistStorage<PersistedProjectState>
+  | undefined {
+  const jsonStorage = createJSONStorage<PersistedProjectState>(
+    () => localStorage,
+  );
+  if (!jsonStorage) return undefined;
+
+  let lastWrittenState: Record<string, unknown> | null = null;
+
+  return {
+    getItem: jsonStorage.getItem,
+    removeItem: jsonStorage.removeItem,
+    setItem: (name: string, value: StorageValue<PersistedProjectState>) => {
+      const state: unknown = value.state;
+      if (state !== null && typeof state === "object") {
+        const record = state as Record<string, unknown>;
+        const previous = lastWrittenState;
+        if (previous !== null) {
+          const keys = Object.keys(record);
+          const unchanged =
+            keys.length === Object.keys(previous).length &&
+            keys.every((key) => Object.is(record[key], previous[key]));
+          if (unchanged) return;
+        }
+        lastWrittenState = { ...record };
+      } else {
+        lastWrittenState = null;
+      }
+      return jsonStorage.setItem(name, value);
+    },
+  };
+}
+
+const storage = createDedupedJSONStorage();
+
 export const useVideoStore = create<VideoStore>()(
   persist(
     (set, get) => {
@@ -26,6 +164,8 @@ export const useVideoStore = create<VideoStore>()(
 
       return {
         markdown: DEFAULT_MARKDOWN,
+        markdownRevision: 0,
+        markdownOrigin: null,
         scenes: initial.scenes,
         segments: initial.segments,
         totalDuration: initial.totalDuration,
@@ -57,17 +197,18 @@ export const useVideoStore = create<VideoStore>()(
           fps: 30,
         },
 
-        // Localization
-        currentLocale: "en",
-        localizationStrings: {},
-
         setMarkdown: (markdown, addToHistory = true) => {
           const { scenes, segments, totalDuration } =
             parseAndComputeSegments(markdown);
           const currentMarkdown = get().markdown;
 
+          const origin = pendingMarkdownOrigin;
+          pendingMarkdownOrigin = null;
+
           set((state) => ({
             markdown,
+            markdownRevision: state.markdownRevision + 1,
+            markdownOrigin: origin,
             scenes,
             segments,
             totalDuration,
@@ -93,6 +234,8 @@ export const useVideoStore = create<VideoStore>()(
 
           set({
             markdown: previous,
+            markdownRevision: get().markdownRevision + 1,
+            markdownOrigin: "undo",
             scenes,
             segments,
             totalDuration,
@@ -115,6 +258,8 @@ export const useVideoStore = create<VideoStore>()(
 
           set({
             markdown: next,
+            markdownRevision: get().markdownRevision + 1,
+            markdownOrigin: "redo",
             scenes,
             segments,
             totalDuration,
@@ -191,13 +336,17 @@ export const useVideoStore = create<VideoStore>()(
         setPlaybackSpeed: (speed) => set({ playbackSpeed: speed }),
 
         nextFrame: () => {
-          const { currentTime, totalDuration } = get();
-          set({ currentTime: Math.min(currentTime + 1, totalDuration) });
+          const { currentTime, totalDuration, exportSettings } = get();
+          const frameDuration = getFrameDuration(exportSettings.fps);
+          set({
+            currentTime: Math.min(currentTime + frameDuration, totalDuration),
+          });
         },
 
         prevFrame: () => {
-          const { currentTime } = get();
-          set({ currentTime: Math.max(currentTime - 1, 0) });
+          const { currentTime, exportSettings } = get();
+          const frameDuration = getFrameDuration(exportSettings.fps);
+          set({ currentTime: Math.max(currentTime - frameDuration, 0) });
         },
 
         nextScene: () => {
@@ -228,56 +377,51 @@ export const useVideoStore = create<VideoStore>()(
             exportSettings: { ...state.exportSettings, ...settings },
           }));
         },
-
-        // Localization methods
-        setCurrentLocale: (locale) => set({ currentLocale: locale }),
-
-        setLocalizationStrings: (strings) =>
-          set({ localizationStrings: strings }),
-
-        addLocale: (locale) => {
-          // Add locale to all existing strings with empty values
-          const { localizationStrings } = get();
-          const updated = { ...localizationStrings };
-          for (const key of Object.keys(updated)) {
-            if (!updated[key][locale]) {
-              updated[key][locale] = "";
-            }
-          }
-          set({ localizationStrings: updated });
-        },
-
-        removeLocale: (locale) => {
-          const { localizationStrings, currentLocale } = get();
-          const updated = { ...localizationStrings };
-          for (const key of Object.keys(updated)) {
-            delete updated[key][locale];
-          }
-          set({
-            localizationStrings: updated,
-            currentLocale: currentLocale === locale ? "en" : currentLocale,
-          });
-        },
       };
     },
     {
       name: "markdown-video-storage",
-      partialize: (state) => ({
-        markdown: state.markdown,
-        aspectRatio: state.aspectRatio,
-        theme: state.theme,
-        markers: state.markers,
-      }),
-      onRehydrateStorage: () => (state) => {
-        // Re-parse markdown after loading from localStorage to ensure scenes have correct sourceMaps
-        if (state?.markdown) {
-          const parsed = parseAndComputeSegments(state.markdown);
-          useVideoStore.setState({
-            scenes: parsed.scenes,
-            segments: parsed.segments,
-            totalDuration: parsed.scenes.reduce((acc, s) => acc + s.duration, 0),
-          });
+      ...(storage ? { storage } : {}),
+      partialize: partializeState,
+      merge: (persistedState, currentState) => {
+        const persisted = (persistedState ?? {}) as Partial<PersistedProjectState>;
+        // Rehydrate only the keys owned by `partializeState`. Spreading the
+        // whole persisted payload would resurrect stale or hand-edited keys
+        // for playback state, runtime-only markdown metadata, and removed UI
+        // state that were never meant to be part of a new session.
+        const merged: VideoStore = {
+          ...currentState,
+          currentTime: currentState.currentTime,
+          isPlaying: false,
+        };
+
+        if (typeof persisted.markdown === "string") {
+          merged.markdown = persisted.markdown;
         }
+        if (persisted.aspectRatio !== undefined) {
+          merged.aspectRatio = persisted.aspectRatio;
+        }
+        if (persisted.theme !== undefined) {
+          merged.theme = persisted.theme;
+        }
+        if (Array.isArray(persisted.markers)) {
+          merged.markers = persisted.markers;
+        }
+
+        // Re-parse the persisted markdown so derived state (scenes, segments,
+        // totalDuration, source maps) matches the restored document instead of
+        // the default document the store initialized with.
+        if (typeof persisted.markdown === "string") {
+          const parsed = parseAndComputeSegments(persisted.markdown);
+          merged.scenes = parsed.scenes;
+          merged.segments = parsed.segments;
+          merged.totalDuration = parsed.totalDuration;
+          merged.currentTime = Math.min(
+            merged.currentTime,
+            parsed.totalDuration,
+          );
+        }
+        return merged;
       },
     }
   )

@@ -1,17 +1,24 @@
 // Code block parsing utilities
 
-import type { CodeHighlight, CodeAnnotation } from "../../types"
+import type { CodeHighlight, CodeAnnotation, VideoVariables } from "../../types"
+import { substituteVariables } from "../utils"
 
-export function parseCodeBlock(lines: string[], startIndex: number): { code: string; language: string; endIndex: number } {
-  const firstLine = lines[startIndex]
+export function parseCodeBlock(
+  lines: string[],
+  startIndex: number,
+  variables: VideoVariables = {}
+): { code: string; language: string; endIndex: number } {
+  // Fence lines are significant even when indented: the editor validator
+  // trims lines before recognizing fences, so the parser does the same.
+  const firstLine = lines[startIndex].trim()
   const langMatch = firstLine.match(/^```(\w+)?/)
   const language = langMatch?.[1] || "text"
 
   let endIndex = startIndex + 1
   const codeLines: string[] = []
 
-  while (endIndex < lines.length && !lines[endIndex].startsWith("```")) {
-    codeLines.push(lines[endIndex])
+  while (endIndex < lines.length && !lines[endIndex].trim().startsWith("```")) {
+    codeLines.push(substituteVariables(lines[endIndex], variables))
     endIndex++
   }
 
@@ -22,6 +29,11 @@ export function parseCodeBlock(lines: string[], startIndex: number): { code: str
   }
 }
 
+function parseHighlightLineNumber(value: string): number | null {
+  if (!/^\d+$/.test(value)) return null
+  return Number.parseInt(value, 10)
+}
+
 export function parseHighlights(value: string): CodeHighlight {
   const lines: number[] = []
   const parts = value.split(",")
@@ -29,12 +41,17 @@ export function parseHighlights(value: string): CodeHighlight {
   for (const part of parts) {
     const trimmed = part.trim()
     if (trimmed.includes("-")) {
-      const [start, end] = trimmed.split("-").map((n) => Number.parseInt(n, 10))
-      for (let i = start; i <= end; i++) {
-        lines.push(i)
+      const [rawStart, rawEnd] = trimmed.split("-")
+      const start = parseHighlightLineNumber(rawStart?.trim() || "")
+      const end = parseHighlightLineNumber(rawEnd?.trim() || "")
+      if (start === null || end === null) continue
+
+      for (let line = start; line <= end; line++) {
+        lines.push(line)
       }
     } else {
-      lines.push(Number.parseInt(trimmed, 10))
+      const line = parseHighlightLineNumber(trimmed)
+      if (line !== null) lines.push(line)
     }
   }
 

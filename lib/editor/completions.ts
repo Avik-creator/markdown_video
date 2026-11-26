@@ -17,18 +17,27 @@ export interface CompletionResult {
 const DOCS = getAllDirectives();
 const DOC_BY_NAME = new Map(DOCS.map((d) => [d.name, d]));
 
-// Directives whose first argument is a bare value rather than key:value.
-const POSITIONAL: Record<string, string> = {
-  transition: "type",
-  camera: "effect",
-};
+// Directives whose first argument is a bare enum value rather than key:value.
+const POSITIONAL: Record<string, string> = Object.fromEntries(
+  DOCS.flatMap((doc) => {
+    const firstPositional = doc.properties?.find(
+      (property) => property.context === "positional" && property.values
+    );
+    return firstPositional ? [[doc.name, firstPositional.name]] : [];
+  })
+);
 
 function docFor(name: string): DirectiveDoc | undefined {
   return DOC_BY_NAME.get(normalizeDirective(name));
 }
 
 function valuesFor(doc: DirectiveDoc | undefined, property: string): string[] {
-  const prop = doc?.properties?.find((p) => p.name === property);
+  const lower = property.toLowerCase();
+  const prop = doc?.properties?.find(
+    (p) =>
+      p.name.toLowerCase() === lower ||
+      (p.aliases?.some((alias) => alias.toLowerCase() === lower) ?? false)
+  );
   if (!prop) return [];
   if (prop.values) return prop.values;
   if (prop.type === "boolean") return ["true", "false"];
@@ -60,7 +69,7 @@ export function getCompletions(text: string, cursor: number): CompletionResult |
   if (insideCodeFence(text, lineStart)) return null;
 
   // "!tra" -> directive names
-  const directiveName = trimmed.match(/^!(\w*)$/);
+  const directiveName = trimmed.match(/^!([\w-]*)$/);
   if (directiveName) {
     const prefix = directiveName[1].toLowerCase();
     // Directives whose own name matches come before alias-only matches.
@@ -78,7 +87,7 @@ export function getCompletions(text: string, cursor: number): CompletionResult |
   }
 
   // "!chart type:b" or "!transition sl" -> argument values
-  const directiveArgs = trimmed.match(/^!(\w+)\s+(.*)$/);
+  const directiveArgs = trimmed.match(/^!([\w-]+)\s+(.*)$/);
   if (directiveArgs) {
     const doc = docFor(directiveArgs[1]);
     const args = directiveArgs[2];
@@ -117,23 +126,68 @@ export function getCompletions(text: string, cursor: number): CompletionResult |
     return result(cursor - value.length, cursor, filter(items, value));
   }
 
+  // "fonts" inside a property-only block -> canonical property names
+  const bareProperty = trimmed.match(/^(\w+)$/);
+  if (bareProperty) {
+    const doc = enclosingBlock(text, lineStart);
+    const items = doc && PROPERTY_NAME_COMPLETION_BLOCKS.has(doc.name)
+      ? (doc.properties ?? [])
+        .filter((p) => p.values || p.type === "boolean")
+        .map((p) => ({ label: `${p.name}:`, insert: `${p.name}:`, detail: p.description }))
+      : [];
+    return result(cursor - bareProperty[1].length, cursor, filter(items, bareProperty[1]));
+  }
+
   return null;
 }
 
-/** The nearest directive above this line within the same scene. */
+const PROPERTY_NAME_COMPLETION_BLOCKS = new Set([
+  "code",
+  "terminal",
+  "export",
+  "particles",
+  "presenter",
+]);
+
+const BLOCK_PROPERTY_DIRECTIVES = new Set([
+  "text",
+  "code",
+  "terminal",
+  "mockup",
+  "particles",
+  "presenter",
+  "export",
+]);
+
+/**
+ * The directive block containing this line, tracked forward so a closed code
+ * fence does not look like part of the preceding !code block.
+ */
 function enclosingBlock(text: string, lineStart: number): DirectiveDoc | undefined {
   const lines = text.slice(0, lineStart).split("\n");
-  for (let i = lines.length - 1; i >= 0; i--) {
-    const line = lines[i].trim();
-    if (line === "---") return undefined;
-    const name = line.match(/^!(\w+)/)?.[1];
-    if (name) {
-      const doc = docFor(name);
-      if (doc?.name === "scene") return undefined;
-      return doc;
+  let current: DirectiveDoc | undefined;
+  let inFence = false;
+
+  for (const sourceLine of lines) {
+    const line = sourceLine.trim();
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+      if (!inFence && current?.name === "code") current = undefined;
+      continue;
     }
+    if (inFence) continue;
+    if (line === "---") {
+      current = undefined;
+      continue;
+    }
+
+    const name = line.match(/^!([\w-]+)/)?.[1];
+    if (!name) continue;
+    const doc = docFor(name);
+    current = doc && BLOCK_PROPERTY_DIRECTIVES.has(doc.name) ? doc : undefined;
   }
-  return undefined;
+
+  return current;
 }
 
 function insideCodeFence(text: string, lineStart: number): boolean {

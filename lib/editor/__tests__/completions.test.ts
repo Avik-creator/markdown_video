@@ -35,6 +35,14 @@ describe("directive names", () => {
     expect(at("!scene\n!img|").labels).toEqual(["image"]);
   });
 
+  it("matches the full schema alias set", () => {
+    expect(at("!scene\n!cmd|").labels).toEqual(["terminal"]);
+    expect(at("!scene\n!dat|").labels).toEqual(["chart"]);
+    expect(at("!scene\n!dur|").labels).toEqual(["duration"]);
+    expect(at("!scene\n!fil|").labels).toEqual(["background"]);
+    expect(at("!scene\n!two-|").labels).toEqual(["layout"]);
+  });
+
   it("ranks name matches above alias matches", () => {
     // "par" is a prefix of "particles" and of the text alias "paragraph".
     expect(at("!scene\n!par|").labels).toEqual(["particles", "text"]);
@@ -81,6 +89,19 @@ describe("block properties", () => {
   it("uses the enclosing block's property set", () => {
     expect(at("!scene\n!text\nHi\nfontFamily: |").labels).toEqual([...C.TEXT_FONT_FAMILIES]);
     expect(at("!scene\n!code\nfontFamily: |").labels).toEqual([...C.CODE_FONT_FAMILIES]);
+  });
+
+  it("matches font property keys case-insensitively", () => {
+    expect(at("!scene\n!code\nfontsize: |").labels).toEqual([...C.CODE_FONT_SIZES]);
+    expect(at("!scene\n!code\nFONTFAMILY: |").labels).toEqual([...C.CODE_FONT_FAMILIES]);
+    expect(at("!scene\n!text\nHi\nfontfamily: |").labels).toEqual([...C.TEXT_FONT_FAMILIES]);
+  });
+
+  it("inserts canonical property casing for property-name completions", () => {
+    const { labels, result, text } = at("!scene\n!code\nfonts|");
+    expect(labels).toEqual(["fontSize:"]);
+    expect(result && text.slice(result.from, result.to)).toBe("fonts");
+    expect(result?.items[0].insert).toBe("fontSize:");
   });
 
   it("offers nothing for ordinary text that contains a colon", () => {

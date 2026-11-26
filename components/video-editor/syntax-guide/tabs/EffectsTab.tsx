@@ -1,6 +1,7 @@
 "use client"
 
 import { CodeExample, Section, DirectiveDoc } from "../components"
+import { schemaValues } from "../schema"
 
 export function EffectsTab() {
   return (
@@ -21,12 +22,12 @@ Celebration!
           <DirectiveDoc
             directive="type:"
             description="Particle type"
-            options={["confetti", "snow", "sparkles", "rain", "fireworks"]}
+            options={schemaValues("particles", "type")}
           />
           <DirectiveDoc
             directive="intensity:"
             description="Particle density"
-            options={["low", "medium", "high"]}
+            options={schemaValues("particles", "intensity")}
           />
         </div>
       </Section>
@@ -66,9 +67,14 @@ const x = 1
           <DirectiveDoc
             directive="arrow:"
             description="Arrow direction"
-            options={["up", "down", "left", "right"]}
+            options={schemaValues("callout", "arrow")}
           />
           <DirectiveDoc directive="target:line:3" description="Target a specific line" />
+          <DirectiveDoc
+            directive="style:"
+            description="Callout style"
+            options={schemaValues("callout", "style")}
+          />
         </div>
       </Section>
 
@@ -86,10 +92,10 @@ const x = 1
           <DirectiveDoc
             directive="position:"
             description="PiP position"
-            options={["top-left", "top-right", "bottom-left", "bottom-right"]}
+            options={schemaValues("presenter", "position")}
           />
-          <DirectiveDoc directive="size:" description="PiP size" options={["sm", "md", "lg"]} />
-          <DirectiveDoc directive="shape:" description="PiP shape" options={["circle", "square", "rounded"]} />
+          <DirectiveDoc directive="size:" description="PiP size" options={schemaValues("presenter", "size")} />
+          <DirectiveDoc directive="shape:" description="PiP shape" options={schemaValues("presenter", "shape")} />
         </div>
       </Section>
 

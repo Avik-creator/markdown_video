@@ -17,27 +17,42 @@ import {
   MousePointerClick,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { SourceRange, SceneSourceMap } from "@/lib/types";
+import type { SourceRange } from "@/lib/types";
 
 interface ClickablePropertyProps {
   children: React.ReactNode;
   sourceRange?: SourceRange;
   className?: string;
+  /** Property name used in the accessible label, e.g. "Duration". */
+  label?: string;
 }
 
-function ClickableProperty({ children, sourceRange, className }: ClickablePropertyProps) {
+function ClickableProperty({ children, sourceRange, className, label }: ClickablePropertyProps) {
   const setHighlightRange = useVideoStore((state) => state.setHighlightRange);
   const highlightRange = useVideoStore((state) => state.highlightRange);
-  
-  const isHighlighted = highlightRange && sourceRange && 
-    highlightRange.startLine === sourceRange.startLine && 
+
+  const isHighlighted = highlightRange && sourceRange &&
+    highlightRange.startLine === sourceRange.startLine &&
     highlightRange.endLine === sourceRange.endLine;
 
-  const handleClick = useCallback(() => {
+  const handleActivate = useCallback(() => {
     if (sourceRange) {
       setHighlightRange(sourceRange);
     }
   }, [sourceRange, setHighlightRange]);
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        // Keep the global shortcut handler (Space toggles playback) quiet
+        // while a property control has focus.
+        e.stopPropagation();
+        handleActivate();
+      }
+    },
+    [handleActivate]
+  );
 
   if (!sourceRange) {
     return <div className={className}>{children}</div>;
@@ -45,17 +60,26 @@ function ClickableProperty({ children, sourceRange, className }: ClickableProper
 
   return (
     <div
-      onClick={handleClick}
+      role="button"
+      tabIndex={0}
+      aria-label={
+        label
+          ? `Jump to ${label} in markdown source`
+          : "Jump to property in markdown source"
+      }
+      onClick={handleActivate}
+      onKeyDown={handleKeyDown}
       className={cn(
         "cursor-pointer transition-all duration-200 rounded-lg relative group",
         "hover:ring-2 hover:ring-pink-500/50 hover:bg-pink-500/5",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/70 focus-visible:bg-pink-500/5",
         isHighlighted && "ring-2 ring-pink-500 bg-pink-500/10",
         className
       )}
     >
       {children}
       <div className={cn(
-        "absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200",
+        "absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200",
         isHighlighted && "opacity-100"
       )}>
         <div className="bg-pink-500 rounded-full p-0.5">
@@ -119,7 +143,7 @@ export function SceneProperties() {
 
       <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
         {/* Scene Type */}
-        <ClickableProperty sourceRange={sourceMap?.type}>
+        <ClickableProperty sourceRange={sourceMap?.type} label="type">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground flex items-center gap-2">
               <Layers className="w-3 h-3" />
@@ -135,7 +159,7 @@ export function SceneProperties() {
         </ClickableProperty>
 
         {/* Duration */}
-        <ClickableProperty sourceRange={sourceMap?.duration}>
+        <ClickableProperty sourceRange={sourceMap?.duration} label="duration">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground flex items-center gap-2">
               <Clock className="w-3 h-3" />
@@ -148,7 +172,7 @@ export function SceneProperties() {
         </ClickableProperty>
 
         {/* Background */}
-        <ClickableProperty sourceRange={sourceMap?.background}>
+        <ClickableProperty sourceRange={sourceMap?.background} label="background">
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground flex items-center gap-2">
               <Palette className="w-3 h-3" />
@@ -168,7 +192,7 @@ export function SceneProperties() {
 
         {/* Transition */}
         {currentScene.transition && (
-          <ClickableProperty sourceRange={sourceMap?.transition}>
+          <ClickableProperty sourceRange={sourceMap?.transition} label="transition">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground flex items-center gap-2">
                 <Sparkles className="w-3 h-3" />
@@ -190,7 +214,7 @@ export function SceneProperties() {
 
         {/* Chapter */}
         {currentScene.chapter && (
-          <ClickableProperty sourceRange={sourceMap?.chapter}>
+          <ClickableProperty sourceRange={sourceMap?.chapter} label="chapter">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">Chapter</Label>
               <div className="p-2 bg-pink-500/10 rounded-lg border border-pink-500/20">
@@ -204,7 +228,7 @@ export function SceneProperties() {
 
         {/* Text Properties */}
         {currentScene.type === "text" && currentScene.text && (
-          <ClickableProperty sourceRange={sourceMap?.text}>
+          <ClickableProperty sourceRange={sourceMap?.text} label="text settings">
             <div className="space-y-4 pt-4 border-t border-white/10">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Text Settings
@@ -268,7 +292,7 @@ export function SceneProperties() {
 
         {/* Code Properties */}
         {currentScene.type === "code" && currentScene.code && (
-          <ClickableProperty sourceRange={sourceMap?.code}>
+          <ClickableProperty sourceRange={sourceMap?.code} label="code settings">
             <div className="space-y-4 pt-4 border-t border-white/10">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Code Settings
@@ -374,7 +398,7 @@ export function SceneProperties() {
 
         {/* Terminal Properties */}
         {currentScene.type === "terminal" && currentScene.terminal && (
-          <ClickableProperty sourceRange={sourceMap?.terminal}>
+          <ClickableProperty sourceRange={sourceMap?.terminal} label="terminal settings">
             <div className="space-y-4 pt-4 border-t border-white/10">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Terminal Settings
@@ -407,7 +431,7 @@ export function SceneProperties() {
 
         {/* Chart Properties */}
         {currentScene.type === "chart" && currentScene.chart && (
-          <ClickableProperty sourceRange={sourceMap?.chart}>
+          <ClickableProperty sourceRange={sourceMap?.chart} label="chart settings">
             <div className="space-y-4 pt-4 border-t border-white/10">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Chart Settings
@@ -439,7 +463,7 @@ export function SceneProperties() {
 
         {/* Mockup Properties */}
         {currentScene.type === "mockup" && currentScene.mockup && (
-          <ClickableProperty sourceRange={sourceMap?.mockup}>
+          <ClickableProperty sourceRange={sourceMap?.mockup} label="mockup settings">
             <div className="space-y-4 pt-4 border-t border-white/10">
               <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
                 Mockup Settings
@@ -467,7 +491,7 @@ export function SceneProperties() {
             </h4>
 
             {currentScene.particles && (
-              <ClickableProperty sourceRange={sourceMap?.particles}>
+              <ClickableProperty sourceRange={sourceMap?.particles} label="particles effect">
                 <div className="p-2 bg-pink-500/10 rounded-lg border border-pink-500/20">
                   <span className="text-sm text-pink-400 capitalize">
                     {currentScene.particles.type} (
@@ -478,7 +502,7 @@ export function SceneProperties() {
             )}
 
             {currentScene.camera && (
-              <ClickableProperty sourceRange={sourceMap?.camera}>
+              <ClickableProperty sourceRange={sourceMap?.camera} label="camera effect">
                 <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
                   <span className="text-sm text-blue-400 capitalize">
                     Camera: {currentScene.camera.effect}{" "}
@@ -490,7 +514,7 @@ export function SceneProperties() {
             )}
 
             {currentScene.presenter && (
-              <ClickableProperty sourceRange={sourceMap?.presenter}>
+              <ClickableProperty sourceRange={sourceMap?.presenter} label="presenter">
                 <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
                   <span className="text-sm text-amber-400 capitalize">
                     Presenter: {currentScene.presenter.position}

@@ -27,6 +27,8 @@ export function ChartScene({
   if (!chart) return null;
 
   const maxValue = Math.max(...chart.data.map((d) => d.value));
+  const safeMaxValue = maxValue > 0 ? maxValue : 1;
+  const chartTotal = chart.data.reduce((sum, d) => sum + d.value, 0);
   const colors = [
     "#3b82f6",
     "#22c55e",
@@ -42,7 +44,7 @@ export function ChartScene({
     <motion.div
       className="flex items-center justify-center h-full p-8"
       initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      animate={sceneTime !== undefined ? controls : { opacity: 1 }}
       exit={{ opacity: 0 }}
     >
       <div className="bg-[#1a1a24] rounded-xl p-6 w-full max-w-2xl shadow-2xl border border-white/10">
@@ -75,12 +77,12 @@ export function ChartScene({
                                 1,
                                 Math.max(0, (sceneTime - index * 0.1) / 0.8)
                               ) *
-                              (item.value / maxValue) *
+                              (item.value / safeMaxValue) *
                               100
                             }%`,
                           }
                         : {
-                            width: `${(item.value / maxValue) * 100}%`,
+                            width: `${(item.value / safeMaxValue) * 100}%`,
                           }
                     }
                     transition={
@@ -103,11 +105,16 @@ export function ChartScene({
           <div className="flex items-center justify-center">
             <svg viewBox="0 0 100 100" className="w-64 h-64">
               {chart.data.map((item, index) => {
-                const total = chart.data.reduce((sum, d) => sum + d.value, 0);
+                if (chartTotal <= 0 || item.value <= 0) return null;
+
                 const startAngle = chart.data
                   .slice(0, index)
-                  .reduce((sum, d) => sum + (d.value / total) * 360, 0);
-                const angle = (item.value / total) * 360;
+                  .reduce(
+                    (sum, d) =>
+                      sum + (Math.max(0, d.value) / chartTotal) * 360,
+                    0
+                  );
+                const angle = (item.value / chartTotal) * 360;
 
                 const x1 =
                   50 + 40 * Math.cos((Math.PI * (startAngle - 90)) / 180);

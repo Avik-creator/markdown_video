@@ -6,15 +6,22 @@ import {
   ANIMATION_TYPES,
   TRANSITION_TYPES,
   TEXT_FONT_FAMILIES,
+  TEXT_SIZES,
   CODE_FONT_FAMILIES,
+  CODE_FONT_SIZES,
   PARTICLE_TYPES,
+  PARTICLE_INTENSITIES,
   DEVICE_TYPES,
   CHART_TYPES,
   CAMERA_EFFECTS,
   PRESENTER_POSITIONS,
+  PRESENTER_SIZES,
+  PRESENTER_SHAPES,
   EMOJI_ANIMATIONS,
   COUNTDOWN_STYLES,
   PROGRESS_STYLES,
+  CALLOUT_ARROWS,
+  CALLOUT_STYLES,
   IMAGE_FIT_OPTIONS,
   IMAGE_POSITIONS,
   EXPORT_FORMATS,
@@ -22,6 +29,18 @@ import {
   DIRECTIVE_CASES,
   KEYWORD_ALIASES,
 } from "../parser/constants";
+import {
+  assertNever,
+  getCameraKeyframeProperty,
+  getDirectivePositional,
+  getDirectiveProperty,
+  getDirectiveSchema,
+  isOneOf,
+  isOneOfCaseInsensitive,
+  type AnyDirectiveSchema,
+  type CanonicalDirectiveName,
+  type DirectiveValueSchema,
+} from "../directive-schema";
 
 export interface ValidationError {
   line?: number;
@@ -46,7 +65,7 @@ export interface ValidationResult {
 export function validateMarkdownSyntax(markdown: string): ValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationError[] = [];
-  const lines = markdown.split("\n");
+  const lines = markdown.split(/\r?\n/);
 
   try {
     // Parse the markdown
@@ -79,6 +98,11 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
         validateDirective(trimmed, lineNumber + 1, errors, warnings);
       }
     });
+
+    // Validate schema-backed values directly from the source. This catches
+    // invalid input that the parser currently coerces to a default (for
+    // example font families, emoji sizes, countdown styles and callout styles).
+    validateSchemaBackedValues(lines, errors);
 
     if (fenceStart !== null) {
       errors.push({
@@ -153,7 +177,7 @@ function validateScene(
   }
 
   // Validate transition
-  if (scene.transition && !TRANSITION_TYPES.includes(scene.transition as any)) {
+  if (scene.transition && !isOneOf(TRANSITION_TYPES, scene.transition)) {
     errors.push({
       line: lineOf(/^!(transition|trans|effect|animation)\b/i),
       message: `Scene ${index + 1}: Invalid transition "${scene.transition}"`,
@@ -172,7 +196,7 @@ function validateScene(
       });
     }
 
-    if (scene.text.animation && !ANIMATION_TYPES.includes(scene.text.animation as any)) {
+    if (scene.text.animation && !isOneOf(ANIMATION_TYPES, scene.text.animation)) {
       errors.push({
       line: lineOf(/^animation:/i, /^!(text|heading|title|h1|h2|h3|paragraph|p)\b/i),
         message: `Scene ${index + 1}: Invalid animation "${scene.text.animation}"`,
@@ -181,7 +205,16 @@ function validateScene(
       });
     }
 
-    if (scene.text.fontFamily && !TEXT_FONT_FAMILIES.includes(scene.text.fontFamily as any)) {
+    if (scene.text.size && !isOneOf(TEXT_SIZES, scene.text.size)) {
+      errors.push({
+        line: lineOf(/^size:/i, /^!(text|heading|title|h1|h2|h3|paragraph|p)\b/i),
+        message: `Scene ${index + 1}: Invalid text size "${scene.text.size}"`,
+        severity: "error",
+        suggestion: `Valid sizes: ${TEXT_SIZES.join(", ")}`,
+      });
+    }
+
+    if (scene.text.fontFamily && !isOneOf(TEXT_FONT_FAMILIES, scene.text.fontFamily)) {
       errors.push({
       line: lineOf(/^(fontFamily|font):/i, /^!(text|heading|title|h1|h2|h3|paragraph|p)\b/i),
         message: `Scene ${index + 1}: Invalid font family "${scene.text.fontFamily}"`,
@@ -201,7 +234,16 @@ function validateScene(
       });
     }
 
-    if (scene.code.fontFamily && !CODE_FONT_FAMILIES.includes(scene.code.fontFamily as any)) {
+    if (scene.code.fontSize && !isOneOf(CODE_FONT_SIZES, scene.code.fontSize)) {
+      errors.push({
+        line: lineOf(/^fontSize:/i, /^!(code|snippet|block|codeblock|syntax)\b/i),
+        message: `Scene ${index + 1}: Invalid code font size "${scene.code.fontSize}"`,
+        severity: "error",
+        suggestion: `Valid font sizes: ${CODE_FONT_SIZES.join(", ")}`,
+      });
+    }
+
+    if (scene.code.fontFamily && !isOneOf(CODE_FONT_FAMILIES, scene.code.fontFamily)) {
       errors.push({
       line: lineOf(/^(fontFamily|font):/i, /^!(code|snippet|block|codeblock|syntax)\b/i),
         message: `Scene ${index + 1}: Invalid code font family "${scene.code.fontFamily}"`,
@@ -231,7 +273,7 @@ function validateScene(
       });
     }
 
-    if (scene.image.fit && !IMAGE_FIT_OPTIONS.includes(scene.image.fit as any)) {
+    if (scene.image.fit && !isOneOf(IMAGE_FIT_OPTIONS, scene.image.fit)) {
       errors.push({
       line: lineOf(/\bfit:/i, /^!(image|img|photo|picture)\b/i),
         message: `Scene ${index + 1}: Invalid image fit "${scene.image.fit}"`,
@@ -240,7 +282,7 @@ function validateScene(
       });
     }
 
-    if (scene.image.position && !IMAGE_POSITIONS.includes(scene.image.position as any)) {
+    if (scene.image.position && !isOneOf(IMAGE_POSITIONS, scene.image.position)) {
       errors.push({
       line: lineOf(/\bposition:/i, /^!(image|img|photo|picture)\b/i),
         message: `Scene ${index + 1}: Invalid image position "${scene.image.position}"`,
@@ -260,7 +302,7 @@ function validateScene(
       });
     }
 
-    if (scene.chart.type && !CHART_TYPES.includes(scene.chart.type as any)) {
+    if (scene.chart.type && !isOneOf(CHART_TYPES, scene.chart.type)) {
       errors.push({
       line: lineOf(/^!(chart|graph|plot|data)\b/i),
         message: `Scene ${index + 1}: Invalid chart type "${scene.chart.type}"`,
@@ -272,7 +314,7 @@ function validateScene(
 
   // Validate mockup scene
   if (scene.type === "mockup" && scene.mockup) {
-    if (!DEVICE_TYPES.includes(scene.mockup.device as any)) {
+    if (!isOneOf(DEVICE_TYPES, scene.mockup.device)) {
       errors.push({
       line: lineOf(/^!(mockup|device|screen|preview)\b/i),
         message: `Scene ${index + 1}: Invalid device type "${scene.mockup.device}"`,
@@ -284,7 +326,7 @@ function validateScene(
 
   // Validate particles
   if (scene.particles) {
-    if (!PARTICLE_TYPES.includes(scene.particles.type as any)) {
+    if (!isOneOf(PARTICLE_TYPES, scene.particles.type)) {
       errors.push({
       line: lineOf(/^!(particles|effects|fx|sparkles)\b/i),
         message: `Scene ${index + 1}: Invalid particle type "${scene.particles.type}"`,
@@ -292,11 +334,20 @@ function validateScene(
         suggestion: `Valid types: ${PARTICLE_TYPES.join(", ")}`,
       });
     }
+
+    if (scene.particles.intensity && !isOneOf(PARTICLE_INTENSITIES, scene.particles.intensity)) {
+      errors.push({
+        line: lineOf(/\bintensity:/i, /^!(particles|effects|fx|sparkles)\b/i),
+        message: `Scene ${index + 1}: Invalid particle intensity "${scene.particles.intensity}"`,
+        severity: "error",
+        suggestion: `Valid intensities: ${PARTICLE_INTENSITIES.join(", ")}`,
+      });
+    }
   }
 
   // Validate camera
   if (scene.camera) {
-    if (!CAMERA_EFFECTS.includes(scene.camera.effect as any)) {
+    if (!isOneOf(CAMERA_EFFECTS, scene.camera.effect)) {
       errors.push({
       line: lineOf(/^!(camera|zoom|pan|move)\b/i),
         message: `Scene ${index + 1}: Invalid camera effect "${scene.camera.effect}"`,
@@ -308,12 +359,30 @@ function validateScene(
 
   // Validate presenter
   if (scene.presenter) {
-    if (!PRESENTER_POSITIONS.includes(scene.presenter.position as any)) {
+    if (!isOneOf(PRESENTER_POSITIONS, scene.presenter.position)) {
       errors.push({
       line: lineOf(/^!(presenter|avatar|person|speaker)\b/i),
         message: `Scene ${index + 1}: Invalid presenter position "${scene.presenter.position}"`,
         severity: "error",
         suggestion: `Valid positions: ${PRESENTER_POSITIONS.join(", ")}`,
+      });
+    }
+
+    if (scene.presenter.size && !isOneOf(PRESENTER_SIZES, scene.presenter.size)) {
+      errors.push({
+        line: lineOf(/\bsize:/i, /^!(presenter|avatar|person|speaker)\b/i),
+        message: `Scene ${index + 1}: Invalid presenter size "${scene.presenter.size}"`,
+        severity: "error",
+        suggestion: `Valid sizes: ${PRESENTER_SIZES.join(", ")}`,
+      });
+    }
+
+    if (scene.presenter.shape && !isOneOf(PRESENTER_SHAPES, scene.presenter.shape)) {
+      errors.push({
+        line: lineOf(/\bshape:/i, /^!(presenter|avatar|person|speaker)\b/i),
+        message: `Scene ${index + 1}: Invalid presenter shape "${scene.presenter.shape}"`,
+        severity: "error",
+        suggestion: `Valid shapes: ${PRESENTER_SHAPES.join(", ")}`,
       });
     }
   }
@@ -328,7 +397,16 @@ function validateScene(
       });
     }
 
-    if (scene.emoji.animate && !EMOJI_ANIMATIONS.includes(scene.emoji.animate as any)) {
+    if (scene.emoji.size && !isOneOf(TEXT_SIZES, scene.emoji.size)) {
+      errors.push({
+        line: lineOf(/^!emoji\b/i),
+        message: `Scene ${index + 1}: Invalid emoji size "${scene.emoji.size}"`,
+        severity: "error",
+        suggestion: `Valid sizes: ${TEXT_SIZES.join(", ")}`,
+      });
+    }
+
+    if (scene.emoji.animate && !isOneOf(EMOJI_ANIMATIONS, scene.emoji.animate)) {
       errors.push({
       line: lineOf(/^!emoji\b/i),
         message: `Scene ${index + 1}: Invalid emoji animation "${scene.emoji.animate}"`,
@@ -348,7 +426,7 @@ function validateScene(
       });
     }
 
-    if (scene.countdown.style && !COUNTDOWN_STYLES.includes(scene.countdown.style as any)) {
+    if (scene.countdown.style && !isOneOf(COUNTDOWN_STYLES, scene.countdown.style)) {
       errors.push({
       line: lineOf(/^!countdown\b/i),
         message: `Scene ${index + 1}: Invalid countdown style "${scene.countdown.style}"`,
@@ -368,12 +446,33 @@ function validateScene(
       });
     }
 
-    if (scene.progress.style && !PROGRESS_STYLES.includes(scene.progress.style as any)) {
+    if (scene.progress.style && !isOneOf(PROGRESS_STYLES, scene.progress.style)) {
       errors.push({
       line: lineOf(/^!progress\b/i),
         message: `Scene ${index + 1}: Invalid progress style "${scene.progress.style}"`,
         severity: "error",
         suggestion: `Valid styles: ${PROGRESS_STYLES.join(", ")}`,
+      });
+    }
+  }
+
+  // Validate callout
+  if (scene.callout) {
+    if (scene.callout.arrow && !isOneOf(CALLOUT_ARROWS, scene.callout.arrow)) {
+      errors.push({
+        line: lineOf(/\barrow:/i, /^!(callout|note|tip|info|annotation)\b/i),
+        message: `Scene ${index + 1}: Invalid callout arrow "${scene.callout.arrow}"`,
+        severity: "error",
+        suggestion: `Valid directions: ${CALLOUT_ARROWS.join(", ")}`,
+      });
+    }
+
+    if (scene.callout.style && !isOneOf(CALLOUT_STYLES, scene.callout.style)) {
+      errors.push({
+        line: lineOf(/\bstyle:/i, /^!(callout|note|tip|info|annotation)\b/i),
+        message: `Scene ${index + 1}: Invalid callout style "${scene.callout.style}"`,
+        severity: "error",
+        suggestion: `Valid styles: ${CALLOUT_STYLES.join(", ")}`,
       });
     }
   }
@@ -417,6 +516,415 @@ function sceneLineFinder(scene: Scene, lines: string[]) {
     }
     return range.startLine;
   };
+}
+
+// ============================================
+// Schema-backed source validation
+// ============================================
+
+interface InlineToken {
+  raw: string;
+  key?: string;
+  value?: string;
+}
+
+function stripQuotes(value: string): string {
+  const trimmed = value.trim();
+  if (trimmed.length >= 2) {
+    const first = trimmed[0];
+    const last = trimmed[trimmed.length - 1];
+    if ((first === '"' || first === "'") && last === first) {
+      return trimmed.slice(1, -1);
+    }
+  }
+  return trimmed;
+}
+
+/**
+ * Split inline directive arguments on whitespace while preserving quoted
+ * strings. Tokens such as `label:"Scan me"` remain one key/value token.
+ */
+function tokenizeInlineArgs(args: string): InlineToken[] {
+  const rawTokens: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  const flush = () => {
+    if (current.length > 0) {
+      rawTokens.push(current);
+      current = "";
+    }
+  };
+
+  for (const char of args) {
+    if (quote) {
+      current += char;
+      if (char === quote) quote = null;
+    } else if (char === '"' || char === "'") {
+      quote = char;
+      current += char;
+    } else if (/\s/.test(char)) {
+      flush();
+    } else {
+      current += char;
+    }
+  }
+  flush();
+
+  const tokens: InlineToken[] = [];
+  for (let index = 0; index < rawTokens.length; index++) {
+    const raw = rawTokens[index];
+
+    // Support `key: "value"` as well as `key:"value"`.
+    const keyOnly = raw.match(/^([A-Za-z][\w-]*):$/);
+    if (keyOnly && index + 1 < rawTokens.length) {
+      const value = rawTokens[index + 1];
+      tokens.push({
+        raw: `${raw} ${value}`,
+        key: keyOnly[1],
+        value: stripQuotes(value),
+      });
+      index++;
+      continue;
+    }
+
+    const keyValue = raw.match(/^([A-Za-z][\w-]*):(.+)$/);
+    if (keyValue) {
+      tokens.push({
+        raw,
+        key: keyValue[1],
+        value: stripQuotes(keyValue[2]),
+      });
+    } else {
+      tokens.push({ raw });
+    }
+  }
+
+  return tokens;
+}
+
+/** Directives whose following block may contain schema-declared key:value lines. */
+function blockContextFor(directive: CanonicalDirectiveName): CanonicalDirectiveName | null {
+  switch (directive) {
+    case "text":
+    case "code":
+    case "terminal":
+    case "mockup":
+    case "particles":
+    case "presenter":
+    case "camera":
+    case "export":
+      return directive;
+    case "scene":
+    case "image":
+    case "chart":
+    case "diff":
+    case "emoji":
+    case "qr":
+    case "countdown":
+    case "progress":
+    case "transition":
+    case "callout":
+    case "layout":
+    case "duration":
+    case "background":
+    case "chapter":
+    case "var":
+    case "locale":
+    case "locales":
+    case "strings":
+      return null;
+    default:
+      return assertNever(directive);
+  }
+}
+
+function pushValidationError(errors: ValidationError[], error: ValidationError): void {
+  const duplicate = errors.some(
+    (existing) =>
+      existing.line === error.line &&
+      existing.message === error.message &&
+      existing.severity === error.severity
+  );
+  if (!duplicate) errors.push(error);
+}
+
+function scenePrefix(sceneIndex: number): string {
+  return sceneIndex > 0 ? `Scene ${sceneIndex}: ` : "";
+}
+
+function errorLabel(schema: DirectiveValueSchema): string {
+  return schema.errorLabel ?? schema.name;
+}
+
+function pushInvalidValue(
+  schema: DirectiveValueSchema,
+  value: string,
+  line: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const booleanValues = schema.type === "boolean" ? ["true", "false"] : undefined;
+  const values = schema.values ?? booleanValues;
+  pushValidationError(errors, {
+    line,
+    message: `${scenePrefix(sceneIndex)}Invalid ${errorLabel(schema)} "${value}"`,
+    severity: "error",
+    suggestion: values
+      ? `Valid ${schema.valuesLabel ?? "values"}: ${values.join(", ")}`
+      : undefined,
+  });
+}
+
+function capitalize(value: string): string {
+  return value.length === 0 ? value : value[0].toUpperCase() + value.slice(1);
+}
+
+function validateNumericValue(
+  schema: DirectiveValueSchema,
+  value: string,
+  line: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const withoutUnit = schema.unit === "seconds" ? value.replace(/s$/i, "") : value;
+  if (!/^-?(?:\d+(?:\.\d+)?|\.\d+)$/.test(withoutUnit)) {
+    pushInvalidValue(schema, value, line, sceneIndex, errors);
+    return;
+  }
+
+  const numeric = Number.parseFloat(withoutUnit);
+  const label = capitalize(errorLabel(schema));
+  const prefix = scenePrefix(sceneIndex);
+
+  if (schema.min !== undefined) {
+    const tooSmall = schema.exclusiveMin ? numeric <= schema.min : numeric < schema.min;
+    if (tooSmall) {
+      pushValidationError(errors, {
+        line,
+        message: `${prefix}${label} must be ${schema.exclusiveMin ? "greater than" : "at least"} ${schema.min}`,
+        severity: "error",
+      });
+      return;
+    }
+  }
+
+  if (schema.max !== undefined && numeric > schema.max) {
+    pushValidationError(errors, {
+      line,
+      message: `${prefix}${label} must be at most ${schema.max}`,
+      severity: "error",
+    });
+  }
+}
+
+function validateSchemaValue(
+  schema: DirectiveValueSchema,
+  rawValue: string,
+  line: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const value = stripQuotes(rawValue);
+
+  switch (schema.type) {
+    case "enum": {
+      const values = schema.values ?? [];
+      const valid = schema.caseInsensitiveValues
+        ? isOneOfCaseInsensitive(values, value)
+        : isOneOf(values, value);
+      if (!valid) pushInvalidValue(schema, value, line, sceneIndex, errors);
+      return;
+    }
+    case "boolean": {
+      if (value !== "true" && value !== "false") {
+        pushInvalidValue(schema, value, line, sceneIndex, errors);
+      }
+      return;
+    }
+    case "number": {
+      validateNumericValue(schema, value, line, sceneIndex, errors);
+      return;
+    }
+    case "string":
+    case "color":
+    case "url":
+    case "array":
+    case "object":
+      return;
+    default:
+      return assertNever(schema.type);
+  }
+}
+
+function validateCameraInline(
+  tokens: InlineToken[],
+  line: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const first = tokens[0];
+  if (!first) return;
+
+  // A bare positional first token is checked by the normal positional schema.
+  if (!first.key) return;
+
+  const effectSchema = getDirectivePositional("camera", "effect");
+  if (!effectSchema) return;
+
+  const key = first.key.toLowerCase();
+  if (key === "duration") return; // Valid; the effect then uses its schema default.
+
+  if (!isOneOf(CAMERA_EFFECTS, key)) {
+    pushInvalidValue(effectSchema, first.key, line, sceneIndex, errors);
+    return;
+  }
+
+  if (first.value === undefined) return;
+
+  // `zoom:1.5` is a numeric amount. `pan:left` and `shake:true` use the
+  // corresponding constrained keyframe values in the documented syntax.
+  if (key === "zoom") {
+    const valueSchema = getDirectivePositional("camera", "value");
+    if (valueSchema) validateSchemaValue(valueSchema, first.value, line, sceneIndex, errors);
+  } else if (key === "pan") {
+    const panSchema = getCameraKeyframeProperty("pan");
+    if (panSchema) validateSchemaValue(panSchema, first.value, line, sceneIndex, errors);
+  } else if (key === "shake") {
+    const shakeSchema = getCameraKeyframeProperty("shake");
+    if (shakeSchema) validateSchemaValue(shakeSchema, first.value, line, sceneIndex, errors);
+  }
+}
+
+function validateInlineDirective(
+  schema: AnyDirectiveSchema,
+  line: string,
+  lineNumber: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const directiveMatch = line.match(/^!([\w-]+)(?=\s|$)/);
+  if (!directiveMatch) return;
+
+  const args = line.slice(directiveMatch[0].length).trim();
+  const tokens = tokenizeInlineArgs(args);
+
+  for (const token of tokens) {
+    if (!token.key || token.value === undefined) continue;
+
+    // Camera effect shortcuts (`zoom:1.5`, `pan:left`, `shake:true`) are
+    // validated by validateCameraInline rather than as normal properties.
+    if (
+      schema.name === "camera" &&
+      (isOneOf(CAMERA_EFFECTS, token.key.toLowerCase()) || !getDirectiveProperty(schema.name, token.key))
+    ) {
+      continue;
+    }
+
+    const property = getDirectiveProperty(schema.name, token.key);
+    if (property) {
+      validateSchemaValue(property, token.value, lineNumber, sceneIndex, errors);
+    }
+  }
+
+  const positionalTokens = tokens.filter((token) => token.key === undefined);
+  schema.positional?.forEach((argument, index) => {
+    const token = positionalTokens[index];
+    if (token) {
+      validateSchemaValue(argument, stripQuotes(token.raw), lineNumber, sceneIndex, errors);
+    }
+  });
+
+  if (schema.name === "camera") {
+    validateCameraInline(tokens, lineNumber, sceneIndex, errors);
+  }
+}
+
+function validateCameraKeyframeLine(
+  line: string,
+  lineNumber: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const content = line.replace(/^-\s*/, "");
+  for (const token of tokenizeInlineArgs(content)) {
+    if (!token.key || token.value === undefined) continue;
+    const property = getCameraKeyframeProperty(token.key);
+    if (property) {
+      validateSchemaValue(property, token.value, lineNumber, sceneIndex, errors);
+    }
+  }
+}
+
+function validateBlockPropertyLine(
+  directive: CanonicalDirectiveName,
+  line: string,
+  lineNumber: number,
+  sceneIndex: number,
+  errors: ValidationError[]
+): void {
+  const match = line.match(/^([A-Za-z][\w-]*)\s*:\s*(.+)$/);
+  if (!match) return;
+
+  const property = getDirectiveProperty(directive, match[1]);
+  if (!property) return;
+  validateSchemaValue(property, match[2], lineNumber, sceneIndex, errors);
+}
+
+/**
+ * Validate constrained values from the original source rather than relying on
+ * parsed scene objects. Several parser branches currently discard invalid
+ * values by falling back to defaults, so post-parse validation alone cannot
+ * see those mistakes.
+ */
+function validateSchemaBackedValues(lines: string[], errors: ValidationError[]): void {
+  let sceneIndex = 0;
+  let currentBlock: CanonicalDirectiveName | null = null;
+  let inFence = false;
+
+  lines.forEach((sourceLine, index) => {
+    const lineNumber = index + 1;
+    const line = sourceLine.trim();
+
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+      if (!inFence && currentBlock === "code") currentBlock = null;
+      return;
+    }
+    if (inFence) return;
+
+    if (line === "---") {
+      currentBlock = null;
+      return;
+    }
+
+    const directiveMatch = line.match(/^!([\w-]+)(?=\s|$)/);
+    if (directiveMatch) {
+      const schema = getDirectiveSchema(directiveMatch[1]);
+      if (!schema) {
+        currentBlock = null;
+        return;
+      }
+
+      if (schema.name === "scene") {
+        sceneIndex++;
+        currentBlock = null;
+      } else {
+        validateInlineDirective(schema, line, lineNumber, sceneIndex, errors);
+        currentBlock = blockContextFor(schema.name);
+      }
+      return;
+    }
+
+    if (currentBlock === "camera" && line.startsWith("-")) {
+      validateCameraKeyframeLine(line, lineNumber, sceneIndex, errors);
+      return;
+    }
+
+    if (currentBlock) {
+      validateBlockPropertyLine(currentBlock, line, lineNumber, sceneIndex, errors);
+    }
+  });
 }
 
 /** Every directive name the parser understands, including aliases. */
@@ -479,7 +987,7 @@ function validateDirective(
   errors: ValidationError[],
   _warnings: ValidationError[]
 ): void {
-  const directive = line.match(/^!(\w+)/)?.[1];
+  const directive = line.match(/^!(\w[\w-]*)/)?.[1];
   if (!directive) return;
   if (KNOWN_DIRECTIVES.includes(directive.toLowerCase())) return;
 
@@ -497,6 +1005,12 @@ function validateDirective(
   });
 }
 
+function isSceneDirectiveLine(line: string): boolean {
+  const match = line.match(/^!(\w[\w-]*)(?=\s|$)/);
+  if (!match) return false;
+  return getDirectiveSchema(match[1])?.name === "scene";
+}
+
 /**
  * Quick syntax check for basic errors
  */
@@ -506,7 +1020,7 @@ export function quickSyntaxCheck(markdown: string): {
   estimatedDuration: number;
   issues: string[];
 } {
-  const lines = markdown.split("\n");
+  const lines = markdown.split(/\r?\n/);
   const issues: string[] = [];
   let sceneCount = 0;
   let estimatedDuration = 0;
@@ -515,7 +1029,7 @@ export function quickSyntaxCheck(markdown: string): {
     const line = lines[i].trim();
 
     // Count scenes
-    if (SCENE_DIRECTIVES.some((dir) => line.startsWith(`!${dir}`))) {
+    if (isSceneDirectiveLine(line)) {
       sceneCount++;
       estimatedDuration += 3; // Default duration
     }
@@ -568,7 +1082,7 @@ export function getSyntaxSuggestions(partialMarkdown: string): string[] {
   }
 
   // Suggest content types after scene
-  if (SCENE_DIRECTIVES.some((dir) => lastLine.startsWith(`!${dir}`))) {
+  if (isSceneDirectiveLine(lastLine)) {
     suggestions.push("!text - Add text content");
     suggestions.push("!code - Add code block");
     suggestions.push("!image - Add image");
