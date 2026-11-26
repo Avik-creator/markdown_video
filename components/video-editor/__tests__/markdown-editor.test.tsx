@@ -349,6 +349,43 @@ describe("MarkdownEditor (CodeMirror)", () => {
       expect(view().state.doc.toString()).toBe("!scene\n!duration 3s");
     });
 
+    it("still applies the fix when unrelated typing has not changed the diagnostic", () => {
+      resetStore("!scene\n!duraton 3s");
+      render(<MarkdownEditor ref={ref} />);
+      // Type within the validation debounce window: the panel entry is
+      // unrefreshed but the underlying diagnostic is unchanged, so the
+      // recheck finds an equivalent diagnostic and the fix applies.
+      type("\nnotes");
+
+      const fixButton = [...document.querySelectorAll("button")].find(
+        (b) => b.textContent === "Fix"
+      );
+      expect(fixButton).toBeDefined();
+      act(() => fixButton!.click());
+      expect(view().state.doc.toString()).toBe("!scene\n!duration 3s\nnotes");
+    });
+
+    it("does not apply a stale fix when typing has invalidated the diagnostic", () => {
+      resetStore("!scene\n!duraton 3s");
+      render(<MarkdownEditor ref={ref} />);
+      // Within the debounce window, prefix line 2 so it no longer parses as a
+      // directive line. The stale panel entry still offers the line-2 fix,
+      // whose find string "!duraton" is still present — applying it blindly
+      // would corrupt the line into "x!duration 3s".
+      type("x", "!scene\n".length);
+
+      const fixButton = [...document.querySelectorAll("button")].find(
+        (b) => b.textContent === "Fix"
+      );
+      expect(fixButton).toBeDefined();
+      act(() => fixButton!.click());
+
+      expect(view().state.doc.toString()).toBe("!scene\nx!duraton 3s");
+      // The forced revalidation refreshes the panel synchronously, so the
+      // stale entry disappears instead of the click being a silent no-op.
+      expect(document.body.textContent).not.toContain("Unknown directive");
+    });
+
     it("keeps document-level diagnostics in the panel but out of the lint ranges", () => {
       // A document with no scene directive produces a document-level problem.
       resetStore("!text\norphan without scene");
