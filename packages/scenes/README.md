@@ -169,6 +169,30 @@ For frame-accurate capture (the CLI render loop):
   byte-identical, and the SSR determinism tests in
   `src/scenes/__tests__/scene-ssr.test.ts` pin that property.
 
+### 5. Caption burn-in (optional)
+
+Burned-in captions are DOM, not an ffmpeg filter. When a host passes the
+`captions` prop to `SceneFrame` (`{ cues, time }` — generated cues from
+`@markdown-video/core` caption generation plus the ABSOLUTE video time, not
+scene time), the frame composites `CaptionBurnOverlay` inside the capture
+subtree as the topmost layer. Capture pipelines therefore encode frames that
+already contain the captions: no libass, no fontconfig, and the same Unicode
+coverage the rest of the composition has.
+
+The contract hosts must respect:
+
+- `time` is the absolute video clock — the same value used to resolve the
+  scene — because cues span scene boundaries;
+- cue visibility is half-open (`startTime <= time < endTime`), matching the
+  SRT/VTT sidecars generated from the same cue list;
+- omitting the prop produces byte-identical markup to a frame without
+  captions (pinned in `src/components/__tests__/caption-burn.test.tsx`), so
+  burn-in is strictly opt-in and burn-off output never changes.
+
+The overlay's backing-box style is deliberate: both capture rasterizers
+(Chromium screenshots and the html2canvas clone) reproduce box backgrounds
+exactly, while text-shadow/stroke rendering would diverge between them.
+
 ## Public API
 
 - `SceneFrame` — logical frame composition root (capture target).
@@ -183,7 +207,8 @@ For frame-accurate capture (the CLI render loop):
   `QRScene`, `CountdownScene`, `ProgressScene`, plus the `SceneRenderer`
   router shared by top-level scenes and composite (mockup/split) content.
 - Overlays: `ParticleEffect`, `CalloutOverlay`, `PresenterOverlay`,
-  `TimelineElementsOverlay`, `TypingCursor`, `CameraWrapper`.
+  `TimelineElementsOverlay`, `TypingCursor`, `CameraWrapper`,
+  `CaptionBurnOverlay`.
 - `SceneLocalizationProvider`, `useSceneLocalization`,
   `SceneLocalizationContext`, `SceneLocalization` type.
 - Animation/transition math: `springProgress`, `countdownDigitState`,
