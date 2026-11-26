@@ -1,32 +1,45 @@
-"use client"
-
-import Link from "next/link"
-import { cn } from "@/lib/utils"
-import CornerMarkers from "@components/CornerMarkers"
+import Link from "next/link";
+import { Reveal } from "./reveal";
 
 export function CTA() {
   return (
-    <section className="py-24 px-6 border-t border-gray-200 dark:border-neutral-800">
-      <div className="max-w-4xl mx-auto text-center animate-[slideFadeUp_0.4s_ease-out]">
-        <h2 className="text-2xl font-serif font-semibold text-gray-900 dark:text-neutral-100 mb-4">
-          Ready to create?
-        </h2>
-        <p className="mt-2 mb-10 text-gray-600 dark:text-neutral-400 leading-relaxed max-w-xl mx-auto">
-          Start building stunning videos with just markdown. No account required, free to use.
-        </p>
-        <Link
-          href="/editor"
-          className={cn(
-            "group inline-flex items-center justify-between gap-1 relative rounded-sm transition-all duration-300 ease-out",
-            "hover:-translate-x-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-950"
-          )}
-        >
-          <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-            Open Editor
-          </span>
-        </Link>
+    <section className="relative overflow-hidden border-t border-[color:var(--landing-line)]/70 px-5 py-28 md:px-10 md:py-40" aria-labelledby="cta-heading">
+      <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[720px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--landing-line)]/75" />
+      <div aria-hidden="true" className="absolute left-1/2 top-1/2 size-[980px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-[color:var(--landing-line)]/45" />
+      <div aria-hidden="true" className="registration-mark absolute left-8 top-10 hidden md:block" />
+
+      <div className="relative mx-auto max-w-[980px] text-center">
+        <Reveal>
+          <p className="font-mono text-[12px] text-[color:var(--landing-muted)]">final render</p>
+          <h2 id="cta-heading" className="landing-display-tight mt-6 text-[clamp(4rem,10vw,10rem)] font-medium leading-[0.85] tracking-[-0.065em]">
+            write less.
+            <br />
+            <span className="text-[color:var(--landing-faint)]">render more.</span>
+          </h2>
+        </Reveal>
+        <Reveal delay={0.1}>
+          <p className="mx-auto mt-8 max-w-[570px] text-[18px] leading-[1.48] text-[color:var(--landing-muted)]">
+            Start in the browser editor, or point your agent at the MCP server and let the document become the
+            video pipeline.
+          </p>
+          <div className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-4">
+            <Link
+              href="/editor"
+              className="inline-flex h-12 items-center rounded-full bg-[color:var(--landing-ink)] px-6 text-[15px] font-medium text-[color:var(--landing-paper)] landing-action-shadow transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+            >
+              open the editor
+            </Link>
+            <a
+              href="https://github.com/Avik-creator/markdown_video"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center text-[15px] font-medium underline decoration-[color:var(--landing-line)] underline-offset-8 transition-colors hover:decoration-[color:var(--landing-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+            >
+              read the source
+            </a>
+          </div>
+        </Reveal>
       </div>
     </section>
-  )
+  );
 }

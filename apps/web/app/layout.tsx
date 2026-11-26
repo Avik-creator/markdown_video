@@ -98,9 +98,9 @@ const siteUrl = new URL(
 ).origin;
 const ogImageUrl = new URL("/og-image.png", `${siteUrl}/`).toString();
 const siteName = "Markdown Video";
-const title = "Markdown Video - Create Stunning Videos with Markdown";
+const title = "Markdown Video - Markdown to MP4 for editors, agents, and CI";
 const description =
-  "Transform simple markdown syntax into stunning animated videos. Perfect for tutorials, demos, and presentations. No timeline, no keyframes - just write.";
+  "Turn plain markdown into deterministic MP4s in the browser editor, from the CLI, through the MCP server, or in GitHub Actions - with music, captions, and multi-locale output.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),

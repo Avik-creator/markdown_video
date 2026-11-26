@@ -1,177 +1,122 @@
-"use client"
+import { Reveal } from "./reveal";
 
-import { useEffect, useRef, useState } from "react"
-import { Copy, Check } from "lucide-react"
-import { toast } from "sonner"
-import { Button } from "@components/ui/button"
+const documentExample = `!locales en es
+!strings
+headline:
+  en: "One source, every locale."
+  es: "Una fuente, cada idioma."
 
-const exampleCode = `!scene
-!text
-Hello World
-animation: bounceIn
+!scene
+!duration 2
+!background #f4f0e6
+!text i18n:headline
 size: 2xl
+fontFamily: display
+animation: none`;
 
-!duration 3s
-!background #3b82f6
-!transition fade
+const cliExample = `markdown-video render video.md -o out.mp4 \\
+  --resolution 720p --fps 24 --locale es`;
 
----
-
-!scene
-!terminal
-$ npm create markdown-video
-$ cd my-project
-$ npm run dev
-> Ready on localhost:3000
-
-!duration 5s
-!background #0d0d0d
-
----
-
-!scene
-!chart type:bar animate:true
-React: 95
-Vue: 82
-Svelte: 78
-
-!duration 4s
-!background #1a1a24`
+export function TypeSpecimen() {
+  return (
+    <section className="relative overflow-hidden border-y border-[color:var(--landing-line)]/70 py-20 md:py-28" aria-labelledby="type-heading">
+      <h2 id="type-heading" className="sr-only">
+        Typography and rendering specimen
+      </h2>
+      <div aria-hidden="true" className="landing-ruler absolute left-0 right-0 top-8 h-3 opacity-60" />
+      <div className="mx-auto max-w-[1520px] px-5 md:px-10">
+        <Reveal>
+          <div className="flex flex-col leading-none">
+            <span className="landing-serif-tight text-[clamp(5rem,15vw,16rem)] font-bold tracking-[-0.075em]">
+              markdown
+            </span>
+            <span className="landing-outline-word landing-display-tight self-end text-[clamp(4.6rem,13vw,14rem)] font-semibold tracking-[-0.075em]">
+              render
+            </span>
+            <span className="mt-2 font-mono text-[clamp(3.8rem,10vw,10rem)] font-semibold tracking-[-0.11em] text-[color:var(--landing-accent)]">
+              .mp4
+            </span>
+          </div>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <div className="mt-12 flex flex-col justify-between gap-5 border-t border-[color:var(--landing-line)] pt-5 font-mono text-[11px] leading-relaxed text-[color:var(--landing-muted)] md:flex-row">
+            <span>type is content here — not decoration</span>
+            <span>renderer fontFamily values: serif / sans / mono / display</span>
+            <span>animations: fadeIn / slideUp / typewriter / none</span>
+          </div>
+        </Reveal>
+      </div>
+    </section>
+  );
+}
 
 export function SyntaxDemo() {
-  const [copied, setCopied] = useState(false)
-  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-
-  useEffect(() => {
-    return () => {
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-    }
-  }, [])
-
-  const handleCopy = async () => {
-    try {
-      if (!navigator.clipboard) {
-        throw new Error("Clipboard API unavailable")
-      }
-
-      await navigator.clipboard.writeText(exampleCode)
-      setCopied(true)
-
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current)
-      }
-      copyTimeoutRef.current = setTimeout(() => setCopied(false), 2000)
-    } catch {
-      toast.error("Could not copy the example. Please copy it manually.")
-    }
-  }
-
   return (
-    <section
-      id="syntax"
-      aria-labelledby="syntax-heading"
-      className="py-24 px-6 border-t border-gray-200 dark:border-neutral-800 scroll-mt-14"
-    >
-      <div className="max-w-6xl mx-auto">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          {/* Left - Description */}
-          <div className="min-w-0 animate-[slideFadeUp_0.4s_ease-out]">
-            <h2
-              id="syntax-heading"
-              className="text-2xl font-serif font-semibold text-gray-900 dark:text-neutral-100 mb-4"
-            >
-              Simple syntax
+    <section className="relative px-5 py-24 md:px-10 md:py-32" aria-labelledby="document-heading">
+      <div className="mx-auto max-w-[1520px]">
+        <div className="grid gap-12 lg:grid-cols-[0.92fr_1.08fr] lg:items-center">
+          <Reveal>
+            <p className="flex items-center gap-3 font-mono text-[12px] text-[color:var(--landing-muted)]">
+              <span aria-hidden="true" className="size-2 rounded-[2px] bg-[color:var(--landing-accent)]" />
+              the document is the interface
+            </p>
+            <h2 id="document-heading" className="landing-display-tight mt-6 text-[clamp(3rem,6vw,6.4rem)] font-medium leading-[0.9] tracking-[-0.06em]">
+              no timeline.
+              <br />
+              <span className="text-[color:var(--landing-faint)]">no hidden project file.</span>
             </h2>
-            <p className="mt-2 mb-8 text-gray-600 dark:text-neutral-400 leading-relaxed">
-              No timeline. No keyframes. Just write what you want to show using our intuitive markdown syntax. Each
-              scene is a few lines of text.
+            <p className="mt-7 max-w-[560px] text-[18px] leading-[1.48] tracking-[-0.015em] text-[color:var(--landing-muted)]">
+              Scenes, text, code, mockups, music, captions, and localization live in readable markdown. Diff it in
+              review, generate it with an agent, then render the same file locally or in CI.
             </p>
 
-            <div className="space-y-6">
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-neutral-200 mb-1">Define scenes with !scene</h3>
-                <p className="text-sm text-gray-600 dark:text-neutral-400">Each scene is separated by --- dividers</p>
+            <div className="mt-9 overflow-x-auto rounded-[14px] border border-[color:var(--landing-line)] bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
+              <code className="whitespace-pre">{cliExample}</code>
+            </div>
+          </Reveal>
+
+          <Reveal delay={0.1}>
+            <div className="landing-dark-card relative rounded-[20px] p-4 text-[#f4efe2] sm:p-5">
+              <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
+                <span className="font-mono text-[11px] text-white/48">landing-i18n.video.md</span>
+                <span className="rounded-full border border-white/12 px-2.5 py-1 font-mono text-[10px] text-white/58">
+                  utf-8 markdown
+                </span>
               </div>
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-neutral-200 mb-1">Add content and effects</h3>
-                <p className="text-sm text-gray-600 dark:text-neutral-400">Text, code, charts, terminal - all with simple directives</p>
-              </div>
-              <div>
-                <h3 className="font-medium text-gray-800 dark:text-neutral-200 mb-1">Export your video</h3>
-                <p className="text-sm text-gray-600 dark:text-neutral-400">Render an MP4 video or animated GIF in your browser</p>
+              <pre className="overflow-x-auto font-mono text-[12px] leading-[1.75] text-white/84 sm:text-[12.5px]">
+                {documentExample}
+              </pre>
+              <div className="mt-5 grid gap-px overflow-hidden rounded-[12px] border border-white/10 bg-white/10 font-mono text-[10.5px] text-white/62 sm:grid-cols-3">
+                <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">01 parse directives</span>
+                <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">02 rasterize scenes</span>
+                <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">03 encode mp4 + sidecars</span>
               </div>
             </div>
-          </div>
-
-          {/* Right - Code example */}
-          <div className="min-w-0 animate-[slideFadeUp_0.5s_ease-out]">
-            <div className="rounded-lg overflow-hidden border border-gray-200 dark:border-neutral-800 bg-white dark:bg-neutral-900">
-              {/* Header */}
-              <div className="flex items-center justify-between gap-3 px-4 py-3 border-b border-gray-200 dark:border-neutral-800">
-                <span className="truncate text-sm text-gray-600 dark:text-neutral-500">example.mdv</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleCopy}
-                  aria-label={copied ? "Example copied" : "Copy example markdown"}
-                  className="h-8 shrink-0 gap-2 text-gray-600 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100"
-                >
-                  {copied ? (
-                    <>
-                      <Check aria-hidden="true" className="w-4 h-4" />
-                      Copied
-                    </>
-                  ) : (
-                    <>
-                      <Copy aria-hidden="true" className="w-4 h-4" />
-                      Copy
-                    </>
-                  )}
-                </Button>
-              </div>
-
-              {/* Code */}
-              <div className="p-4 font-mono text-sm max-h-100 overflow-auto bg-white dark:bg-neutral-950">
-                <pre className="whitespace-pre-wrap break-words">
-                  {exampleCode.split("\n").map((line, i) => (
-                    <span key={i} className="flex min-w-0">
-                      <span aria-hidden="true" className="w-8 shrink-0 text-gray-400 dark:text-neutral-700 select-none">{i + 1}</span>
-                      <span className="min-w-0">
-                        {line.startsWith("!") && <span className="text-pink-500">{line.split(" ")[0]}</span>}
-                        {line.startsWith("!") && line.includes(" ") && (
-                          <span className="text-cyan-400"> {line.split(" ").slice(1).join(" ")}</span>
-                        )}
-                        {line.startsWith("$") && <span className="text-emerald-400">{line}</span>}
-                        {line.startsWith(">") && <span className="text-gray-500 dark:text-neutral-500">{line}</span>}
-                        {line.includes(":") &&
-                          !line.startsWith("!") &&
-                          !line.startsWith("$") &&
-                          !line.startsWith(">") && (
-                            <>
-                              <span className="text-violet-400">{line.split(":")[0]}:</span>
-                              <span className="text-cyan-400">{line.split(":").slice(1).join(":")}</span>
-                            </>
-                          )}
-                        {line === "---" && <span className="text-gray-400 dark:text-neutral-600">{line}</span>}
-                        {!line.startsWith("!") &&
-                          !line.startsWith("$") &&
-                          !line.startsWith(">") &&
-                          !line.includes(":") &&
-                          line !== "---" && <span className="text-gray-900 dark:text-white">{line}</span>}
-                      </span>
-                    </span>
-                  ))}
-                </pre>
-              </div>
-            </div>
-          </div>
+          </Reveal>
         </div>
+
+        <Reveal delay={0.14}>
+          <div className="mt-20 grid border-y border-[color:var(--landing-line)] md:grid-cols-4">
+            {[
+              ["write", "plain markdown, readable in review"],
+              ["preview", "iterate in the editor or through MCP"],
+              ["render", "CLI flags control resolution, fps, speed, aspect ratio"],
+              ["publish", "attach MP4s and caption sidecars to releases"],
+            ].map(([title, copy], index) => (
+              <div
+                key={title}
+                className={`border-[color:var(--landing-line)]/75 px-5 py-7 ${
+                  index > 0 ? "border-t md:border-l md:border-t-0" : ""
+                }`}
+              >
+                <span className="font-mono text-[11px] text-[color:var(--landing-muted)]">0{index + 1}</span>
+                <h3 className="mt-5 text-[22px] font-medium tracking-[-0.035em]">{title}</h3>
+                <p className="mt-2 text-[14px] leading-[1.45] text-[color:var(--landing-muted)]">{copy}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
       </div>
-      <span aria-live="polite" className="sr-only">
-        {copied ? "Example copied to clipboard" : ""}
-      </span>
     </section>
-  )
+  );
 }
