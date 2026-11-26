@@ -19,22 +19,21 @@
 }
 
 /* The scene font package contract: these custom properties are consumed
-   through var(--font-*, fallback) inside scene components. The nine text-family
-   values mirror the family/fallback chains exposed by next/font in the editor;
-   --font-emoji names the bundled COLRv1 face and is deliberately separate so
-   scene code can place it after the primary family without disturbing Latin
-   text shaping. */
+   through var(--font-*, fallback) inside scene components. Text variables hold
+   only the primary family name; the surrounding font chains append the shared
+   platform fallbacks after --font-emoji. Keeping fallbacks out of these values
+   is what preserves that ordering after CSS variable expansion. */
 :root {
   --font-emoji: "Noto Color Emoji";
-  --font-inter: "Inter", system-ui, sans-serif;
-  --font-playfair: "Playfair Display", Georgia, serif;
-  --font-merriweather-family: "Merriweather", Georgia, serif;
-  --font-ibm-plex-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-geist-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-jetbrains-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-fira-family: "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-source-code-family: "Source Code Pro", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-inconsolata-family: "Inconsolata", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-inter: "Inter";
+  --font-playfair: "Playfair Display";
+  --font-merriweather-family: "Merriweather";
+  --font-ibm-plex-family: "IBM Plex Mono";
+  --font-geist-mono: "Geist Mono";
+  --font-jetbrains-family: "JetBrains Mono";
+  --font-fira-family: "Fira Code";
+  --font-source-code-family: "Source Code Pro";
+  --font-inconsolata-family: "Inconsolata";
 }
 
 html {
