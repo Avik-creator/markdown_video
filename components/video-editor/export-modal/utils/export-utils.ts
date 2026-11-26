@@ -161,11 +161,24 @@ export function normalizeOutputFps(fps: number | undefined) {
   return Math.min(60, Math.max(1, Math.round(fps || 30)))
 }
 
+/**
+ * Frame counts are ceiling(duration * fps), but the multiplication can land
+ * one ulp above a mathematically integral frame count — 8.3 * 30 is
+ * 249.00000000000003 in floating point — and a naive ceil then renders one
+ * extra frame. Durations only carry millisecond precision, so a billionth of
+ * a frame is always representation noise, never signal: subtract it before
+ * rounding up. Genuinely fractional counts (4.15s at 30fps = 124.5) are
+ * unaffected because their fraction is many orders of magnitude larger.
+ */
+function frameCountFor(duration: number, fps: number) {
+  return Math.ceil(duration * fps - 1e-9)
+}
+
 export function getTotalFrameCount(
   totalDuration: number,
   fps: number | undefined
 ) {
-  return Math.ceil(totalDuration * normalizeOutputFps(fps))
+  return frameCountFor(totalDuration, normalizeOutputFps(fps))
 }
 
 export interface ExportValidationResult {
@@ -189,7 +202,7 @@ export function validateExportInput({
   fps?: number
 }): ExportValidationResult {
   const outputFps = normalizeOutputFps(fps)
-  const totalFrameCount = Math.ceil(totalDuration * outputFps)
+  const totalFrameCount = frameCountFor(totalDuration, outputFps)
 
   if (!Number.isInteger(sceneCount) || sceneCount <= 0) {
     return {

@@ -1,15 +1,30 @@
-import { getDirectiveValueOptions } from "@/lib/directive-schema";
+/**
+ * Schema bindings used by the quick-insert snippets below. Each entry is
+ * recorded at module scope but deliberately NOT validated here: a module-level
+ * throw would crash the entire app chunk for every user if the invariant ever
+ * broke in production. The invariant — every value is a schema-valid option
+ * for its directive property — is asserted in
+ * lib/editor/__tests__/snippets.test.ts instead, so editor quick-inserts
+ * cannot drift from the values validation and completions offer.
+ */
+const snippetSchemaBindings: Array<{
+  directive: string;
+  property: string;
+  value: string;
+}> = [];
+
+export const SNIPPET_SCHEMA_BINDINGS: ReadonlyArray<{
+  directive: string;
+  property: string;
+  value: string;
+}> = snippetSchemaBindings;
 
 function schemaValue(directive: string, property: string, value: string): string {
-  const options = getDirectiveValueOptions(directive, property);
-  if (!options.includes(value)) {
-    throw new Error(`"${value}" is not a schema-valid ${directive}.${property} value`);
-  }
+  snippetSchemaBindings.push({ directive, property, value });
   return value;
 }
 
-// Snippet choices are validated against the schema at module load, so editor
-// quick-inserts cannot drift from the values validation and completions offer.
+// Snippet interpolation values, each registered above for the schema test.
 const V = {
   bounceIn: schemaValue("text", "animation", "bounceIn"),
   slideUp: schemaValue("text", "animation", "slideUp"),

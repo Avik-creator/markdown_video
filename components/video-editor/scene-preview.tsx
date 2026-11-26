@@ -115,7 +115,17 @@ function getEmbeddedServerSnapshot() {
   return false;
 }
 
-function getSceneAtTime(scenes: Scene[], currentTime: number) {
+/**
+ * Locate the scene shown at `currentTime` and the time within that scene.
+ *
+ * A time exactly on a scene boundary belongs to the NEXT scene at time 0 —
+ * the strict inequality is what keeps a mid-video boundary from flashing the
+ * end state of the previous scene. Only the end-of-video fallthrough differs:
+ * when playback reaches (or passes) the total duration, the last scene is
+ * pinned to its own end so completed-state rendering (finished animations,
+ * final countdown values) does not snap back to the scene's beginning.
+ */
+export function getSceneAtTime(scenes: Scene[], currentTime: number) {
   let accumulatedTime = 0;
   for (let i = 0; i < scenes.length; i++) {
     const sceneDuration = scenes[i].duration;
@@ -127,7 +137,11 @@ function getSceneAtTime(scenes: Scene[], currentTime: number) {
     }
     accumulatedTime += sceneDuration;
   }
-  return { currentScene: scenes[scenes.length - 1] || null, sceneTime: 0 };
+  const lastScene = scenes[scenes.length - 1];
+  if (!lastScene) {
+    return { currentScene: null, sceneTime: 0 };
+  }
+  return { currentScene: lastScene, sceneTime: lastScene.duration };
 }
 
 export const ScenePreview = forwardRef<HTMLDivElement, object>(

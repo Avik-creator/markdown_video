@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { PersistStorage, StorageValue } from "zustand/middleware";
-import { parseMarkdown, getTimelineSegments } from "./parser";
+import { parseMarkdownFull, getTimelineSegments } from "./parser";
 import { DEFAULT_MARKDOWN } from "./default-markdown";
 import type {
   AspectRatio,
@@ -45,9 +45,16 @@ export function tagNextMarkdownOrigin(origin: string): void {
 
 
 function parseAndComputeSegments(markdown: string) {
-  const scenes = parseMarkdown(markdown);
-  const { segments, totalDuration } = getTimelineSegments(scenes);
-  return { scenes, segments, totalDuration };
+  const parsed = parseMarkdownFull(markdown);
+  const { segments, totalDuration } = getTimelineSegments(parsed.scenes);
+  return {
+    scenes: parsed.scenes,
+    segments,
+    totalDuration,
+    locales: parsed.locales,
+    localizationStrings: parsed.localizationStrings,
+    defaultLocale: parsed.defaultLocale,
+  };
 }
 
 function generateId(): string {
@@ -169,6 +176,10 @@ export const useVideoStore = create<VideoStore>()(
         scenes: initial.scenes,
         segments: initial.segments,
         totalDuration: initial.totalDuration,
+        locales: initial.locales,
+        localizationStrings: initial.localizationStrings,
+        defaultLocale: initial.defaultLocale,
+        activeLocale: null,
         isPlaying: false,
         currentTime: 0,
         showGuide: false,
@@ -218,8 +229,14 @@ export const useVideoStore = create<VideoStore>()(
             return;
           }
 
-          const { scenes, segments, totalDuration } =
-            parseAndComputeSegments(markdown);
+          const {
+            scenes,
+            segments,
+            totalDuration,
+            locales,
+            localizationStrings,
+            defaultLocale,
+          } = parseAndComputeSegments(markdown);
 
           set((state) => ({
             markdown,
@@ -228,6 +245,9 @@ export const useVideoStore = create<VideoStore>()(
             scenes,
             segments,
             totalDuration,
+            locales,
+            localizationStrings,
+            defaultLocale,
             currentTime: Math.min(state.currentTime, totalDuration),
             history: addToHistory
               ? {
@@ -245,16 +265,18 @@ export const useVideoStore = create<VideoStore>()(
           const previous = history.past[history.past.length - 1];
           const newPast = history.past.slice(0, -1);
 
-          const { scenes, segments, totalDuration } =
-            parseAndComputeSegments(previous);
+          const parsed = parseAndComputeSegments(previous);
 
           set({
             markdown: previous,
             markdownRevision: get().markdownRevision + 1,
             markdownOrigin: "undo",
-            scenes,
-            segments,
-            totalDuration,
+            scenes: parsed.scenes,
+            segments: parsed.segments,
+            totalDuration: parsed.totalDuration,
+            locales: parsed.locales,
+            localizationStrings: parsed.localizationStrings,
+            defaultLocale: parsed.defaultLocale,
             history: {
               past: newPast,
               future: [markdown, ...get().history.future.slice(0, 50)],
@@ -269,16 +291,18 @@ export const useVideoStore = create<VideoStore>()(
           const next = history.future[0];
           const newFuture = history.future.slice(1);
 
-          const { scenes, segments, totalDuration } =
-            parseAndComputeSegments(next);
+          const parsed = parseAndComputeSegments(next);
 
           set({
             markdown: next,
             markdownRevision: get().markdownRevision + 1,
             markdownOrigin: "redo",
-            scenes,
-            segments,
-            totalDuration,
+            scenes: parsed.scenes,
+            segments: parsed.segments,
+            totalDuration: parsed.totalDuration,
+            locales: parsed.locales,
+            localizationStrings: parsed.localizationStrings,
+            defaultLocale: parsed.defaultLocale,
             history: {
               past: [...get().history.past, markdown],
               future: newFuture,
@@ -294,6 +318,13 @@ export const useVideoStore = create<VideoStore>()(
         setZoom: (zoom) => set({ zoom }),
 
         setTheme: (theme) => set({ theme }),
+
+        // Runtime-only preference. We deliberately do not persist it: the
+        // document owns the available/default locales, and a stale persisted
+        // preference would otherwise be surprising when opening a different or
+        // edited document. Resolution validates it against the current
+        // document's declared locales before use.
+        setActiveLocale: (locale) => set({ activeLocale: locale }),
 
         addMarker: (time, label) => {
           const marker: Marker = {
@@ -425,13 +456,16 @@ export const useVideoStore = create<VideoStore>()(
         }
 
         // Re-parse the persisted markdown so derived state (scenes, segments,
-        // totalDuration, source maps) matches the restored document instead of
-        // the default document the store initialized with.
+        // totalDuration, localization tables, source maps) matches the restored
+        // document instead of the default document the store initialized with.
         if (typeof persisted.markdown === "string") {
           const parsed = parseAndComputeSegments(persisted.markdown);
           merged.scenes = parsed.scenes;
           merged.segments = parsed.segments;
           merged.totalDuration = parsed.totalDuration;
+          merged.locales = parsed.locales;
+          merged.localizationStrings = parsed.localizationStrings;
+          merged.defaultLocale = parsed.defaultLocale;
           merged.currentTime = Math.min(
             merged.currentTime,
             parsed.totalDuration,

@@ -63,9 +63,11 @@ const deviceStyles: Record<string, DeviceStyle> = {
 function MockupContent({
   contentScene,
   sceneTime,
+  parentLocale,
 }: {
   contentScene: Scene["mockup"];
   sceneTime: number;
+  parentLocale?: string;
 }) {
   if (!contentScene?.content) {
     return (
@@ -84,6 +86,10 @@ function MockupContent({
     text: content.text,
     code: content.code,
     image: content.image,
+    // The mockup device is part of the containing scene, so a scene-level
+    // !locale override applies inside it unless programmatic content data
+    // carries a more specific locale.
+    locale: content.locale ?? parentLocale,
   };
 
   switch (content.type) {
@@ -136,7 +142,11 @@ function IPhoneMockup({
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
+        <MockupContent
+          contentScene={mockup}
+          sceneTime={sceneTime}
+          parentLocale={scene.locale}
+        />
       </div>
       {/* Home indicator */}
       <div
@@ -181,7 +191,11 @@ function AndroidMockup({
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
+        <MockupContent
+          contentScene={mockup}
+          sceneTime={sceneTime}
+          parentLocale={scene.locale}
+        />
       </div>
     </div>
   );
@@ -221,7 +235,11 @@ function IPadMockup({
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
+        <MockupContent
+          contentScene={mockup}
+          sceneTime={sceneTime}
+          parentLocale={scene.locale}
+        />
       </div>
     </div>
   );
@@ -263,7 +281,11 @@ function MacbookMockup({
           className={cn("w-full h-full overflow-hidden", style.screenRadius)}
           style={{ backgroundColor: mockup.content.background || "#ffffff" }}
         >
-          <MockupContent contentScene={mockup} sceneTime={sceneTime} />
+          <MockupContent
+            contentScene={mockup}
+            sceneTime={sceneTime}
+            parentLocale={scene.locale}
+          />
         </div>
       </div>
       {/* Base */}
@@ -323,7 +345,11 @@ function BrowserMockup({
           backgroundColor: mockup.content.background || "#ffffff",
         }}
       >
-        <MockupContent contentScene={mockup} sceneTime={sceneTime} />
+        <MockupContent
+          contentScene={mockup}
+          sceneTime={sceneTime}
+          parentLocale={scene.locale}
+        />
       </div>
     </div>
   );
@@ -332,9 +358,12 @@ function BrowserMockup({
 export function MockupScene({
   scene,
   sceneTime,
+  inheritedLocale,
 }: {
   scene: Scene;
   sceneTime: number;
+  /** Locale inherited when this mockup is nested inside another composite scene. */
+  inheritedLocale?: string;
 }) {
   const controls = useAnimation();
 
@@ -355,27 +384,31 @@ export function MockupScene({
   if (!mockup) return null;
 
   const style = deviceStyles[mockup.device] || deviceStyles.browser;
+  const sceneWithInheritedLocale =
+    scene.locale !== undefined || inheritedLocale === undefined
+      ? scene
+      : { ...scene, locale: inheritedLocale };
 
   const renderDevice = () => {
     switch (mockup.device) {
       case "iphone":
         return (
-          <IPhoneMockup scene={scene} style={style} sceneTime={sceneTime} />
+          <IPhoneMockup scene={sceneWithInheritedLocale} style={style} sceneTime={sceneTime} />
         );
       case "android":
         return (
-          <AndroidMockup scene={scene} style={style} sceneTime={sceneTime} />
+          <AndroidMockup scene={sceneWithInheritedLocale} style={style} sceneTime={sceneTime} />
         );
       case "ipad":
-        return <IPadMockup scene={scene} style={style} sceneTime={sceneTime} />;
+        return <IPadMockup scene={sceneWithInheritedLocale} style={style} sceneTime={sceneTime} />;
       case "macbook":
         return (
-          <MacbookMockup scene={scene} style={style} sceneTime={sceneTime} />
+          <MacbookMockup scene={sceneWithInheritedLocale} style={style} sceneTime={sceneTime} />
         );
       case "browser":
       default:
         return (
-          <BrowserMockup scene={scene} style={style} sceneTime={sceneTime} />
+          <BrowserMockup scene={sceneWithInheritedLocale} style={style} sceneTime={sceneTime} />
         );
     }
   };

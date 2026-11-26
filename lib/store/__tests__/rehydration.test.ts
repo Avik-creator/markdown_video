@@ -93,6 +93,7 @@ describe("store rehydration", () => {
       markdownOrigin: "editor",
       currentLocale: "es",
       localizationStrings: { welcome: { en: "Welcome", es: "Bienvenido" } },
+      activeLocale: "es",
     });
 
     const { useVideoStore } = await import("../../use-video-store");
@@ -102,12 +103,41 @@ describe("store rehydration", () => {
     expect(state.markdown).toBe(STORED_MARKDOWN);
     expect(state.markdownRevision).toBe(0);
     expect(state.markdownOrigin).toBeNull();
+    // localizationStrings is now real derived state, so it is recomputed from
+    // the restored markdown rather than resurrected from the stale payload.
+    expect(state.localizationStrings).toEqual({});
+    expect(state.activeLocale).toBeNull();
     expect(runtimeState).not.toHaveProperty("currentLocale");
-    expect(runtimeState).not.toHaveProperty("localizationStrings");
     expect(runtimeState).not.toHaveProperty("setCurrentLocale");
     expect(runtimeState).not.toHaveProperty("setLocalizationStrings");
     expect(runtimeState).not.toHaveProperty("addLocale");
     expect(runtimeState).not.toHaveProperty("removeLocale");
+  });
+
+  it("recomputes localized document metadata during rehydration", async () => {
+    seedStorage({
+      markdown: `!locales en es
+!strings
+welcome:
+  en: "Welcome"
+  es: "Bienvenido"
+---
+!scene
+!text i18n:welcome
+`,
+      markers: [],
+    });
+
+    const { useVideoStore } = await import("../../use-video-store");
+    const state = useVideoStore.getState();
+
+    expect(state.locales).toEqual(["en", "es"]);
+    expect(state.defaultLocale).toBe("en");
+    expect(state.localizationStrings.welcome).toEqual({
+      en: "Welcome",
+      es: "Bienvenido",
+    });
+    expect(state.scenes[0].text?.i18nKey).toBe("welcome");
   });
 
   it("falls back to the default document when storage is empty", async () => {

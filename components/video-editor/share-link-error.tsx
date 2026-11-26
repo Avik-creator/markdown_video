@@ -8,6 +8,7 @@ export type ShareLinkErrorKind =
   | "invalid-markdown"
   | "project-not-found"
   | "project-unavailable"
+  | "rate-limited"
   | "legacy-too-large"
 
 interface ShareLinkErrorProps {
@@ -30,6 +31,11 @@ const ERROR_CONTENT: Record<ShareLinkErrorKind, { title: string; description: st
     title: "Could not load the shared project",
     description:
       "Temporary project storage is not responding right now. Try opening the link again later, or ask the sender to export the project instead.",
+  },
+  "rate-limited": {
+    title: "Too many requests",
+    description:
+      "This shared project link is being opened too frequently right now, so the load was skipped. Wait a few seconds and try the link again.",
   },
   "legacy-too-large": {
     title: "This legacy share link is incomplete",

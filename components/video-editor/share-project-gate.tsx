@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@components/ui/dialog"
 import { useVideoStore } from "@/lib/use-video-store"
+import { DEFAULT_MARKDOWN } from "@/lib/default-markdown"
 
 const VIDEO_STORE_STORAGE_KEY = "markdown-video-storage"
 const PREVIEW_CHARACTER_LIMIT = 700
@@ -68,6 +69,17 @@ function summarizeMarkdown(markdown: string): { lines: number; characters: numbe
   }
 }
 
+/**
+ * Whether the visitor's saved markdown is just the untouched default
+ * document — in which case there is nothing worth protecting behind a
+ * confirmation prompt. Compared exactly except for trailing whitespace: a
+ * stray trailing newline or space carries no user content, while leading or
+ * interior differences are real edits that keep the prompt.
+ */
+export function isUntouchedDefaultMarkdown(markdown: string): boolean {
+  return markdown.trimEnd() === DEFAULT_MARKDOWN.trimEnd()
+}
+
 export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProjectGateProps) {
   const [decision, setDecision] = useState<GateDecision>("checking")
   const [savedMarkdown, setSavedMarkdown] = useState<string | null>(null)
@@ -100,7 +112,11 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
     const localMarkdown = readSavedMarkdown()
     setSavedMarkdown(localMarkdown)
 
-    if (localMarkdown === null || localMarkdown === initialMarkdown) {
+    if (
+      localMarkdown === null ||
+      localMarkdown === initialMarkdown ||
+      isUntouchedDefaultMarkdown(localMarkdown)
+    ) {
       setDecision("accepted")
     } else {
       setDecision("pending")

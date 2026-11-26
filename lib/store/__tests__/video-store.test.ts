@@ -24,6 +24,7 @@ function resetStore() {
   useVideoStore.getState().setTheme("default");
   useVideoStore.getState().setAspectRatio("16:9");
   useVideoStore.getState().setExportSettings({ fps: 30 });
+  useVideoStore.getState().setActiveLocale(null);
   useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
   useVideoStore.setState({ currentTime: 0, isPlaying: false, markers: [] });
 }
@@ -136,6 +137,59 @@ describe("markdown mutation metadata", () => {
   });
 });
 
+describe("localization state", () => {
+  beforeEach(resetStore);
+
+  const localizedMarkdown = `!locales en es fr
+!strings
+welcome:
+  en: "Welcome"
+  es: "Bienvenido"
+  fr: "Bienvenue"
+
+---
+
+!scene
+!text i18n:welcome
+`;
+
+  it("recomputes locales, strings, and the default locale on setMarkdown", () => {
+    useVideoStore.getState().setMarkdown(localizedMarkdown, false);
+    const state = useVideoStore.getState();
+
+    expect(state.locales).toEqual(["en", "es", "fr"]);
+    expect(state.defaultLocale).toBe("en");
+    expect(state.localizationStrings).toEqual({
+      welcome: { en: "Welcome", es: "Bienvenido", fr: "Bienvenue" },
+    });
+  });
+
+  it("clears document-derived localization state for a monolingual document", () => {
+    useVideoStore.getState().setMarkdown(localizedMarkdown, false);
+    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
+    const state = useVideoStore.getState();
+
+    expect(state.locales).toEqual([]);
+    expect(state.localizationStrings).toEqual({});
+    expect(state.defaultLocale).toBeUndefined();
+  });
+
+  it("stores activeLocale as runtime-only state and does not validate or clear it eagerly", () => {
+    useVideoStore.getState().setMarkdown(localizedMarkdown, false);
+    useVideoStore.getState().setActiveLocale("es");
+    expect(useVideoStore.getState().activeLocale).toBe("es");
+
+    // Document edits recompute derived tables but do not erase the user's
+    // runtime selection. Resolution ignores it if it is no longer declared.
+    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
+    expect(useVideoStore.getState().activeLocale).toBe("es");
+
+    const raw = memoryStorage.getItem(STORAGE_KEY);
+    expect(raw).toBeTruthy();
+    expect(JSON.parse(raw as string).state).not.toHaveProperty("activeLocale");
+  });
+});
+
 describe("persistence", () => {
   beforeEach(resetStore);
   afterEach(() => {
@@ -167,11 +221,14 @@ describe("persistence", () => {
     expect(stored.state).not.toHaveProperty("localizationStrings");
   });
 
-  it("does not expose unfinished localization UI state on the store", () => {
+  it("exposes real document-derived localization state without legacy mutation APIs", () => {
     const state = useVideoStore.getState() as unknown as Record<string, unknown>;
 
+    expect(state).toHaveProperty("locales");
+    expect(state).toHaveProperty("localizationStrings");
+    expect(state).toHaveProperty("activeLocale");
+    expect(state).toHaveProperty("setActiveLocale");
     expect(state).not.toHaveProperty("currentLocale");
-    expect(state).not.toHaveProperty("localizationStrings");
     expect(state).not.toHaveProperty("setCurrentLocale");
     expect(state).not.toHaveProperty("setLocalizationStrings");
     expect(state).not.toHaveProperty("addLocale");

@@ -300,14 +300,38 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     (d: Diagnostic) => {
       const view = viewRef.current;
       if (!view) return;
-      const change = diagnosticFixChange(view.state.doc, d);
+
+      // Validation is debounced, so the panel entry being acted on can be
+      // stale relative to the live document — applying it blindly would edit
+      // the wrong text or no-op. Force synchronous validation, then apply
+      // only when an equivalent diagnostic with the same fix is still
+      // present for the current document. The recheck is strict about the
+      // line number: the same message one line up or down is a different
+      // edit site than the one the user clicked.
+      syncRef.current?.validateNow();
+      const current = getDiagnostics(view.state.doc.toString());
+      const match = current.find(
+        (candidate) =>
+          candidate.line === d.line &&
+          candidate.severity === d.severity &&
+          candidate.message === d.message &&
+          candidate.fix?.find === d.fix?.find &&
+          candidate.fix?.replace === d.fix?.replace
+      );
+      if (!match) {
+        // validateNow() already refreshed the panel and lint ranges, so the
+        // stale entry disappears instead of the button silently no-oping.
+        return;
+      }
+
+      const change = diagnosticFixChange(view.state.doc, match);
       if (change) {
         view.dispatch({
           changes: { from: change.from, to: change.to, insert: change.insert },
         });
       }
-      if (d.line) {
-        selectLine(d.line);
+      if (match.line) {
+        selectLine(match.line);
       } else {
         view.contentDOM.focus();
       }

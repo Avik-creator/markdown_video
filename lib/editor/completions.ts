@@ -1,5 +1,6 @@
 import { getAllDirectives, type DirectiveDoc } from "@/lib/mcp/documentation";
-import { normalizeDirective } from "@/lib/parser/utils";
+import { parseLocalizationStringsBlock } from "@/lib/parser/i18n";
+import { normalizeDirective, parseDirective } from "@/lib/parser/utils";
 
 export interface Completion {
   label: string;
@@ -56,6 +57,69 @@ function result(from: number, to: number, items: Completion[]): CompletionResult
   return items.length > 0 ? { from, to, items } : null;
 }
 
+/** Keys defined by document-level !strings blocks, in first-seen order. */
+function localizationKeysInDocument(text: string): string[] {
+  const lines = text.split(/\r?\n/);
+  const keys: string[] = [];
+  let insideScene = false;
+  let inFence = false;
+
+  for (let index = 0; index < lines.length; index++) {
+    const line = lines[index].trim();
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+    if (line === "---") {
+      insideScene = false;
+      continue;
+    }
+
+    const directive = parseDirective(line);
+    if (!directive) continue;
+    if (directive.canonicalName === "scene") {
+      insideScene = true;
+      continue;
+    }
+    if (directive.canonicalName !== "strings" || insideScene) continue;
+
+    const parsed = parseLocalizationStringsBlock(lines, index + 1);
+    for (const key of Object.keys(parsed.localizationStrings)) {
+      if (!keys.includes(key)) keys.push(key);
+    }
+    index = parsed.endIndex - 1;
+  }
+
+  return keys;
+}
+
+function isI18nKeyProperty(doc: DirectiveDoc | undefined, key: string): boolean {
+  const lower = key.toLowerCase();
+  return (
+    (doc?.name === "text" || doc?.name === "mockup") &&
+    (doc.properties ?? []).some(
+      (property) =>
+        property.name === "i18nKey" &&
+        (property.name.toLowerCase() === lower ||
+          (property.aliases?.some((alias) => alias.toLowerCase() === lower) ?? false))
+    )
+  );
+}
+
+function i18nKeyCompletions(
+  text: string,
+  cursor: number,
+  typedPrefix: string
+): CompletionResult | null {
+  const items = localizationKeysInDocument(text).map((key) => ({
+    label: key,
+    insert: key,
+    detail: "Localization key",
+  }));
+  return result(cursor - typedPrefix.length, cursor, filter(items, typedPrefix));
+}
+
 /**
  * Completions for the cursor position, or null when there is nothing to offer.
  * Handles directive names after "!", values for directive arguments
@@ -95,6 +159,9 @@ export function getCompletions(text: string, cursor: number): CompletionResult |
     const keyValue = args.match(/(?:^|\s)(\w+):([\w-]*)$/);
     if (keyValue) {
       const [, key, value] = keyValue;
+      if (isI18nKeyProperty(doc, key)) {
+        return i18nKeyCompletions(text, cursor, value);
+      }
       const items = valuesFor(doc, key).map((v) => ({ label: v, insert: v }));
       return result(cursor - value.length, cursor, filter(items, value));
     }
@@ -122,6 +189,9 @@ export function getCompletions(text: string, cursor: number): CompletionResult |
   if (blockProperty) {
     const [, key, value] = blockProperty;
     const doc = enclosingBlock(text, lineStart);
+    if (isI18nKeyProperty(doc, key)) {
+      return i18nKeyCompletions(text, cursor, value);
+    }
     const items = valuesFor(doc, key).map((v) => ({ label: v, insert: v }));
     return result(cursor - value.length, cursor, filter(items, value));
   }

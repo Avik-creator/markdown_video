@@ -398,20 +398,26 @@ includeSubtitles: true`}
       <Section title="Localization & i18n">
         <CodeExample
           title="localization-basic.md"
-          code={`!locale en
+          code={`!locales en es
+
+!strings
+welcome:
+  en: "Welcome to our video"
+  es: "Bienvenido a nuestro video"
+
+---
+
 !scene
-!text
-Welcome to our video
+!text i18n:welcome
 animation: fadeIn
 
 !duration 3s
 
 ---
 
-!locale es
 !scene
-!text
-Bienvenido a nuestro video
+!locale es
+!text i18n:welcome
 animation: fadeIn
 
 !duration 3s`}
@@ -457,9 +463,12 @@ welcome:
           />
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          <strong>Global Reach:</strong> One markdown file → 10 languages.
-          Define locales and strings once, export in any language. Perfect for
-          enterprise and global creators.
+          <strong>Global Reach:</strong> the first locale in{" "}
+          <code className="text-pink-400">!locales</code> is the document
+          default. A scene-level <code className="text-pink-400">!locale</code>{" "}
+          overrides the preview/export locale for that scene. Translation
+          fallback is: effective locale → default locale → first defined
+          translation → inline text in the same text object → the literal key.
         </p>
       </Section>
 

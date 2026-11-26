@@ -17,6 +17,7 @@ import {
   reorderScenesInMarkdown,
 } from "./timeline-utils"
 import type { AdjacentReorderDirection } from "./timeline-utils"
+import { flushPendingEditorText } from "@/lib/editor/codemirror/store-sync"
 
 interface TimelineSegmentProps {
   segment: TimelineSegmentData
@@ -144,9 +145,6 @@ export function Timeline() {
   const seekTo = useVideoStore((state) => state.seekTo)
   const markers = useVideoStore((state) => state.markers)
   const removeMarker = useVideoStore((state) => state.removeMarker)
-  const markdown = useVideoStore((state) => state.markdown)
-  const setMarkdown = useVideoStore((state) => state.setMarkdown)
-
   const timelineRef = useRef<HTMLDivElement>(null)
   const [orderedSegments, setOrderedSegments] = useState(segments)
   const [reorderAnnouncement, setReorderAnnouncement] = useState("")
@@ -184,17 +182,34 @@ export function Timeline() {
   }, [])
 
   const resetVisualOrder = useCallback(() => {
-    orderedSegmentsRef.current = segments
-    setOrderedSegments(segments)
-  }, [segments])
+    // Read imperatively: after a mid-reorder flush reparse, the React closure
+    // can still hold the pre-reparse segments for a frame.
+    const currentSegments = useVideoStore.getState().segments
+    orderedSegmentsRef.current = currentSegments
+    setOrderedSegments(currentSegments)
+  }, [])
 
   /**
    * Persist the visual reorder by rewriting the scene blocks in the markdown
    * source. If anything looks inconsistent the visual order snaps back to the
    * real one instead of corrupting the document.
+   *
+   * Uncommitted editor typing is flushed first, like every other flow that
+   * rewrites the store markdown (project menu, templates): without the flush
+   * the rewrite would be computed from stale text and the pending keystrokes
+   * would be clobbered. State is then read imperatively because the flush's
+   * reparse can make this callback's React closure stale — scene ids are
+   * regenerated on every parse. When a flush did reparse mid-drag, the visual
+   * order's stale ids no longer form a permutation of the fresh ones and the
+   * reorder is dropped rather than applied to the wrong document. That drop
+   * requires typing within the commit window before the drop of a drag, which
+   * is vanishingly rare next to the certainty of never losing typed text.
    */
   const commitReorder = useCallback(() => {
-    const currentIds = segments.map((s) => s.sceneId)
+    flushPendingEditorText()
+    const state = useVideoStore.getState()
+
+    const currentIds = state.segments.map((s) => s.sceneId)
     const reorderedIds = orderedSegmentsRef.current.map((s) => s.sceneId)
     const order = indexPermutation(currentIds, reorderedIds)
 
@@ -208,8 +223,8 @@ export function Timeline() {
     }
 
     const ranges: SourceRange[] = []
-    for (const segment of segments) {
-      const scene = scenes.find((s) => s.id === segment.sceneId)
+    for (const segment of state.segments) {
+      const scene = state.scenes.find((s) => s.id === segment.sceneId)
       const range = scene?.sourceMap?.scene
       if (!range) {
         resetVisualOrder()
@@ -218,14 +233,14 @@ export function Timeline() {
       ranges.push(range)
     }
 
-    const newMarkdown = reorderScenesInMarkdown(markdown, ranges, order)
+    const newMarkdown = reorderScenesInMarkdown(state.markdown, ranges, order)
     if (newMarkdown === null) {
       resetVisualOrder()
       return false
     }
-    setMarkdown(newMarkdown)
+    state.setMarkdown(newMarkdown)
     return true
-  }, [segments, scenes, markdown, setMarkdown, resetVisualOrder])
+  }, [resetVisualOrder])
 
   const handleReorderDragStart = useCallback(() => {
     isReorderDraggingRef.current = true
@@ -239,7 +254,14 @@ export function Timeline() {
 
   const handleKeyboardReorder = useCallback(
     (position: number, direction: AdjacentReorderDirection) => {
-      const reorder = adjacentReorder(segments.length, position, direction)
+      // Flush before measuring anything: uncommitted typing reparses every
+      // scene id, so a permutation computed from stale segments could never
+      // apply cleanly. When nothing is pending the flush is a no-op and the
+      // fresh state is the same state the closure already saw.
+      flushPendingEditorText()
+      const currentSegments = useVideoStore.getState().segments
+
+      const reorder = adjacentReorder(currentSegments.length, position, direction)
       if (!reorder) {
         setReorderAnnouncement(
           direction === "left"
@@ -249,7 +271,7 @@ export function Timeline() {
         return
       }
 
-      const reorderedSegments = reorder.order.map((originalIndex) => segments[originalIndex])
+      const reorderedSegments = reorder.order.map((originalIndex) => currentSegments[originalIndex])
       orderedSegmentsRef.current = reorderedSegments
 
       if (!commitReorder()) {
@@ -266,10 +288,10 @@ export function Timeline() {
 
       pendingReorderFocusIndexRef.current = reorder.targetIndex
       setReorderAnnouncement(
-        `Scene moved to position ${reorder.targetIndex + 1} of ${segments.length}`
+        `Scene moved to position ${reorder.targetIndex + 1} of ${currentSegments.length}`
       )
     },
-    [segments, commitReorder]
+    [commitReorder]
   )
 
   const handleTrackPointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {

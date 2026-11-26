@@ -4,6 +4,7 @@ import { advancePlaybackTime, useVideoStore } from "@/lib/use-video-store"
 import { useEffect } from "react"
 import { Play, Pause, SkipBack, SkipForward } from "lucide-react"
 import { cn } from "@/lib/utils"
+import { LocalePicker } from "./scene-preview/components/LocalePicker"
 
 function formatTime(seconds: number): string {
   const mins = Math.floor(seconds / 60)
@@ -137,6 +138,7 @@ export function Controls() {
 
       {/* Playback speed */}
       <div className="ml-auto flex items-center gap-2">
+        <LocalePicker />
         <span className="text-xs text-gray-600 dark:text-neutral-400">Speed</span>
         <select
           aria-label="Playback speed"

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  detectShortcutPlatform,
   hasPlainShortcutModifier,
   matchesCtrlOrMetaShortcut,
   matchesKey,
@@ -7,6 +8,7 @@ import {
   playbackSpeedIndex,
   shouldUsePlainShortcut,
   stepFrameTime,
+  type ShortcutEventLike,
 } from "../keyboard";
 
 function keyEvent(
@@ -29,6 +31,20 @@ function keyEvent(
   };
 }
 
+/**
+ * The key-matching and layout-fallback behavior tests below predate
+ * platform-aware modifiers and describe the permissive non-mac rules. Pin
+ * the platform explicitly so the suite does not depend on the host machine's
+ * own navigator (a macOS dev machine would otherwise flip them).
+ */
+function matchesOtherPlatform(
+  event: ShortcutEventLike,
+  key: string,
+  options: { shiftKey?: boolean } = {}
+) {
+  return matchesCtrlOrMetaShortcut(event, key, { ...options, platform: "other" });
+}
+
 describe("normalizeKey", () => {
   it("normalizes single letter keys case-insensitively", () => {
     expect(normalizeKey("Z")).toBe("z");
@@ -44,13 +60,13 @@ describe("normalizeKey", () => {
 describe("matchesCtrlOrMetaShortcut", () => {
   it("matches Ctrl+Z for undo", () => {
     expect(
-      matchesCtrlOrMetaShortcut(keyEvent("z", { ctrlKey: true }), "z")
+      matchesOtherPlatform(keyEvent("z", { ctrlKey: true }), "z")
     ).toBe(true);
   });
 
   it("matches Cmd+Shift+Z for redo even when the key is uppercase", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("Z", { metaKey: true, shiftKey: true }),
         "z",
         { shiftKey: true }
@@ -60,7 +76,7 @@ describe("matchesCtrlOrMetaShortcut", () => {
 
   it("does not match when the shift state differs", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("Z", { ctrlKey: true, shiftKey: true }),
         "z"
       )
@@ -69,7 +85,7 @@ describe("matchesCtrlOrMetaShortcut", () => {
 
   it("does not match when Alt is also pressed", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("z", { ctrlKey: true, altKey: true }),
         "z"
       )
@@ -77,10 +93,118 @@ describe("matchesCtrlOrMetaShortcut", () => {
   });
 });
 
+describe("platform-dependent modifiers", () => {
+  it("on macOS, bare Ctrl+Z does not trigger undo — it is the emacs text-editing layer", () => {
+    expect(
+      matchesCtrlOrMetaShortcut(keyEvent("z", { ctrlKey: true }), "z", {
+        platform: "mac",
+      })
+    ).toBe(false);
+  });
+
+  it("on macOS, Cmd+Z triggers undo", () => {
+    expect(
+      matchesCtrlOrMetaShortcut(keyEvent("z", { metaKey: true }), "z", {
+        platform: "mac",
+      })
+    ).toBe(true);
+  });
+
+  it("on macOS, Ctrl+Cmd together is not the shortcut", () => {
+    expect(
+      matchesCtrlOrMetaShortcut(
+        keyEvent("z", { ctrlKey: true, metaKey: true }),
+        "z",
+        { platform: "mac" }
+      )
+    ).toBe(false);
+  });
+
+  it("on macOS, the emacs-conflicting letters stay text-editing keys", () => {
+    // Ctrl+N/E/O/H/F are next-line, end-of-line, open-line, delete-back and
+    // forward-char on macOS — none of them may fire the new/export/open/
+    // replace/find application shortcuts.
+    for (const key of ["n", "e", "o", "h", "f"]) {
+      expect(
+        matchesCtrlOrMetaShortcut(keyEvent(key, { ctrlKey: true }), key, {
+          platform: "mac",
+        })
+      ).toBe(false);
+    }
+  });
+
+  it("on other platforms, Ctrl+Z still triggers undo", () => {
+    expect(
+      matchesCtrlOrMetaShortcut(keyEvent("z", { ctrlKey: true }), "z", {
+        platform: "other",
+      })
+    ).toBe(true);
+  });
+
+  it("on other platforms, Cmd+Z also triggers undo and Ctrl+Cmd together still matches", () => {
+    expect(
+      matchesCtrlOrMetaShortcut(keyEvent("z", { metaKey: true }), "z", {
+        platform: "other",
+      })
+    ).toBe(true);
+    expect(
+      matchesCtrlOrMetaShortcut(
+        keyEvent("z", { ctrlKey: true, metaKey: true }),
+        "z",
+        { platform: "other" }
+      )
+    ).toBe(true);
+  });
+
+  it("keeps exact shift matching on macOS too", () => {
+    expect(
+      matchesCtrlOrMetaShortcut(
+        keyEvent("Z", { metaKey: true, shiftKey: true }),
+        "z",
+        { platform: "mac" }
+      )
+    ).toBe(false);
+    expect(
+      matchesCtrlOrMetaShortcut(
+        keyEvent("Z", { metaKey: true, shiftKey: true }),
+        "z",
+        { platform: "mac", shiftKey: true }
+      )
+    ).toBe(true);
+  });
+});
+
+describe("detectShortcutPlatform", () => {
+  it("detects macOS from navigator.platform", () => {
+    expect(detectShortcutPlatform({ platform: "MacIntel", userAgent: "" })).toBe("mac");
+    expect(detectShortcutPlatform({ platform: "MacPPC", userAgent: "" })).toBe("mac");
+  });
+
+  it("falls back to the user agent when platform is empty", () => {
+    expect(
+      detectShortcutPlatform({
+        platform: "",
+        userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+      })
+    ).toBe("mac");
+  });
+
+  it("treats Windows, Linux and unknown platforms as non-mac", () => {
+    expect(detectShortcutPlatform({ platform: "Win32", userAgent: "" })).toBe("other");
+    expect(detectShortcutPlatform({ platform: "Linux x86_64", userAgent: "" })).toBe("other");
+    expect(detectShortcutPlatform({ platform: "", userAgent: "" })).toBe("other");
+    expect(detectShortcutPlatform({})).toBe("other");
+  });
+
+  it("falls back to the ambient navigator without throwing", () => {
+    expect(["mac", "other"]).toContain(detectShortcutPlatform());
+  });
+});
+
 describe("non-Latin keyboard layouts", () => {
   it("matches Ctrl+Z when a Cyrillic layout reports key 'я' at physical KeyZ", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("я", { code: "KeyZ", ctrlKey: true }),
         "z"
       )
@@ -89,7 +213,7 @@ describe("non-Latin keyboard layouts", () => {
 
   it("matches Ctrl+Z when a Greek layout reports key 'ζ' at physical KeyZ", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("ζ", { code: "KeyZ", ctrlKey: true }),
         "z"
       )
@@ -98,7 +222,7 @@ describe("non-Latin keyboard layouts", () => {
 
   it("matches Cmd+Z when a Hebrew layout reports key 'ז' at physical KeyZ", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("ז", { code: "KeyZ", metaKey: true }),
         "z"
       )
@@ -107,17 +231,17 @@ describe("non-Latin keyboard layouts", () => {
 
   it("keeps undo and redo distinct on non-Latin layouts via exact shift matching", () => {
     const shifted = keyEvent("Я", { code: "KeyZ", ctrlKey: true, shiftKey: true });
-    expect(matchesCtrlOrMetaShortcut(shifted, "z")).toBe(false);
-    expect(matchesCtrlOrMetaShortcut(shifted, "z", { shiftKey: true })).toBe(true);
+    expect(matchesOtherPlatform(shifted, "z")).toBe(false);
+    expect(matchesOtherPlatform(shifted, "z", { shiftKey: true })).toBe(true);
 
     const unshifted = keyEvent("я", { code: "KeyZ", ctrlKey: true });
-    expect(matchesCtrlOrMetaShortcut(unshifted, "z")).toBe(true);
-    expect(matchesCtrlOrMetaShortcut(unshifted, "z", { shiftKey: true })).toBe(false);
+    expect(matchesOtherPlatform(unshifted, "z")).toBe(true);
+    expect(matchesOtherPlatform(unshifted, "z", { shiftKey: true })).toBe(false);
   });
 
   it("still excludes AltGr combinations on non-Latin layouts", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("я", { code: "KeyZ", ctrlKey: true, altKey: true }),
         "z"
       )
@@ -130,7 +254,7 @@ describe("non-Latin keyboard layouts", () => {
     // reported key is a Latin letter, key-based matching keeps governing and
     // the physical-position fallback must not fire.
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("y", { code: "KeyZ", ctrlKey: true }),
         "z"
       )
@@ -138,7 +262,7 @@ describe("non-Latin keyboard layouts", () => {
     // ...while the key actually labeled Z on that layout (physical KeyY)
     // still matches through its key value, exactly as before.
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("z", { code: "KeyY", ctrlKey: true }),
         "z"
       )
@@ -147,7 +271,7 @@ describe("non-Latin keyboard layouts", () => {
 
   it("does not match when the physical key position is different", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("я", { code: "KeyX", ctrlKey: true }),
         "z"
       )
@@ -156,19 +280,19 @@ describe("non-Latin keyboard layouts", () => {
 
   it("does not match a non-Latin key when the event carries no code", () => {
     expect(
-      matchesCtrlOrMetaShortcut(keyEvent("я", { ctrlKey: true }), "z")
+      matchesOtherPlatform(keyEvent("я", { ctrlKey: true }), "z")
     ).toBe(false);
   });
 
   it("keeps US-layout behavior unchanged", () => {
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("z", { code: "KeyZ", ctrlKey: true }),
         "z"
       )
     ).toBe(true);
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("y", { code: "KeyY", ctrlKey: true }),
         "z"
       )
@@ -179,13 +303,13 @@ describe("non-Latin keyboard layouts", () => {
     // Cyrillic 'эс' layout positions: physical KeyF reports 'а', KeyS reports
     // 'ы' — the letters differ, only the physical position is stable.
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("а", { code: "KeyF", ctrlKey: true }),
         "f"
       )
     ).toBe(true);
     expect(
-      matchesCtrlOrMetaShortcut(
+      matchesOtherPlatform(
         keyEvent("ы", { code: "KeyS", metaKey: true }),
         "s"
       )

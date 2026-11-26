@@ -274,7 +274,8 @@ export const DIRECTIVE_SCHEMAS = [
         aliases: ["i18n", "i18nkey"],
         type: "string",
         required: false,
-        description: "Localization key for multi-language support",
+        description:
+          "Localization key for multi-language support. Lookup order: effective locale, default locale, first defined translation, inline text, then the literal key.",
       },
     ],
   },
@@ -553,6 +554,13 @@ export const DIRECTIVE_SCHEMAS = [
         values: TEXT_SIZE_VALUES,
         errorLabel: "mockup text size",
         valuesLabel: "sizes",
+      },
+      {
+        name: "i18nKey",
+        aliases: ["i18n", "i18nkey"],
+        type: "string",
+        required: false,
+        description: "Localization key for mockup text content",
       },
     ],
   },
@@ -1133,12 +1141,13 @@ export const DIRECTIVE_SCHEMAS = [
   {
     name: "locale",
     aliases: [],
-    description: "Sets the locale for a scene (i18n support)",
+    description:
+      "Sets the locale override for the containing scene. It is scene-only: document-level !locale lines are ignored, and the document default is the first !locales entry.",
     syntax: "!locale en|es|fr|de|...",
     category: "meta",
     examples: [
-      "!locale es\n!scene\n!text\nBienvenido",
-      "!locale fr\n!scene\n!text\nBienvenue",
+      "!scene\n!locale es\n!text i18n:welcome",
+      "!scene\n!locale fr\n!text\nFallback inline text\ni18nKey: welcome",
     ],
     positional: [
       {
@@ -1152,12 +1161,14 @@ export const DIRECTIVE_SCHEMAS = [
   {
     name: "locales",
     aliases: [],
-    description: "Defines supported locales for the video",
+    description:
+      "Defines supported locales for the video. The first valid locale is the document default; if repeated, the most recent non-empty list replaces the previous one.",
     syntax: "!locales en es fr de ...",
     category: "meta",
     examples: [
       "!locales en es fr de",
       "!locales en es fr de ja zh",
+      "!locales en pt-BR zh-CN",
     ],
     positional: [
       {
@@ -1171,7 +1182,8 @@ export const DIRECTIVE_SCHEMAS = [
   {
     name: "strings",
     aliases: [],
-    description: "Defines localization strings for i18n",
+    description:
+      "Defines localization strings. Keys are unindented `key:` lines; translations are indented `locale: value` lines (quotes optional). Multiple blocks merge, with later duplicate translations winning.",
     syntax: "!strings",
     category: "meta",
     examples: [

@@ -196,6 +196,30 @@ describe("export input validation", () => {
     });
   });
 
+  it("does not overshoot by one frame when floating point inflates an integral frame count", () => {
+    // 8.3 * 30 is exactly 249 frames mathematically, but IEEE-754 multiplication
+    // produces 249.00000000000003; a naive Math.ceil would render a 250th frame.
+    expect(8.3 * 30).toBeGreaterThan(249);
+    expect(getTotalFrameCount(8.3, 30)).toBe(249);
+    expect(getTotalFrameCount(16.1, 30)).toBe(483);
+    expect(getTotalFrameCount(16.6, 30)).toBe(498);
+    // 2.2 * 25 is exactly 55 mathematically but 55.00000000000001 in floating point.
+    expect(2.2 * 25).toBeGreaterThan(55);
+    expect(getTotalFrameCount(2.2, 25)).toBe(55);
+    // Exactly integral seconds are exact in floating point too.
+    expect(getTotalFrameCount(4, 30)).toBe(120);
+
+    const validation = validateExportInput({ sceneCount: 1, totalDuration: 8.3, fps: 30 });
+    expect(validation.totalFrameCount).toBe(249);
+  });
+
+  it("still rounds genuinely fractional frame counts up", () => {
+    // 4.1s is fractional in seconds but exactly 123 frames at 30fps.
+    expect(getTotalFrameCount(4.1, 30)).toBe(123);
+    // 124.5 frames really does need the ceiling: the final partial frame exists.
+    expect(getTotalFrameCount(4.15, 30)).toBe(125);
+  });
+
   it("rejects exports with no scenes", () => {
     const validation = validateExportInput({ sceneCount: 0, totalDuration: 2, fps: 30 });
 

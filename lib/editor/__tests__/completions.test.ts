@@ -79,6 +79,41 @@ describe("directive arguments", () => {
   });
 });
 
+describe("localization keys", () => {
+  const localizedPrefix = `!locales en es
+!strings
+welcome:
+  en: "Welcome"
+cta-main:
+  en: "Start"
+---
+!scene
+`;
+
+  it("completes keys after the text shorthand prefix", () => {
+    const { labels, replaced } = at(`${localizedPrefix}!text i18n:wel|`);
+    expect(labels).toEqual(["welcome"]);
+    expect(replaced).toBe("wel");
+  });
+
+  it("completes keys in text and mockup block properties", () => {
+    expect(at(`${localizedPrefix}!text\nHi\ni18nKey: cta|`).labels).toEqual(["cta-main"]);
+    expect(at(`${localizedPrefix}!mockup device:iphone\ni18nKey: |`).labels).toEqual([
+      "welcome",
+      "cta-main",
+    ]);
+  });
+
+  it("does not treat strings nested inside a scene as document keys", () => {
+    const nested = `!scene
+!strings
+nested:
+  en: "Nested"
+!text i18n:nest|`;
+    expect(at(nested).result).toBeNull();
+  });
+});
+
 describe("block properties", () => {
   it("completes animation values inside a text block", () => {
     const { labels, replaced } = at("!scene\n!text\nHello\nanimation: sl|");

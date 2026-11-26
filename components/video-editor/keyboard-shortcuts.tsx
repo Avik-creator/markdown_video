@@ -1,15 +1,33 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from "@components/ui/dialog";
+import { detectShortcutPlatform } from "./video-editor/utils/keyboard";
 
 interface KeyboardShortcutsProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+}
+
+// The modifier label depends on the visitor's platform, which is unknowable
+// on the server. useSyncExternalStore keeps the hydration contract honest:
+// the server snapshot always renders "Ctrl" and macOS clients switch to "⌘"
+// after hydration instead of mismatching the prerendered markup.
+function subscribeToPlatform() {
+  return () => {};
+}
+
+function getMacClientSnapshot() {
+  return detectShortcutPlatform() === "mac";
+}
+
+function getMacServerSnapshot() {
+  return false;
 }
 
 const shortcuts = [
@@ -64,6 +82,15 @@ export function KeyboardShortcuts({
   open,
   onOpenChange,
 }: KeyboardShortcutsProps) {
+  const isMac = useSyncExternalStore(
+    subscribeToPlatform,
+    getMacClientSnapshot,
+    getMacServerSnapshot
+  );
+  // Application shortcuts are Cmd-only on macOS, where bare Ctrl+letter keys
+  // belong to emacs-style text editing; elsewhere Ctrl (or Cmd) fires them.
+  const modifierKey = isMac ? "⌘" : "Ctrl";
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
@@ -92,7 +119,7 @@ export function KeyboardShortcuts({
                       {shortcut.keys.map((key, j) => (
                         <span key={j}>
                           <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-xs font-mono text-zinc-300">
-                            {key}
+                            {key === "Ctrl" ? modifierKey : key}
                           </kbd>
                           {j < shortcut.keys.length - 1 && (
                             <span className="text-zinc-600 mx-0.5">+</span>
