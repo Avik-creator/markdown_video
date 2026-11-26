@@ -180,6 +180,42 @@ describe("Controls preview music", () => {
     expect(audio.paused).toBe(true);
   });
 
+  it("suspends hidden-tab audio with the rAF-driven playhead and resumes on visibility", async () => {
+    useVideoStore.getState().setMarkdown(MUSIC_MARKDOWN, false);
+    render(<Controls />);
+    const audio = FakeAudioElement.instances[0];
+    let hidden = false;
+    Object.defineProperty(document, "hidden", {
+      configurable: true,
+      get: () => hidden,
+    });
+
+    try {
+      fireEvent.click(screen.getByRole("button", { name: "Play" }));
+      await act(async () => Promise.resolve());
+      expect(audio.paused).toBe(false);
+      expect(audio.play).toHaveBeenCalledTimes(1);
+
+      hidden = true;
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(audio.paused).toBe(true);
+      expect(audio.pause).toHaveBeenCalled();
+
+      hidden = false;
+      act(() => {
+        document.dispatchEvent(new Event("visibilitychange"));
+      });
+      expect(audio.play).toHaveBeenCalledTimes(2);
+      expect(audio.paused).toBe(false);
+
+      fireEvent.click(screen.getByRole("button", { name: "Pause" }));
+    } finally {
+      Reflect.deleteProperty(document, "hidden");
+    }
+  });
+
   it("joins late-loading looping music at the wrapped playhead position", () => {
     useVideoStore.getState().setMarkdown(LOOPING_MUSIC_MARKDOWN, false);
     render(<Controls />);

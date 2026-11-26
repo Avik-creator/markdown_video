@@ -73,6 +73,20 @@ export function usePreviewMusic(): UsePreviewMusicResult {
       audio.addEventListener(eventName, sync)
     }
 
+    // The video playhead is rAF-driven and therefore stops while the document
+    // is hidden. Media elements do not share that suspension, so without an
+    // explicit pause a hidden tab would keep audible music running far ahead
+    // of the frozen playhead. Resume through the normal store-governed sync
+    // when the tab becomes visible again.
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        controller.pause()
+      } else {
+        sync()
+      }
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange)
+
     // Assigning the URL as-is lets the browser implement the same source set
     // as plain media playback: HTTPS, same-origin/relative, data:, and blob:.
     // Unlike the ffmpeg exporter, playback does not need to fetch bytes and
@@ -84,6 +98,7 @@ export function usePreviewMusic(): UsePreviewMusicResult {
 
     return () => {
       unsubscribe()
+      document.removeEventListener("visibilitychange", handleVisibilityChange)
       for (const eventName of mediaReadyEvents) {
         audio.removeEventListener(eventName, sync)
       }
