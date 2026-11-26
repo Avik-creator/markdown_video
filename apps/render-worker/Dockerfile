@@ -48,9 +48,14 @@ ENV NODE_ENV=production \
 # Playwright's own installer owns the Chromium system-library contract for the
 # exact browser revision. ffmpeg is deliberately the distribution package so
 # security updates come from the base OS rather than a bundled binary.
+# install-deps also adds Debian's bitmap color emoji as a general browser
+# fallback. Remove that package after satisfying Chromium's library contract:
+# the render page bundles its own COLRv1 emoji webfont, and keeping a system
+# color font would make glyph selection depend on the container OS again.
 RUN apt-get update \
     && npx --yes playwright@1.65.1 install-deps chromium \
-    && apt-get install -y --no-install-recommends ffmpeg fonts-noto-color-emoji \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && apt-get purge -y fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/* /root/.npm
 
 COPY --from=build /ms-playwright /ms-playwright

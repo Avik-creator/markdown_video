@@ -39,10 +39,24 @@ export const SCENE_CODE_FONT_VARIABLES: Record<
   inconsolata: "--font-inconsolata-family",
 };
 
+/**
+ * CSS variable carrying the host's color-emoji family chain.
+ *
+ * This is a separate variable because text hosts expose their primary font as
+ * one token stream: there is no CSS-only way to splice a family into the middle
+ * of var(--font-inter). Scene chains therefore place the emoji variable directly
+ * after the primary text family. Primary ordering keeps ASCII digits and other
+ * text-presentation characters in the text font; the emoji face's unicode-range
+ * then confines this fallback slot to emoji-related codepoints instead of making
+ * it a general-purpose font.
+ */
+export const SCENE_EMOJI_FONT_VARIABLE = "--font-emoji";
+
 /** Every CSS variable a host must define for full scene font coverage. */
 export const SCENE_FONT_CSS_VARIABLES: readonly string[] = [
   ...Object.values(SCENE_TEXT_FONT_VARIABLES),
   ...Object.values(SCENE_CODE_FONT_VARIABLES),
+  SCENE_EMOJI_FONT_VARIABLE,
 ];
 
 /**
@@ -59,7 +73,7 @@ function variableFontFamily(
   fallbacks: string
 ): string {
   const firstFallback = fallbacks.split(",")[0].trim();
-  return `var(${variableName}, ${firstFallback}), ${fallbacks}`;
+  return `var(${variableName}, ${firstFallback}), var(${SCENE_EMOJI_FONT_VARIABLE}, ${firstFallback}), ${fallbacks}`;
 }
 
 const SERIF_FALLBACKS = "Georgia, serif";
@@ -98,6 +112,9 @@ const CODE_FALLBACKS: Record<keyof typeof SCENE_CODE_FONT_VARIABLES, string> = {
 
 export const codeFontFamilyStyles: Record<CodeFontFamily, FontFamilyStyle> = {
   ...buildFontStyles(SCENE_CODE_FONT_VARIABLES, CODE_FALLBACKS),
-  // Courier is a system font; there is no corresponding host font variable.
-  courier: { fontFamily: '"Courier New", Courier, monospace' },
+  // Courier is a system font; there is no corresponding primary host variable,
+  // but emoji in courier text still use the host's emoji family.
+  courier: {
+    fontFamily: `"Courier New", var(${SCENE_EMOJI_FONT_VARIABLE}, Courier), Courier, monospace`,
+  },
 };

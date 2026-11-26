@@ -3,6 +3,7 @@
 import { motion } from "framer-motion";
 import type { TimelineElement } from "@markdown-video/core";
 import { timelineElementVisualState } from "../utils/timeline-animation.js";
+import { textFontFamilyStyles } from "../utils/fonts.js";
 
 function TimelineElementRenderer({
   element,
@@ -45,7 +46,9 @@ function TimelineElementRenderer({
         className="absolute inset-0 flex items-center justify-center"
         {...motionProps}
       >
-        <span className="text-6xl">{element.content}</span>
+        <span className="text-6xl" style={textFontFamilyStyles.sans}>
+          {element.content}
+        </span>
       </motion.div>
     );
   }

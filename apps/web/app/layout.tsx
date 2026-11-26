@@ -8,6 +8,7 @@ import {
   Inter,
   JetBrains_Mono,
   Merriweather,
+  Noto_Color_Emoji,
   Playfair_Display,
   Source_Code_Pro,
 } from "next/font/google";
@@ -16,50 +17,53 @@ import { ThemeProvider } from "@components/theme-provider";
 import { Toaster } from "@components/ui/sonner";
 import { PrivacyAnalytics } from "./privacy-analytics";
 
+// Text fallback arrays are intentionally empty: next/font concatenates them
+// inside each CSS variable, while globals.css composes the complete chain. The
+// composed order must be primary text face, color emoji, then platform fallback.
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
-  fallback: ["system-ui", "sans-serif"],
+  fallback: [],
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  fallback: [],
 });
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
-  fallback: ["Georgia", "serif"],
+  fallback: [],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-family",
   preload: false,
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  fallback: [],
 });
 
 const firaCode = Fira_Code({
   subsets: ["latin"],
   variable: "--font-fira-family",
   preload: false,
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  fallback: [],
 });
 
 const sourceCodePro = Source_Code_Pro({
   subsets: ["latin"],
   variable: "--font-source-code-family",
   preload: false,
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  fallback: [],
 });
 
 const inconsolata = Inconsolata({
   subsets: ["latin"],
   variable: "--font-inconsolata-family",
   preload: false,
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  fallback: [],
 });
 
 const ibmPlexMono = IBM_Plex_Mono({
@@ -67,14 +71,25 @@ const ibmPlexMono = IBM_Plex_Mono({
   subsets: ["latin"],
   variable: "--font-ibm-plex-family",
   preload: false,
-  fallback: ["ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
+  fallback: [],
 });
 
 const merriweather = Merriweather({
   subsets: ["latin"],
   variable: "--font-merriweather-family",
   preload: false,
-  fallback: ["Georgia", "serif"],
+  fallback: [],
+});
+
+// Color emoji are loaded on demand rather than preloaded: the full repertoire
+// is much larger than a text subset, and export capture explicitly waits for
+// document.fonts.ready before rasterizing frames.
+const notoColorEmoji = Noto_Color_Emoji({
+  weight: "400",
+  subsets: ["emoji"],
+  variable: "--font-emoji",
+  preload: false,
+  fallback: ["Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol"],
 });
 
 const fallbackSiteUrl = "https://markdownvideo.avikmukherjee.com";
@@ -196,7 +211,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable}`}
+      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable} ${notoColorEmoji.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">

@@ -13,10 +13,13 @@ import type { RenderPageConfig } from "./render-config";
 
 export const MAX_RENDER_MARKDOWN_BYTES = 2 * 1024 * 1024;
 
+export const RENDER_EMOJI_FONT_FAMILY = "Noto Color Emoji";
+
 /**
- * The nine Google families next/font serves in the editor. Keeping this list
- * beside the loader makes a missing @font-face rule fail during load() rather
- * than after hundreds of frames have silently been rasterized in a fallback.
+ * The nine Google families next/font serves in the editor, plus the bundled
+ * color emoji face. Keeping this list beside the loader makes a missing
+ * @font-face rule fail during load() rather than after hundreds of frames have
+ * silently been rasterized in a fallback.
  */
 export const REQUIRED_RENDER_FONT_FAMILIES = [
   "Inter",
@@ -28,13 +31,25 @@ export const REQUIRED_RENDER_FONT_FAMILIES = [
   "Fira Code",
   "Source Code Pro",
   "Inconsolata",
+  RENDER_EMOJI_FONT_FAMILY,
 ] as const;
 
 // Scene typography uses regular through bold weights. IBM Plex Mono is the
-// only non-variable family here, so loading the full range also verifies that
-// all four of its static weight files are present.
+// only non-variable text family here, so loading the full range also verifies
+// that all four of its static weight files are present. Noto Color Emoji has
+// only a 400 face and needs an emoji probe string so its unicode-range shards
+// participate in the load/check calls.
 const REQUIRED_FONT_WEIGHTS = [400, 500, 600, 700] as const;
+const EMOJI_FONT_WEIGHTS = [400] as const;
 const FONT_TEST_STRING = "Markdown Video 123";
+const EMOJI_FONT_TEST_STRING = "😀";
+
+function fontContract(family: (typeof REQUIRED_RENDER_FONT_FAMILIES)[number]) {
+  return {
+    weights: family === RENDER_EMOJI_FONT_FAMILY ? EMOJI_FONT_WEIGHTS : REQUIRED_FONT_WEIGHTS,
+    testString: family === RENDER_EMOJI_FONT_FAMILY ? EMOJI_FONT_TEST_STRING : FONT_TEST_STRING,
+  };
+}
 
 interface RenderDocumentState {
   parsed: ParseResult;
@@ -102,26 +117,30 @@ async function assertRequiredFontsLoaded() {
   const loadFailures: string[] = [];
 
   await Promise.all(
-    REQUIRED_RENDER_FONT_FAMILIES.flatMap((family) =>
-      REQUIRED_FONT_WEIGHTS.map(async (weight) => {
+    REQUIRED_RENDER_FONT_FAMILIES.flatMap((family) => {
+      const { weights, testString } = fontContract(family);
+      return weights.map(async (weight) => {
         const fontFaceSet = await document.fonts
-          .load(`${weight} 16px "${family}"`, FONT_TEST_STRING)
+          .load(`${weight} 16px "${family}"`, testString)
           .catch(() => [] as FontFace[]);
 
         if (fontFaceSet.length === 0) {
           loadFailures.push(`${family} ${weight}`);
         }
-      })
-    )
+      });
+    })
   );
 
   await document.fonts.ready;
 
-  const checkFailures = REQUIRED_RENDER_FONT_FAMILIES.flatMap((family) =>
-    REQUIRED_FONT_WEIGHTS.filter(
-      (weight) => !document.fonts.check(`${weight} 16px "${family}"`, FONT_TEST_STRING)
-    ).map((weight) => `${family} ${weight}`)
-  );
+  const checkFailures = REQUIRED_RENDER_FONT_FAMILIES.flatMap((family) => {
+    const { weights, testString } = fontContract(family);
+    return weights
+      .filter(
+        (weight) => !document.fonts.check(`${weight} 16px "${family}"`, testString)
+      )
+      .map((weight) => `${family} ${weight}`);
+  });
 
   const failures = [...new Set([...loadFailures, ...checkFailures])];
   if (failures.length > 0) {
