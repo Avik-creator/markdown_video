@@ -19,7 +19,11 @@ import {
   trackExportEvent,
 } from "@/lib/analytics";
 import {
+  buildMusicAudioFilter,
+  buildMusicInputArgs,
+  buildMusicOutputArgs,
   createRenderPlan,
+  generateCaptionSidecars,
   getFrameFileName,
   getVideoEncodingSettings,
   validateExportInput,
@@ -30,6 +34,10 @@ import {
   copyFrameData,
   getExportArtifactNames,
 } from "../utils/export-utils";
+import {
+  fetchBrowserMusicData,
+  fetchCaptionFontData,
+} from "../utils/export-media";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -91,6 +99,7 @@ export default function FfmpegRender({
   const [currentFrame, setCurrentFrame] = useState(0);
   const [totalFrames, setTotalFrames] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [captionUrls, setCaptionUrls] = useState<{ srt: string; vtt: string } | null>(null);
   const [outputFileName, setOutputFileName] = useState("video.mp4");
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -98,6 +107,7 @@ export default function FfmpegRender({
   const activeRunRef = useRef<ActiveRun | null>(null);
   const mountedRef = useRef(true);
   const previewUrlRef = useRef<string | null>(null);
+  const captionUrlsRef = useRef<{ srt: string; vtt: string } | null>(null);
 
   const totalDuration = useVideoStore((state) => state.totalDuration);
   const sceneCount = useVideoStore((state) => state.scenes.length);
@@ -120,6 +130,16 @@ export default function FfmpegRender({
     setPreviewUrl(url);
   }, []);
 
+  const replaceCaptionUrls = useCallback((urls: { srt: string; vtt: string } | null) => {
+    const previousUrls = captionUrlsRef.current;
+    if (previousUrls && previousUrls !== urls) {
+      URL.revokeObjectURL(previousUrls.srt);
+      URL.revokeObjectURL(previousUrls.vtt);
+    }
+    captionUrlsRef.current = urls;
+    setCaptionUrls(urls);
+  }, []);
+
   const resetRenderState = useCallback(() => {
     setStatus("idle");
     setProgress(0);
@@ -127,7 +147,8 @@ export default function FfmpegRender({
     setTotalFrames(0);
     setErrorMessage("");
     replacePreviewUrl(null);
-  }, [replacePreviewUrl]);
+    replaceCaptionUrls(null);
+  }, [replacePreviewUrl, replaceCaptionUrls]);
 
   const cancelActiveRun = useCallback(() => {
     const activeRun = activeRunRef.current;
@@ -178,6 +199,11 @@ export default function FfmpegRender({
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
         previewUrlRef.current = null;
+      }
+      if (captionUrlsRef.current) {
+        URL.revokeObjectURL(captionUrlsRef.current.srt);
+        URL.revokeObjectURL(captionUrlsRef.current.vtt);
+        captionUrlsRef.current = null;
       }
     };
   }, [ffmpeg, runTracker]);
@@ -239,6 +265,7 @@ export default function FfmpegRender({
     setTotalFrames(0);
     setErrorMessage("");
     replacePreviewUrl(null);
+    replaceCaptionUrls(null);
 
     // The render plan and output parameters are pure functions of the
     // current settings, so computing them before the run starts lets the
@@ -254,6 +281,20 @@ export default function FfmpegRender({
     const totalFrameCount = exportValidation.totalFrameCount;
     const format = exportSettings.format || "mp4";
     const artifactNames = getExportArtifactNames(generation, format);
+    const captionSidecars = generateCaptionSidecars(
+      {
+        scenes: state.scenes,
+        locales: state.locales,
+        localizationStrings: state.localizationStrings,
+        defaultLocale: state.defaultLocale,
+      },
+      { activeLocale: state.activeLocale }
+    );
+    const hasCaptions = captionSidecars.cues.length > 0;
+    const burnCaptions = exportSettings.burnCaptions === true && hasCaptions;
+    // GIF containers cannot carry audio. Music is intentionally ignored there
+    // rather than silently producing an invalid or player-hostile file.
+    const music = format === "gif" ? undefined : state.music;
 
     // Privacy-preserving usage analytics: export settings, output geometry,
     // and scene type counts only — never markdown, scene content, or URLs.
@@ -295,6 +336,32 @@ export default function FfmpegRender({
       frameDirectory = artifactNames.frameDirectory;
       await ffmpeg.createDir(frameDirectory, { signal: controller.signal });
       throwIfNotCurrent();
+
+      if (music) {
+        const musicData = await fetchBrowserMusicData(music.src, controller.signal);
+        throwIfNotCurrent();
+        await ffmpeg.writeFile(artifactNames.musicFileName, musicData, {
+          signal: controller.signal,
+        });
+        throwIfNotCurrent();
+      }
+
+      if (burnCaptions) {
+        await ffmpeg.writeFile(
+          artifactNames.captionsFileName,
+          new TextEncoder().encode(captionSidecars.srt),
+          { signal: controller.signal }
+        );
+        await ffmpeg.createDir(artifactNames.fontDirectory, { signal: controller.signal });
+        const fontData = await fetchCaptionFontData(controller.signal);
+        throwIfNotCurrent();
+        await ffmpeg.writeFile(
+          `${artifactNames.fontDirectory}/${artifactNames.fontFileName}`,
+          fontData,
+          { signal: controller.signal }
+        );
+        throwIfNotCurrent();
+      }
 
       // Pause playback and seek to start
       pause();
@@ -470,7 +537,7 @@ export default function FfmpegRender({
           "-i",
           artifactNames.paletteFileName,
           "-lavfi",
-          `fps=${gifFps}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=2`,
+          `fps=${gifFps}${burnCaptions ? `,subtitles=${artifactNames.captionsFileName}:fontsdir=${artifactNames.fontDirectory}` : ""}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=2`,
           "-loop",
           "0",
           "-y",
@@ -491,6 +558,7 @@ export default function FfmpegRender({
       } else {
         // MP4 is used for mp4, reels and shorts. The dimensions in
         // renderPlan already encode the selected aspect ratio.
+        const subtitlesFilter = `subtitles=${artifactNames.captionsFileName}:fontsdir=${artifactNames.fontDirectory}`;
         const mp4Args = [
           "-v",
           "error",
@@ -498,6 +566,11 @@ export default function FfmpegRender({
           String(outputFps),
           "-i",
           inputPattern,
+          ...(music ? buildMusicInputArgs(music, artifactNames.musicFileName) : []),
+          ...(music
+            ? buildMusicOutputArgs(buildMusicAudioFilter(music, totalDuration))
+            : []),
+          ...(burnCaptions ? ["-vf", subtitlesFilter] : []),
           "-c:v",
           "libx264",
           "-preset",
@@ -525,6 +598,21 @@ export default function FfmpegRender({
       }
 
       throwIfNotCurrent();
+      if (hasCaptions) {
+        const srtUrl = URL.createObjectURL(
+          new Blob([captionSidecars.srt], { type: "application/x-subrip" })
+        );
+        const vttUrl = URL.createObjectURL(
+          new Blob([captionSidecars.vtt], { type: "text/vtt" })
+        );
+        if (!isCurrentRun()) {
+          URL.revokeObjectURL(srtUrl);
+          URL.revokeObjectURL(vttUrl);
+          throw new RenderCancelledError();
+        }
+        replaceCaptionUrls({ srt: srtUrl, vtt: vttUrl });
+      }
+
       const objectUrl = URL.createObjectURL(outputBlob);
       if (!isCurrentRun()) {
         URL.revokeObjectURL(objectUrl);
@@ -588,6 +676,20 @@ export default function FfmpegRender({
           } catch {}
           try {
             await ffmpeg.deleteFile(artifactNames.outputFileName);
+          } catch {}
+          try {
+            await ffmpeg.deleteFile(artifactNames.musicFileName);
+          } catch {}
+          try {
+            await ffmpeg.deleteFile(artifactNames.captionsFileName);
+          } catch {}
+          try {
+            await ffmpeg.deleteFile(
+              `${artifactNames.fontDirectory}/${artifactNames.fontFileName}`
+            );
+          } catch {}
+          try {
+            await ffmpeg.deleteDir(artifactNames.fontDirectory);
           } catch {}
           try {
             await ffmpeg.deleteDir(directoryToClean);
@@ -723,6 +825,36 @@ export default function FfmpegRender({
             <X className="w-4 h-4" />
           </Button>
         </div>
+
+        {captionUrls && (
+          <div className="space-y-2">
+            <p className="text-xs text-zinc-400 text-center">
+              Caption sidecars generated from text scenes
+            </p>
+            <div className="flex gap-3">
+              <Button
+                asChild
+                variant="outline"
+                className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
+              >
+                <a href={captionUrls.srt} download="video.srt">
+                  <Download className="w-4 h-4" />
+                  SRT
+                </a>
+              </Button>
+              <Button
+                asChild
+                variant="outline"
+                className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
+              >
+                <a href={captionUrls.vtt} download="video.vtt">
+                  <Download className="w-4 h-4" />
+                  VTT
+                </a>
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

@@ -17,6 +17,10 @@ export interface ExportArtifactNames {
   frameDirectory: string
   paletteFileName: string
   outputFileName: string
+  musicFileName: string
+  captionsFileName: string
+  fontDirectory: string
+  fontFileName: string
   outputExtension: "mp4" | "gif"
 }
 
@@ -38,6 +42,10 @@ export function getExportArtifactNames(
     frameDirectory: `frames-${safeGeneration}`,
     paletteFileName: `palette-${safeGeneration}.png`,
     outputFileName: `output-${safeGeneration}.${outputExtension}`,
+    musicFileName: `music-${safeGeneration}`,
+    captionsFileName: `captions-${safeGeneration}.srt`,
+    fontDirectory: `fonts-${safeGeneration}`,
+    fontFileName: `inter-variable-latin.ttf`,
     outputExtension,
   }
 }

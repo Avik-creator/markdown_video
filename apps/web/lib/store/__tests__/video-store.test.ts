@@ -29,6 +29,26 @@ function resetStore() {
   useVideoStore.setState({ currentTime: 0, isPlaying: false, markers: [] });
 }
 
+
+describe("document music state", () => {
+  beforeEach(resetStore);
+
+  it("derives music from markdown and clears it on the next parse", () => {
+    useVideoStore.getState().setMarkdown(`!music theme.mp3 volume:0.25 fade:0.5s loop:false
+${CONTROLLED_MARKDOWN}`, false);
+
+    expect(useVideoStore.getState().music).toEqual({
+      src: "theme.mp3",
+      volume: 0.25,
+      fade: 0.5,
+      loop: false,
+    });
+
+    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
+    expect(useVideoStore.getState().music).toBeUndefined();
+  });
+});
+
 describe("frame stepping", () => {
   beforeEach(resetStore);
 

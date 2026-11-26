@@ -25,12 +25,20 @@ describe("generation-scoped artifact names", () => {
       frameDirectory: "frames-7",
       paletteFileName: "palette-7.png",
       outputFileName: "output-7.gif",
+      musicFileName: "music-7",
+      captionsFileName: "captions-7.srt",
+      fontDirectory: "fonts-7",
+      fontFileName: "inter-variable-latin.ttf",
       outputExtension: "gif",
     });
     expect(getExportArtifactNames(7, "reels")).toEqual({
       frameDirectory: "frames-7",
       paletteFileName: "palette-7.png",
       outputFileName: "output-7.mp4",
+      musicFileName: "music-7",
+      captionsFileName: "captions-7.srt",
+      fontDirectory: "fonts-7",
+      fontFileName: "inter-variable-latin.ttf",
       outputExtension: "mp4",
     });
   });
@@ -42,6 +50,9 @@ describe("generation-scoped artifact names", () => {
     expect(first.frameDirectory).not.toBe(second.frameDirectory);
     expect(first.paletteFileName).not.toBe(second.paletteFileName);
     expect(first.outputFileName).not.toBe(second.outputFileName);
+    expect(first.musicFileName).not.toBe(second.musicFileName);
+    expect(first.captionsFileName).not.toBe(second.captionsFileName);
+    expect(first.fontDirectory).not.toBe(second.fontDirectory);
   });
 });
 

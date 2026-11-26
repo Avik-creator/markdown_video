@@ -394,6 +394,45 @@ includeSubtitles: true`}
         </p>
       </Section>
 
+
+      {/* Music & Captions */}
+      <Section title="Music & Captions">
+        <CodeExample
+          title="music-captions.md"
+          code={`!music https://example.com/theme.mp3 volume:0.4 fade:1s loop:true
+
+!scene
+!duration 4
+!text
+These words become captions`}
+        />
+        <div className="space-y-2 mt-3">
+          <DirectiveDoc
+            directive="volume:"
+            description="Music volume from 0 to 1"
+            options={["0", "0.4", "1"]}
+          />
+          <DirectiveDoc
+            directive="fade:"
+            description="Music fade-in/out seconds (max 30)"
+            options={["0", "0.5s", "1s"]}
+          />
+          <DirectiveDoc
+            directive="loop:"
+            description="Repeat music shorter than the video"
+            options={["true", "false"]}
+          />
+        </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          <strong>Export behavior:</strong> Music starts at 0s, loops by
+          default, is truncated at video end, and never extends duration.
+          Remote music must use HTTPS (and CORS in browser export). SRT/VTT
+          captions are generated from top-level text scenes; burn-in is
+          optional and off by default. Browser burn-in uses a bundled Latin
+          Inter font subset. GIF output cannot carry audio.
+        </p>
+      </Section>
+
       {/* Localization */}
       <Section title="Localization & i18n">
         <CodeExample

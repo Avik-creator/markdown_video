@@ -1,0 +1,101 @@
+// Browser-side media fetching for ffmpeg.wasm export. Network access happens
+// in the user's browser (never in the shared worker): cross-origin music is
+// HTTPS-only and relies on normal CORS permission.
+
+export const MAX_BROWSER_MUSIC_BYTES = 32 * 1024 * 1024;
+
+function audioContentTypeAllowed(contentType: string | null): boolean {
+  const normalized = (contentType ?? "").split(";")[0]?.trim().toLowerCase() ?? "";
+  return (
+    normalized === "" ||
+    normalized.startsWith("audio/") ||
+    normalized === "application/octet-stream" ||
+    normalized === "binary/octet-stream"
+  );
+}
+
+async function readLimitedArrayBuffer(
+  response: Response,
+  limit: number,
+  label: string
+): Promise<Uint8Array> {
+  const declaredLength = Number(response.headers.get("content-length") ?? 0);
+  if (declaredLength > limit) {
+    throw new Error(`${label} exceeds the ${Math.floor(limit / (1024 * 1024))}MB export limit`);
+  }
+  const buffer = await response.arrayBuffer();
+  if (buffer.byteLength === 0) {
+    throw new Error(`${label} is empty`);
+  }
+  if (buffer.byteLength > limit) {
+    throw new Error(`${label} exceeds the ${Math.floor(limit / (1024 * 1024))}MB export limit`);
+  }
+  return new Uint8Array(buffer);
+}
+
+/**
+ * Resolve and fetch a browser !music source into bytes suitable for MEMFS.
+ *
+ * Relative sources are application assets resolved against the current origin.
+ * Cross-origin sources must be HTTPS and CORS-readable. data:/blob: URLs are
+ * self-contained browser objects and do not create additional network egress.
+ */
+export async function fetchBrowserMusicData(
+  src: string,
+  signal: AbortSignal
+): Promise<Uint8Array> {
+  const trimmed = src.trim();
+  if (!trimmed) throw new Error("Music source is empty");
+
+  let url: string;
+  if (/^(data|blob):/i.test(trimmed)) {
+    url = trimmed;
+  } else {
+    let resolved: URL;
+    try {
+      resolved = new URL(trimmed, window.location.href);
+    } catch {
+      throw new Error(`Invalid music source "${trimmed}"`);
+    }
+    const isSameOrigin = resolved.origin === window.location.origin;
+    if (!isSameOrigin && resolved.protocol !== "https:") {
+      throw new Error("Remote music must use HTTPS");
+    }
+    if (!/^(https?|data|blob):$/.test(resolved.protocol)) {
+      throw new Error(`Unsupported music source scheme "${resolved.protocol}"`);
+    }
+    url = resolved.href;
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      signal,
+      credentials: "same-origin",
+    });
+  } catch (error) {
+    if (signal.aborted) throw error;
+    throw new Error(
+      "Could not fetch music. For remote audio, check HTTPS and CORS access."
+    );
+  }
+  if (!response.ok) {
+    throw new Error(`Music download failed with HTTP status ${response.status}`);
+  }
+  if (!audioContentTypeAllowed(response.headers.get("content-type"))) {
+    throw new Error("Music download did not return an audio content type");
+  }
+  return readLimitedArrayBuffer(response, MAX_BROWSER_MUSIC_BYTES, "Music");
+}
+
+/** Fetch the OFL-licensed caption font bundled as a public application asset. */
+export async function fetchCaptionFontData(signal: AbortSignal): Promise<Uint8Array> {
+  const response = await fetch("/fonts/inter-variable-latin.ttf", {
+    signal,
+    credentials: "same-origin",
+  });
+  if (!response.ok) {
+    throw new Error(`Caption font download failed with HTTP status ${response.status}`);
+  }
+  return readLimitedArrayBuffer(response, 4 * 1024 * 1024, "Caption font");
+}

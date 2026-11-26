@@ -49,6 +49,7 @@ function parseAndComputeSegments(markdown: string) {
     locales: parsed.locales,
     localizationStrings: parsed.localizationStrings,
     defaultLocale: parsed.defaultLocale,
+    music: parsed.music,
   };
 }
 
@@ -174,6 +175,7 @@ export const useVideoStore = create<VideoStore>()(
         locales: initial.locales,
         localizationStrings: initial.localizationStrings,
         defaultLocale: initial.defaultLocale,
+        music: initial.music,
         activeLocale: null,
         isPlaying: false,
         currentTime: 0,
@@ -231,6 +233,7 @@ export const useVideoStore = create<VideoStore>()(
             locales,
             localizationStrings,
             defaultLocale,
+            music,
           } = parseAndComputeSegments(markdown);
 
           set((state) => ({
@@ -243,6 +246,7 @@ export const useVideoStore = create<VideoStore>()(
             locales,
             localizationStrings,
             defaultLocale,
+            music,
             currentTime: Math.min(state.currentTime, totalDuration),
             history: addToHistory
               ? {
@@ -272,6 +276,7 @@ export const useVideoStore = create<VideoStore>()(
             locales: parsed.locales,
             localizationStrings: parsed.localizationStrings,
             defaultLocale: parsed.defaultLocale,
+            music: parsed.music,
             history: {
               past: newPast,
               future: [markdown, ...get().history.future.slice(0, 50)],
@@ -298,6 +303,7 @@ export const useVideoStore = create<VideoStore>()(
             locales: parsed.locales,
             localizationStrings: parsed.localizationStrings,
             defaultLocale: parsed.defaultLocale,
+            music: parsed.music,
             history: {
               past: [...get().history.past, markdown],
               future: newFuture,
