@@ -5,12 +5,14 @@ const {
   redisGet,
   redisSet,
   redisConfigured,
-  enforceProjectRateLimit,
+  enforceProjectReadRateLimit,
+  enforceProjectWriteRateLimit,
 } = vi.hoisted(() => ({
   redisGet: vi.fn(),
   redisSet: vi.fn(),
   redisConfigured: vi.fn(),
-  enforceProjectRateLimit: vi.fn(),
+  enforceProjectReadRateLimit: vi.fn(),
+  enforceProjectWriteRateLimit: vi.fn(),
 }));
 
 vi.mock("@/lib/redis", () => ({
@@ -24,7 +26,8 @@ vi.mock("@/lib/redis", () => ({
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
-  enforceProjectRateLimit,
+  enforceProjectReadRateLimit,
+  enforceProjectWriteRateLimit,
 }));
 
 import { GET, POST } from "../route";
@@ -75,10 +78,12 @@ describe("/api/projects", () => {
     redisGet.mockReset();
     redisSet.mockReset();
     redisConfigured.mockReset();
-    enforceProjectRateLimit.mockReset();
+    enforceProjectReadRateLimit.mockReset();
+    enforceProjectWriteRateLimit.mockReset();
 
     redisConfigured.mockReturnValue(true);
-    enforceProjectRateLimit.mockResolvedValue(null);
+    enforceProjectReadRateLimit.mockResolvedValue(null);
+    enforceProjectWriteRateLimit.mockResolvedValue(null);
     redisSet.mockResolvedValue("OK");
   });
 
@@ -90,10 +95,30 @@ describe("/api/projects", () => {
     expect(body.projectId).toMatch(/^[A-Za-z0-9_-]{11}$/);
 
     expect(redisSet).toHaveBeenCalledTimes(1);
-    const [key, markdown, options] = redisSet.mock.calls[0];
+    const [key, storedValue, options] = redisSet.mock.calls[0];
     expect(key).toBe(`project:${body.projectId}`);
-    expect(markdown).toBe("!scene\n!text\nHello");
+    // The markdown is wrapped in a versioned object so Upstash's automatic
+    // JSON deserialization round-trips it type-safely.
+    expect(storedValue).toEqual({ v: 1, markdown: "!scene\n!text\nHello" });
     expect(options).toEqual({ ex: PROJECT_TTL_SECONDS });
+  });
+
+  it("applies the write rate limit to POST before reading the body or storing", async () => {
+    const response = await POST(validPost());
+
+    expect(response.status).toBe(200);
+    expect(enforceProjectWriteRateLimit).toHaveBeenCalledTimes(1);
+    expect(enforceProjectReadRateLimit).not.toHaveBeenCalled();
+  });
+
+  it("applies the read rate limit to GET", async () => {
+    redisGet.mockResolvedValue({ v: 1, markdown: "stored" });
+
+    const response = await GET(getProject("abcDEF123-_"));
+
+    expect(response.status).toBe(200);
+    expect(enforceProjectReadRateLimit).toHaveBeenCalledTimes(1);
+    expect(enforceProjectWriteRateLimit).not.toHaveBeenCalled();
   });
 
   it("returns 400 for malformed JSON instead of a generic 500", async () => {
@@ -160,8 +185,8 @@ describe("/api/projects", () => {
     expect(redisSet).not.toHaveBeenCalled();
   });
 
-  it("returns the rate-limit response before writing", async () => {
-    enforceProjectRateLimit.mockResolvedValue(
+  it("returns the write rate-limit response before writing", async () => {
+    enforceProjectWriteRateLimit.mockResolvedValue(
       new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
         headers: { "content-type": "application/json" },
@@ -175,8 +200,8 @@ describe("/api/projects", () => {
     expect(redisSet).not.toHaveBeenCalled();
   });
 
-  it("loads a valid project using the existing response shape", async () => {
-    redisGet.mockResolvedValue("!scene\n!text\nStored");
+  it("loads a project stored in the versioned wrapper shape", async () => {
+    redisGet.mockResolvedValue({ v: 1, markdown: "!scene\n!text\nStored" });
 
     const response = await GET(getProject("abcDEF123-_"));
     const body = await response.json();
@@ -184,6 +209,56 @@ describe("/api/projects", () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({ markdown: "!scene\n!text\nStored" });
     expect(redisGet).toHaveBeenCalledWith("project:abcDEF123-_");
+  });
+
+  it("still loads legacy plain-string projects", async () => {
+    redisGet.mockResolvedValue("!scene\n!text\nLegacy");
+
+    const response = await GET(getProject("abcDEF123-_"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ markdown: "!scene\n!text\nLegacy" });
+  });
+
+  it("recovers legacy scalar-corrupted documents with String conversion", async () => {
+    // Simulates the Upstash client auto-deserializing a legacy plain-string
+    // write whose entire markdown was `42` into the number 42.
+    redisGet.mockResolvedValue(42);
+
+    const response = await GET(getProject("abcDEF123-_"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ markdown: "42" });
+  });
+
+  it("recovers legacy boolean-corrupted documents", async () => {
+    redisGet.mockResolvedValue(true);
+
+    const response = await GET(getProject("abcDEF123-_"));
+    const body = await response.json();
+
+    expect(response.status).toBe(200);
+    expect(body).toEqual({ markdown: "true" });
+  });
+
+  it("round-trips numeric-looking markdown through the wrapper shape", async () => {
+    const postResponse = await POST(validPost("42"));
+    expect(postResponse.status).toBe(200);
+
+    const [, storedValue] = redisSet.mock.calls[0];
+    expect(storedValue).toEqual({ v: 1, markdown: "42" });
+
+    // The Upstash client stores the wrapper as JSON and parses it back into
+    // the same object shape, so the read path sees the object form.
+    redisGet.mockResolvedValue(JSON.parse(JSON.stringify(storedValue)));
+
+    const getResponse = await GET(getProject("abcDEF123-_"));
+    const body = await getResponse.json();
+
+    expect(getResponse.status).toBe(200);
+    expect(body).toEqual({ markdown: "42" });
   });
 
   it("keeps requiring a project ID", async () => {
@@ -213,8 +288,8 @@ describe("/api/projects", () => {
     expect((await response.json()).error).toBe("Project not found");
   });
 
-  it("returns the rate-limit response before reading", async () => {
-    enforceProjectRateLimit.mockResolvedValue(
+  it("returns the read rate-limit response before reading", async () => {
+    enforceProjectReadRateLimit.mockResolvedValue(
       new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
         headers: { "content-type": "application/json" },

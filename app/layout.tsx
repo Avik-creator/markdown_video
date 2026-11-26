@@ -11,10 +11,10 @@ import {
   Playfair_Display,
   Source_Code_Pro,
 } from "next/font/google";
-import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 import { ThemeProvider } from "@components/theme-provider";
 import { Toaster } from "@components/ui/sonner";
+import { PrivacyAnalytics } from "./privacy-analytics";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -204,7 +204,7 @@ export default function RootLayout({
           {children}
           <Toaster position="bottom-right" closeButton />
         </ThemeProvider>
-        <Analytics />
+        <PrivacyAnalytics />
       </body>
     </html>
   );

@@ -73,6 +73,7 @@ import {
   TRANSITION_TYPES,
 } from "./constants";
 import {
+  collectVariableDefinitions,
   generateId,
   isSceneDirective,
   parseDirective,
@@ -136,22 +137,13 @@ function parseMarkdownInternal(
 ): ParseResult {
   const scenes: Scene[] = [];
   const chapters: Chapter[] = [];
-  const variables: VideoVariables = { ...inheritedVariables };
   const lines = markdown.split(/\r?\n/);
+  // First pass: collect hoisted variable definitions. Nested layout parsing
+  // inherits the parent's variables and can add document-local definitions.
+  const variables: VideoVariables = collectVariableDefinitions(lines, inheritedVariables);
   let i = 0;
   let colorIndex = 0;
   let currentTime = 0;
-
-  // First pass: collect variables
-  for (const line of lines) {
-    const directive = parseDirective(line.trim());
-    if (directive?.canonicalName !== DIRECTIVE_CASES.VAR) continue;
-
-    const match = directive.args.match(/^(\w+)\s+(.+)$/);
-    if (match) {
-      variables[match[1]] = match[2].trim();
-    }
-  }
 
   while (i < lines.length) {
     let line = lines[i].trim();
@@ -847,12 +839,23 @@ function parseMarkdownInternal(
               );
               const effectRaw = effectToken?.key ?? firstInlineValue(positional, 0);
               const valueRaw = effectToken?.value ?? firstInlineValue(positional, 1);
+              // `zoom` and `pan` are both camera aliases and camera effects.
+              // When either alias invokes the directive and the arguments do
+              // not select another valid effect, the alias supplies the effect
+              // (`!pan` means a pan). `move` is not an effect and therefore
+              // keeps the schema default. This hint is deliberately scoped to
+              // the camera branch; aliases of other directives carry no such
+              // positional meaning.
+              const invokedEffect =
+                parsedDirective && isOneOf(CAMERA_EFFECTS, parsedDirective.name)
+                  ? parsedDirective.name
+                  : DEFAULTS.cameraEffect;
               const effect = parseDirectiveEnumOrDefault<CameraEffect>(
                 "camera",
                 "effect",
                 effectRaw,
                 CAMERA_EFFECTS,
-                DEFAULTS.cameraEffect
+                invokedEffect
               );
               const value =
                 parseDirectiveNumericValue("camera", "value", valueRaw) ?? DEFAULTS.cameraZoom;

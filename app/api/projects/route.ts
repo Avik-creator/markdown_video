@@ -1,7 +1,15 @@
 import { randomBytes } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { enforceProjectRateLimit } from "@/lib/rate-limit";
+import {
+  enforceProjectReadRateLimit,
+  enforceProjectWriteRateLimit,
+  type RateLimitRequestLike,
+} from "@/lib/rate-limit";
+import {
+  parseProjectMarkdown,
+  serializeProjectMarkdown,
+} from "@/lib/project-storage";
 import {
   REDIS_CONFIGURATION_MESSAGE,
   isRedisConfigured,
@@ -47,12 +55,15 @@ function requestTooLargeResponse() {
   );
 }
 
-async function preExecutionErrorResponse(request: NextRequest) {
+async function preExecutionErrorResponse(
+  request: NextRequest,
+  enforceRateLimit: (request: RateLimitRequestLike) => Promise<Response | null>
+) {
   if (!isRedisConfigured()) {
     return redisNotConfiguredResponse();
   }
 
-  return enforceProjectRateLimit(request);
+  return enforceRateLimit(request);
 }
 
 type RequestBodyResult =
@@ -104,7 +115,12 @@ async function readRequestBodyWithLimit(request: NextRequest): Promise<RequestBo
 }
 
 export async function POST(request: NextRequest) {
-  const preExecutionError = await preExecutionErrorResponse(request);
+  // Writes use the dedicated per-hour write policy, enforced before any body
+  // reading or storage so rejected requests cost no bandwidth or Redis space.
+  const preExecutionError = await preExecutionErrorResponse(
+    request,
+    enforceProjectWriteRateLimit
+  );
   if (preExecutionError) {
     return preExecutionError;
   }
@@ -143,8 +159,13 @@ export async function POST(request: NextRequest) {
   const key = `project:${projectId}`;
 
   try {
-    // Store in Redis with 7 day expiration
-    await redis.set(key, parsedBody.data.markdown, { ex: PROJECT_TTL_SECONDS });
+    // Store in Redis with 7 day expiration. The markdown is wrapped in a
+    // versioned object so the Upstash client's automatic JSON deserialization
+    // round-trips it type-safely even when the document is valid JSON itself
+    // (e.g. the entire markdown is `42` or `true`); see lib/project-storage.
+    await redis.set(key, serializeProjectMarkdown(parsedBody.data.markdown), {
+      ex: PROJECT_TTL_SECONDS,
+    });
   } catch (error) {
     console.error("Error storing project in Redis:", error);
     return redisOperationUnavailableResponse();
@@ -154,7 +175,10 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const preExecutionError = await preExecutionErrorResponse(request);
+  const preExecutionError = await preExecutionErrorResponse(
+    request,
+    enforceProjectReadRateLimit
+  );
   if (preExecutionError) {
     return preExecutionError;
   }
@@ -173,15 +197,20 @@ export async function GET(request: NextRequest) {
 
   const key = `project:${parsedProjectId.data}`;
 
-  let markdown: string | null;
+  // Fetch as unknown: the Upstash client auto-deserializes JSON, so legacy
+  // plain-string writes whose content was valid JSON (e.g. `42`) may come
+  // back as non-strings. parseProjectMarkdown normalizes the versioned
+  // wrapper, legacy strings, and corrupted scalars into markdown or null.
+  let storedValue: unknown;
   try {
-    markdown = await redis.get<string>(key);
+    storedValue = await redis.get(key);
   } catch (error) {
     console.error("Error retrieving project from Redis:", error);
     return redisOperationUnavailableResponse();
   }
 
-  if (!markdown) {
+  const markdown = parseProjectMarkdown(storedValue);
+  if (markdown === null) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }
 

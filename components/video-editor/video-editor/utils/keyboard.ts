@@ -1,5 +1,11 @@
 export interface ShortcutEventLike {
   key: string;
+  /**
+   * Physical key position (e.g. "KeyZ"), stable across keyboard layouts.
+   * Optional so test doubles and non-DOM callers can omit it; real
+   * KeyboardEvents always carry it.
+   */
+  code?: string;
   ctrlKey: boolean;
   metaKey: boolean;
   altKey: boolean;
@@ -53,8 +59,42 @@ export function normalizeKey(key: string): string {
   return key.length === 1 ? key.toLowerCase() : key;
 }
 
+/** True for single lowercase Latin letters a-z. */
+function isLatinLetter(key: string): boolean {
+  return key.length === 1 && key >= "a" && key <= "z";
+}
+
+/**
+ * Match an event against a shortcut key, case-insensitively.
+ *
+ * Non-Latin keyboard layouts (Cyrillic, Greek, Hebrew, ...) report non-Latin
+ * `key` values for the letter keys — the physical Z key produces "я", "ζ" or
+ * "ז" — so matching `key` alone means Ctrl+Z and the other letter shortcuts
+ * never fire there. `event.code` is layout-independent, so as a fallback a
+ * single-letter Latin shortcut also matches when the event's `code` is
+ * `"Key" + letter`.
+ *
+ * The fallback only applies when the event's `key` is not itself a Latin
+ * letter. On Latin layouts with rearranged letters (QWERTZ, AZERTY, Dvorak)
+ * the reported `key` is the layout's own letter, and key-based matching must
+ * keep governing — otherwise e.g. the key a QWERTZ user knows as Y (physical
+ * KeyZ) would suddenly trigger the undo binding. Non-letter shortcuts never
+ * use the fallback: punctuation `code` values are themselves layout-dependent
+ * in complex ways.
+ */
 export function matchesKey(event: ShortcutEventLike, key: string): boolean {
-  return normalizeKey(event.key) === normalizeKey(key);
+  const normalizedKey = normalizeKey(key);
+  if (normalizeKey(event.key) === normalizedKey) return true;
+
+  if (
+    isLatinLetter(normalizedKey) &&
+    !isLatinLetter(normalizeKey(event.key)) &&
+    event.code === `Key${normalizedKey.toUpperCase()}`
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**

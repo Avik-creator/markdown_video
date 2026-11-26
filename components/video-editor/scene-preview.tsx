@@ -1,6 +1,11 @@
 "use client";
 
-import { forwardRef, useMemo, useEffect, useSyncExternalStore } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from "react";
 import { useVideoStore } from "@/lib/use-video-store";
 import type { Scene } from "@/lib/types";
 import { motion, useAnimation } from "framer-motion";
@@ -10,6 +15,16 @@ import {
   normalizeTransitionDuration,
   transitionProgress,
 } from "./scene-preview/utils/transition";
+import {
+  LOGICAL_ROOT_FONT_SIZE_PX,
+  getRenderLayoutDimensions,
+  getSceneAspectRatioDimensions,
+} from "./scene-preview/utils/render-layout";
+import {
+  calculatePreviewFitTransform,
+  previewFitTransformToCss,
+} from "./scene-preview/utils/preview-fit";
+import { useMeasuredPreviewSize } from "./scene-preview/utils/use-measured-preview-size";
 import { cn } from "@/lib/utils";
 
 // Import extracted scene components
@@ -100,6 +115,21 @@ function getEmbeddedServerSnapshot() {
   return false;
 }
 
+function getSceneAtTime(scenes: Scene[], currentTime: number) {
+  let accumulatedTime = 0;
+  for (let i = 0; i < scenes.length; i++) {
+    const sceneDuration = scenes[i].duration;
+    if (currentTime < accumulatedTime + sceneDuration) {
+      return {
+        currentScene: scenes[i],
+        sceneTime: currentTime - accumulatedTime,
+      };
+    }
+    accumulatedTime += sceneDuration;
+  }
+  return { currentScene: scenes[scenes.length - 1] || null, sceneTime: 0 };
+}
+
 export const ScenePreview = forwardRef<HTMLDivElement, object>(
   function ScenePreview(_, ref) {
     const scenes = useVideoStore((state) => state.scenes);
@@ -112,37 +142,42 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
       getEmbeddedServerSnapshot
     );
 
-    const { currentScene, sceneTime } = useMemo(() => {
-      let accumulatedTime = 0;
-      for (let i = 0; i < scenes.length; i++) {
-        const sceneDuration = scenes[i].duration;
-        if (currentTime < accumulatedTime + sceneDuration) {
-          return {
-            currentScene: scenes[i],
-            sceneTime: currentTime - accumulatedTime,
-          };
-        }
-        accumulatedTime += sceneDuration;
-      }
-      return { currentScene: scenes[scenes.length - 1] || null, sceneTime: 0 };
-    }, [scenes, currentTime]);
+    const { currentScene, sceneTime } = useMemo(
+      () => getSceneAtTime(scenes, currentTime),
+      [scenes, currentTime]
+    );
 
-    const [ratioW, ratioH] =
-      (
-        {
-          "16:9": [16, 9],
-          "9:16": [9, 16],
-          "1:1": [1, 1],
-          "4:3": [4, 3],
-        } as Record<string, [number, number]>
-      )[aspectRatio] ?? [16, 9];
+    const [ratioW, ratioH] = getSceneAspectRatioDimensions(aspectRatio);
+    const logicalLayout = useMemo(
+      () => getRenderLayoutDimensions(aspectRatio),
+      [aspectRatio]
+    );
+    const { sizingElementRef, size: fittedSize } = useMeasuredPreviewSize(
+      currentScene !== null
+    );
 
-    // Fit the frame inside the preview area at any aspect ratio: as wide as
-    // possible without exceeding the area's height. cqw/cqh are the
-    // container's content box, set up by containerType below.
-    const fitWidth = `min(100cqw, calc(100cqh * ${ratioW} / ${ratioH})${
-      isEmbedded ? "" : ", 56rem"
-    })`;
+    // Embed previews historically ignored the editor zoom control (which is
+    // not available there), while editor zoom composes multiplicatively with
+    // the fit scale around the center of the reserved display box.
+    const fitTransform = useMemo(() => {
+      if (!fittedSize) return null;
+      return calculatePreviewFitTransform({
+        fittedWidth: fittedSize.width,
+        fittedHeight: fittedSize.height,
+        logicalWidth: logicalLayout.width,
+        logicalHeight: logicalLayout.height,
+        zoomPercent: isEmbedded ? 100 : zoom,
+      });
+    }, [fittedSize, logicalLayout, isEmbedded, zoom]);
+
+    // Fit the reserved display box inside the preview area. The editor uses
+    // both container dimensions and keeps the historical 56rem cap. Embeds are
+    // width-driven instead: their outer box may scroll vertically, so a short
+    // iframe still gets the full embed width rather than side-letterboxing.
+    // cqw/cqh are the container's content box, set up by containerType below.
+    const fitWidth = isEmbedded
+      ? "100cqw"
+      : `min(100cqw, calc(100cqh * ${ratioW} / ${ratioH}), 56rem)`;
 
     if (!currentScene) {
       return (
@@ -155,69 +190,97 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     return (
       <div
         className={cn(
-          "flex-1 min-h-0 min-w-0 flex items-center justify-center bg-[#0d0d12]",
-          isEmbedded ? "p-2 overflow-auto" : "p-4 overflow-hidden"
+          "flex-1 min-h-0 min-w-0 flex bg-[#0d0d12]",
+          isEmbedded
+            ? "p-2 overflow-auto"
+            : "items-center justify-center p-4 overflow-hidden"
         )}
         style={{ containerType: "size" }}
       >
+        {/* This shell reserves exactly the on-screen fitted size in layout.
+            The scene inside it is deliberately oversized: it is composed in
+            the same logical coordinate space used by exports and then scaled
+            down as a finished frame. */}
         <div
-          ref={ref}
-          data-scene-preview="true"
-          className={cn(
-            "relative shrink-0 rounded-lg overflow-hidden shadow-2xl transition-transform"
-          )}
+          ref={sizingElementRef}
+          data-scene-preview-fit="true"
+          className={cn("relative shrink-0", isEmbedded && "m-auto")}
           style={{
-            background: currentScene.background || "#1a1a24",
-            transform: isEmbedded ? "scale(1)" : `scale(${zoom / 100})`,
             width: fitWidth,
             aspectRatio: `${ratioW} / ${ratioH}`,
           }}
         >
-          <CameraWrapper camera={currentScene.camera} sceneTime={sceneTime}>
-            {/* No exit animation: it ran on wall-clock time, so exports caught
-                the previous scene mid-exit depending on capture speed. The
-                incoming scene's transition is driven by sceneTime instead. */}
-            <SceneContent
-              key={currentScene.id}
-              scene={currentScene}
-              sceneTime={sceneTime}
-            />
-          </CameraWrapper>
+          <div
+            ref={ref}
+            data-scene-preview="true"
+            className="absolute left-0 top-0 rounded-lg overflow-hidden shadow-2xl"
+            style={{
+              background: currentScene.background || "#1a1a24",
+              width: logicalLayout.width,
+              height: logicalLayout.height,
+              fontSize: LOGICAL_ROOT_FONT_SIZE_PX,
+              // Scene descendants using container-query units must resolve
+              // against the logical frame, not the editor shell. The frame has
+              // fixed dimensions, so size containment cannot create a cyclic
+              // content-size dependency here.
+              containerType: "size",
+              transform: fitTransform
+                ? previewFitTransformToCss(fitTransform)
+                : "none",
+              transformOrigin: "0 0",
+              // The first RO measurement normally happens in a layout effect
+              // before paint. If it has not completed (or the box is currently
+              // zero-sized), show nothing rather than flashing an unscaled
+              // 1920px-wide composition inside the editor layout.
+              visibility: fitTransform ? "visible" : "hidden",
+            }}
+          >
+            <CameraWrapper camera={currentScene.camera} sceneTime={sceneTime}>
+              {/* No exit animation: it ran on wall-clock time, so exports caught
+                  the previous scene mid-exit depending on capture speed. The
+                  incoming scene's transition is driven by sceneTime instead. */}
+              <SceneContent
+                key={currentScene.id}
+                scene={currentScene}
+                sceneTime={sceneTime}
+              />
+            </CameraWrapper>
 
-          {/* Overlays */}
-          {currentScene.particles && (
-            <ParticleEffect
-              type={currentScene.particles.type}
-              intensity={currentScene.particles.intensity}
-              sceneTime={sceneTime}
-            />
-          )}
-          {currentScene.callout && (
-            <CalloutOverlay
-              callout={currentScene.callout}
-              sceneTime={sceneTime}
-            />
-          )}
-          {currentScene.presenter && (
-            <PresenterOverlay
-              presenter={currentScene.presenter}
-              sceneTime={sceneTime}
-            />
-          )}
-          {currentScene.emoji &&
-            !["text", "code", "terminal"].includes(currentScene.type) && (
-              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <EmojiScene scene={currentScene} sceneTime={sceneTime} />
-              </div>
-            )}
-          {/* Timeline elements */}
-          {currentScene.timelineElements &&
-            currentScene.timelineElements.length > 0 && (
-              <TimelineElementsOverlay
-                elements={currentScene.timelineElements}
+            {/* Overlays */}
+            {currentScene.particles && (
+              <ParticleEffect
+                type={currentScene.particles.type}
+                intensity={currentScene.particles.intensity}
                 sceneTime={sceneTime}
               />
             )}
+            {currentScene.callout && (
+              <CalloutOverlay
+                callout={currentScene.callout}
+                sceneTime={sceneTime}
+              />
+            )}
+            {currentScene.presenter && (
+              <PresenterOverlay
+                presenter={currentScene.presenter}
+                sceneTime={sceneTime}
+              />
+            )}
+            {currentScene.emoji &&
+              !["text", "code", "terminal"].includes(currentScene.type) && (
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <EmojiScene scene={currentScene} sceneTime={sceneTime} />
+                </div>
+              )}
+            {/* Timeline elements */}
+            {currentScene.timelineElements &&
+              currentScene.timelineElements.length > 0 && (
+                <TimelineElementsOverlay
+                  elements={currentScene.timelineElements}
+                  sceneTime={sceneTime}
+                />
+              )}
+          </div>
         </div>
       </div>
     );

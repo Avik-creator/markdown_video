@@ -2,7 +2,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EditorView } from "@codemirror/view";
 import { EditorState, Transaction } from "@codemirror/state";
-import { EditorStoreSync, ExternalChange, isExternalChange } from "../store-sync";
+import {
+  EditorStoreSync,
+  ExternalChange,
+  isExternalChange,
+  minimalEditRange,
+} from "../store-sync";
 import { useVideoStore } from "@/lib/use-video-store";
 
 const INITIAL = "!scene\n!text\nHello";
@@ -193,5 +198,190 @@ describe("EditorStoreSync", () => {
       expect(userEdits).toBe(0);
       expect(validated).toHaveLength(0);
     });
+
+    it("keeps the cursor in place when an undo echo edits far away from it", () => {
+      // Edit the tail of the document while the caret sits near the top.
+      const caretPos = 3;
+      view.dispatch({ selection: { anchor: caretPos } });
+      typeText(view, " v2");
+      sync!.flushPending();
+      expect(useVideoStore.getState().markdown).toBe(INITIAL + " v2");
+
+      useVideoStore.getState().undo();
+      expect(view.state.doc.toString()).toBe(INITIAL);
+      // A whole-document replacement overlaps every position and collapses
+      // the caret; the minimal infix deletion is far away, so it survives.
+      expect(view.state.selection.main.head).toBe(caretPos);
+
+      useVideoStore.getState().redo();
+      expect(view.state.doc.toString()).toBe(INITIAL + " v2");
+      expect(view.state.selection.main.head).toBe(caretPos);
+    });
+
+    it("keeps a tail caret at the end when the echo inserts at the start", () => {
+      // Caret at the very end of the document; an external mutation inserts
+      // text at the very beginning. The caret must ride the mapping forward
+      // and stay at the end of the document instead of collapsing.
+      const endPos = view.state.doc.length;
+      view.dispatch({ selection: { anchor: endPos } });
+
+      const prefix = "!scene\n!text\nInserted\n\n---\n\n";
+      useVideoStore.getState().setMarkdown(prefix + INITIAL);
+      expect(view.state.doc.toString()).toBe(prefix + INITIAL);
+      expect(view.state.selection.main.head).toBe(endPos + prefix.length);
+    });
+
+    it("keeps the caret when the echo deletes ahead of it", () => {
+      const original = useVideoStore.getState().markdown;
+      const prefix = "prefix line\n";
+      useVideoStore.getState().setMarkdown(prefix + original, false);
+      // The echo above inserted at the start; put the caret back at the end.
+      const endPos = view.state.doc.length;
+      view.dispatch({ selection: { anchor: endPos } });
+
+      useVideoStore.getState().setMarkdown(original, false);
+      expect(view.state.doc.toString()).toBe(original);
+      expect(view.state.selection.main.head).toBe(endPos - prefix.length);
+    });
+
+    it("skips the echo dispatch entirely when the document already matches", () => {
+      // The editor's own commit changes the store markdown, so the subscriber
+      // fires synchronously — but the document already holds this exact text
+      // and not a single echo dispatch may happen.
+      typeText(view, " abc");
+      const dispatchSpy = vi.spyOn(view, "dispatch");
+      sync!.flushPending();
+      expect(useVideoStore.getState().markdown).toBe(INITIAL + " abc");
+      expect(dispatchSpy).not.toHaveBeenCalled();
+    });
+
+    it("dispatches nothing when the store markdown did not actually change", () => {
+      const dispatchSpy = vi.spyOn(view, "dispatch");
+      useVideoStore.getState().setMarkdown(INITIAL, false);
+      expect(dispatchSpy).not.toHaveBeenCalled();
+    });
+
+    it("echoes reordered documents as a localized infix, not a full replace", () => {
+      // Simulate a timeline reorder: two scenes swap places. The caret inside
+      // the unchanged prefix must not move at all.
+      const twoScenes = INITIAL + "\n\n---\n\n!scene\n!text\nWorld";
+      useVideoStore.getState().setMarkdown(twoScenes, false);
+      view.dispatch({ selection: { anchor: 2 } });
+
+      const reordered = "!scene\n!text\nWorld\n\n---\n\n" + INITIAL;
+      useVideoStore.getState().setMarkdown(reordered, false);
+      expect(view.state.doc.toString()).toBe(reordered);
+      expect(view.state.selection.main.head).toBe(2);
+    });
+  });
+});
+
+describe("minimalEditRange", () => {
+  function applyEdit(current: string, edit: { from: number; to: number; insert: string }) {
+    return current.slice(0, edit.from) + edit.insert + current.slice(edit.to);
+  }
+
+  it("returns null for identical strings", () => {
+    expect(minimalEditRange("abc", "abc")).toBeNull();
+    expect(minimalEditRange("", "")).toBeNull();
+  });
+
+  it("covers an insertion at the end", () => {
+    expect(minimalEditRange("abc", "abcdef")).toEqual({
+      from: 3,
+      to: 3,
+      insert: "def",
+    });
+  });
+
+  it("covers an insertion at the start", () => {
+    expect(minimalEditRange("abc", "xyzabc")).toEqual({
+      from: 0,
+      to: 0,
+      insert: "xyz",
+    });
+  });
+
+  it("covers a deletion at the end", () => {
+    expect(minimalEditRange("abcdef", "abc")).toEqual({
+      from: 3,
+      to: 6,
+      insert: "",
+    });
+  });
+
+  it("covers a deletion at the start", () => {
+    expect(minimalEditRange("xyzabc", "abc")).toEqual({
+      from: 0,
+      to: 3,
+      insert: "",
+    });
+  });
+
+  it("covers a mid-document replacement", () => {
+    expect(minimalEditRange("abcXYZdef", "abc123def")).toEqual({
+      from: 3,
+      to: 6,
+      insert: "123",
+    });
+  });
+
+  it("falls back to a full replacement for completely different documents", () => {
+    expect(minimalEditRange("abc", "xyz")).toEqual({
+      from: 0,
+      to: 3,
+      insert: "xyz",
+    });
+  });
+
+  it("handles insertion into an empty document", () => {
+    expect(minimalEditRange("", "abc")).toEqual({ from: 0, to: 0, insert: "abc" });
+  });
+
+  it("handles deletion of the whole document", () => {
+    expect(minimalEditRange("abc", "")).toEqual({ from: 0, to: 3, insert: "" });
+  });
+
+  it("does not double-count overlapping repeated characters", () => {
+    // Naive prefix+suffix scans would keep more characters than the shorter
+    // document has. "aa" -> "aaa" must be a single-character insertion.
+    const edit = minimalEditRange("aa", "aaa");
+    expect(edit).toEqual({ from: 2, to: 2, insert: "a" });
+  });
+
+  it("handles one string being a strict infix of the other", () => {
+    expect(minimalEditRange("aXb", "aXYZb")).toEqual({
+      from: 2,
+      to: 2,
+      insert: "YZ",
+    });
+  });
+
+  it.each([
+    ["", ""],
+    ["", "abc"],
+    ["abc", ""],
+    ["abc", "abc"],
+    ["abc", "abcdef"],
+    ["xyzabc", "abc"],
+    ["aa", "aaa"],
+    ["aaa", "aa"],
+    ["aab", "ab"],
+    ["ab", "aab"],
+    ["abcXYZdef", "abc123def"],
+    ["completely different", "nothing alike at all"],
+    ["!scene\n!text\nHello", "!scene\n!text\nHello world"],
+    ["abab", "ababab"],
+  ])("applying the edit to %j always yields %j", (current, next) => {
+    const edit = minimalEditRange(current, next);
+    if (edit === null) {
+      expect(current).toBe(next);
+      return;
+    }
+    expect(applyEdit(current, edit)).toBe(next);
+    // The reported range must stay inside the current document.
+    expect(edit.from).toBeGreaterThanOrEqual(0);
+    expect(edit.to).toBeGreaterThanOrEqual(edit.from);
+    expect(edit.to).toBeLessThanOrEqual(current.length);
   });
 });

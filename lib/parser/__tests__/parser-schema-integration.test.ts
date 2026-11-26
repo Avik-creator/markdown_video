@@ -92,12 +92,12 @@ Hello
     });
   });
 
-  describe("case-insensitive schema property keys", () => {
-    it("parses code font keys case-insensitively and canonicalizes font values", () => {
+  describe("block property key casing", () => {
+    it("parses exact schema casing for code font keys and canonicalizes font values", () => {
       const [scene] = parseMarkdown(`!scene
 !code
-FontSize: lg
-FONTFAMILY: JetBrains
+fontSize: lg
+fontFamily: JetBrains
 \`\`\`ts
 const x = 1;
 \`\`\`
@@ -109,11 +109,17 @@ const x = 1;
       });
     });
 
-    it("parses lower-case canonical spellings for code font keys", () => {
+    it("does not parse capitalized/all-caps block keys, but accepts legacy lowercase spellings", () => {
+      // `FontSize`/`FONTFAMILY` start capitals and are treated as non-property
+      // lines. The all-lowercase spellings `fontsize`/`fontfamily` are the
+      // pre-refactor parser's documented forms (it lowercased every key) and
+      // are registered aliases, so they keep working.
       const [scene] = parseMarkdown(`!scene
 !code
+FontSize: xl
 fontsize: md
-fontfamily: FIRA
+FONTFAMILY: JetBrains
+fontfamily: fira
 \`\`\`ts
 const x = 1;
 \`\`\`
@@ -125,7 +131,7 @@ const x = 1;
       });
     });
 
-    it("parses text font keys case-insensitively without changing text content casing", () => {
+    it("preserves case-mismatched text keys as prose instead of consuming them as properties", () => {
       const [scene] = parseMarkdown(`!scene
 !text
 Hello
@@ -133,8 +139,8 @@ FONTFAMILY: DISPLAY
 `);
 
       expect(scene.text).toMatchObject({
-        content: "Hello",
-        fontFamily: "display",
+        content: "Hello\nFONTFAMILY: DISPLAY",
+        fontFamily: "sans",
       });
     });
 

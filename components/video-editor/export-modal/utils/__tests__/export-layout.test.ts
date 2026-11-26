@@ -17,6 +17,8 @@ function createCloneDocument(withPreview = true) {
     preview.style.aspectRatio = "16 / 9";
     preview.style.maxWidth = "56rem";
     preview.style.maxHeight = "20rem";
+    preview.style.borderRadius = "8px";
+    preview.style.visibility = "hidden";
     clonedDoc.body.appendChild(preview);
   }
   return clonedDoc;
@@ -46,6 +48,17 @@ describe("applyRenderLayoutToClone", () => {
     expect(preview?.style.maxWidth).toBe("none");
     expect(preview?.style.maxHeight).toBe("none");
     expect(preview?.style.flexShrink).toBe("0");
+    expect(preview?.style.visibility).toBe("visible");
+  });
+
+  it("squares rounded corners so opaque JPEG frames do not get black matte corners", () => {
+    const clonedDoc = createCloneDocument();
+    const preview = clonedDoc.querySelector<HTMLElement>('[data-scene-preview="true"]');
+    const plan = createRenderPlan({ resolution: "720p", format: "mp4" });
+
+    applyRenderLayoutToClone({ clonedDoc, clonedElement: preview, renderPlan: plan });
+
+    expect(preview?.style.borderRadius).toBe("0");
   });
 
   it("normalizes rem/em typography to a fixed logical font base", () => {

@@ -16,10 +16,14 @@ describe("getDiagnostics", () => {
 !text
 Hello
 animation: wobble`;
-    const lines = getDiagnostics(md).map((d) => [d.line, d.message]);
+    const lines = getDiagnostics(md).map((d) => [d.line, d.severity, d.message]);
     expect(lines).toEqual([
-      [2, 'Scene 1: Invalid transition "spin"'],
-      [5, 'Scene 1: Invalid animation "wobble"'],
+      [2, "error", 'Scene 1: Invalid transition "spin"'],
+      [
+        5,
+        "warning",
+        "Scene 1: looks like property `animation` but `wobble` is not valid; treating as text",
+      ],
     ]);
   });
 

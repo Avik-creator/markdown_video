@@ -17,6 +17,36 @@
 //    in 7 properties, leaving room for a failure-phase property.
 
 import { track } from "@vercel/analytics";
+import type { AnalyticsProps } from "@vercel/analytics/next";
+
+/**
+ * Strip the query string and hash fragment from a URL. Inline share links put
+ * the entire document in the `?md=` query parameter, so any URL reported to an
+ * analytics provider must have both removed first. Splitting on "?" first and
+ * then "#" handles both the standard order (query before hash) and malformed
+ * URLs with the hash first.
+ */
+export function stripUrlQueryAndHash(url: string): string {
+  return url.split("?")[0].split("#")[0];
+}
+
+type AnalyticsBeforeSendEvent = Parameters<
+  NonNullable<AnalyticsProps["beforeSend"]>
+>[0];
+
+/**
+ * `beforeSend` middleware for the Vercel Analytics `<Analytics />` component.
+ * Guarantees that no query string (which can carry a full markdown document in
+ * `?md=`) or hash fragment ever leaves the browser in an analytics event,
+ * while preserving the rest of the event payload. This must be applied inside
+ * a client component — see app/privacy-analytics.tsx — because function props
+ * cannot cross the server/client component boundary.
+ */
+export function beforeSendAnalyticsEvent(
+  event: AnalyticsBeforeSendEvent
+): AnalyticsBeforeSendEvent {
+  return { ...event, url: stripUrlQueryAndHash(event.url) };
+}
 
 /** Custom event names for the export lifecycle, normalized as snake_case. */
 export const EXPORT_EVENT_NAMES = {

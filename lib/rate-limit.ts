@@ -27,13 +27,31 @@ export type RateLimitPolicy = {
 const MEMORY_FALLBACK_MAX_IDENTIFIERS = 5_000;
 
 /**
- * Project creation/loading depends on the same Redis instance as rate limiting,
- * so there is no useful degraded mode when Redis cannot be reached: fail closed.
+ * Read policy for project lookups: GET /api/projects and the editor page's
+ * shared-project resolution. Project loading depends on the same Redis
+ * instance as rate limiting, so there is no useful degraded mode when Redis
+ * cannot be reached: fail closed.
  */
-export const PROJECTS_RATE_LIMIT: RateLimitPolicy = {
-  prefix: "markdown-video:projects",
+export const PROJECTS_READ_RATE_LIMIT: RateLimitPolicy = {
+  prefix: "markdown-video:projects:read",
   limit: 30,
   window: "1 m",
+  failureMode: "fail-closed",
+};
+
+/**
+ * Write policy for project creation: POST /api/projects. Each accepted write
+ * stores up to 1 MiB in Redis with a 7-day TTL, so writes get a much tighter
+ * budget than reads — without one, a single IP could fill a small Redis plan
+ * within minutes. The read and write policies use separate prefixes so their
+ * counters never interfere. Writes depend on the same Redis instance as rate
+ * limiting, so there is no useful degraded mode when Redis cannot be reached:
+ * fail closed.
+ */
+export const PROJECTS_WRITE_RATE_LIMIT: RateLimitPolicy = {
+  prefix: "markdown-video:projects:write",
+  limit: 10,
+  window: "1 h",
   failureMode: "fail-closed",
 };
 
@@ -110,25 +128,55 @@ function normalizeIpCandidate(candidate: string | null | undefined): string | nu
   return normalized.slice(0, MAX_IP_HEADER_LENGTH);
 }
 
-/**
- * Extracts the client IP using the standard proxy headers. The first
- * x-forwarded-for entry is the original client when the deployment platform or
- * reverse proxy appends trusted proxy addresses. If this app is exposed without
- * such a proxy, those headers should be stripped/set by whatever edge layer is
- * in front of it, as clients can otherwise spoof them.
- */
-export function getClientIp(request: RateLimitRequestLike): string {
-  const forwardedFor = request.headers.get("x-forwarded-for");
-  if (forwardedFor) {
-    for (const candidate of forwardedFor.split(",")) {
-      const ip = normalizeIpCandidate(candidate);
-      if (ip) {
-        return ip;
-      }
+function firstForwardedCandidate(headerValue: string | null): string | null {
+  if (!headerValue) {
+    return null;
+  }
+  for (const candidate of headerValue.split(",")) {
+    const ip = normalizeIpCandidate(candidate);
+    if (ip) {
+      return ip;
     }
   }
+  return null;
+}
 
-  return normalizeIpCandidate(request.headers.get("x-real-ip")) ?? "unknown";
+/**
+ * Extracts the client IP from forwarding headers, in decreasing order of
+ * trustworthiness:
+ *
+ * 1. `x-vercel-forwarded-for` — on Vercel this header is set by the platform's
+ *    edge network to the connecting client's IP and a client-supplied value
+ *    cannot survive, so it is the only header that stays trustworthy even if
+ *    another proxy fronts the deployment (in which case `x-forwarded-for` may
+ *    have been overwritten by that proxy). See
+ *    https://vercel.com/docs/headers/request-headers
+ * 2. `x-real-ip` — identical to `x-forwarded-for` on Vercel, and set by some
+ *    reverse proxies to the immediate client address.
+ * 3. Leftmost `x-forwarded-for` entry — the original client only when every
+ *    proxy in front appends (rather than passes through) client-supplied
+ *    values.
+ *
+ * Residual caveat: when self-hosting without an edge layer or reverse proxy
+ * that strips/overwrites client-supplied forwarding headers, ALL of these
+ * headers — including `x-vercel-forwarded-for`, which is only special on
+ * Vercel — are trivially spoofable, so per-IP rate limiting is best-effort in
+ * that deployment mode.
+ */
+export function getClientIp(request: RateLimitRequestLike): string {
+  const vercelForwardedFor = firstForwardedCandidate(
+    request.headers.get("x-vercel-forwarded-for")
+  );
+  if (vercelForwardedFor) {
+    return vercelForwardedFor;
+  }
+
+  const realIp = normalizeIpCandidate(request.headers.get("x-real-ip"));
+  if (realIp) {
+    return realIp;
+  }
+
+  return firstForwardedCandidate(request.headers.get("x-forwarded-for")) ?? "unknown";
 }
 
 function jsonError(error: string, status: number, headers: Record<string, string> = {}) {
@@ -330,8 +378,20 @@ export async function enforceRateLimit(
   }
 }
 
-export function enforceProjectRateLimit(request: RateLimitRequestLike) {
-  return enforceRateLimit(request, PROJECTS_RATE_LIMIT);
+/**
+ * Read-side project rate limit: GET /api/projects and the editor page's
+ * shared-project lookup.
+ */
+export function enforceProjectReadRateLimit(request: RateLimitRequestLike) {
+  return enforceRateLimit(request, PROJECTS_READ_RATE_LIMIT);
+}
+
+/**
+ * Write-side project rate limit: POST /api/projects. Must be enforced before
+ * reading or storing the request body so rejected requests cost no storage.
+ */
+export function enforceProjectWriteRateLimit(request: RateLimitRequestLike) {
+  return enforceRateLimit(request, PROJECTS_WRITE_RATE_LIMIT);
 }
 
 export function enforceMcpRateLimit(request: RateLimitRequestLike) {

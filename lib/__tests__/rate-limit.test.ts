@@ -33,8 +33,11 @@ vi.mock("@/lib/redis", () => ({
 
 import {
   MCP_RATE_LIMIT,
+  PROJECTS_READ_RATE_LIMIT,
+  PROJECTS_WRITE_RATE_LIMIT,
   enforceMcpRateLimit,
-  enforceProjectRateLimit,
+  enforceProjectReadRateLimit,
+  enforceProjectWriteRateLimit,
   getClientIp,
 } from "../rate-limit";
 
@@ -53,14 +56,61 @@ function allowedResponse() {
 }
 
 describe("getClientIp", () => {
-  it("uses the first address from x-forwarded-for", () => {
+  it("prefers x-vercel-forwarded-for over x-real-ip and x-forwarded-for", () => {
+    expect(
+      getClientIp(
+        request({
+          "x-vercel-forwarded-for": "198.51.100.23",
+          "x-real-ip": "203.0.113.8",
+          "x-forwarded-for": "192.0.2.10",
+        })
+      )
+    ).toBe("198.51.100.23");
+  });
+
+  it("uses the first address of a multi-valued x-vercel-forwarded-for", () => {
+    expect(
+      getClientIp(
+        request({ "x-vercel-forwarded-for": "198.51.100.23, 203.0.113.8" })
+      )
+    ).toBe("198.51.100.23");
+  });
+
+  it("prefers x-real-ip over x-forwarded-for when no Vercel header exists", () => {
+    expect(
+      getClientIp(
+        request({
+          "x-real-ip": "203.0.113.8",
+          "x-forwarded-for": "192.0.2.10",
+        })
+      )
+    ).toBe("203.0.113.8");
+  });
+
+  it("uses the first address from x-forwarded-for as the last header fallback", () => {
     expect(
       getClientIp(request({ "x-forwarded-for": "198.51.100.23, 203.0.113.8" }))
     ).toBe("198.51.100.23");
   });
 
-  it("falls back to x-real-ip and then to unknown", () => {
-    expect(getClientIp(request({ "x-real-ip": "203.0.113.8" }))).toBe("203.0.113.8");
+  it("skips blank x-vercel-forwarded-for entries before falling back", () => {
+    expect(
+      getClientIp(
+        request({
+          "x-vercel-forwarded-for": "  ",
+          "x-real-ip": "203.0.113.8",
+        })
+      )
+    ).toBe("203.0.113.8");
+  });
+
+  it("caps overlong header values at the IP length limit", () => {
+    const overlong = `${"1".repeat(200)}`;
+    const ip = getClientIp(request({ "x-vercel-forwarded-for": overlong }));
+    expect(ip.length).toBeLessThanOrEqual(128);
+  });
+
+  it("falls back to unknown when no forwarding headers are present", () => {
     expect(getClientIp(request())).toBe("unknown");
   });
 });
@@ -80,7 +130,7 @@ describe("rate-limit enforcement", () => {
   });
 
   it("allows requests under the limit and uses the client IP as the identifier", async () => {
-    const response = await enforceProjectRateLimit(
+    const response = await enforceProjectReadRateLimit(
       request({ "x-forwarded-for": "198.51.100.23, 203.0.113.8" })
     );
 
@@ -89,17 +139,43 @@ describe("rate-limit enforcement", () => {
   });
 
   it("configures the documented sliding-window limits", async () => {
-    await enforceProjectRateLimit(request());
+    await enforceProjectReadRateLimit(request());
+    await enforceProjectWriteRateLimit(request());
     await enforceMcpRateLimit(request());
 
     expect(slidingWindow).toHaveBeenCalledWith(30, "1 m");
+    expect(slidingWindow).toHaveBeenCalledWith(10, "1 h");
     expect(slidingWindow).toHaveBeenCalledWith(60, "1 m");
     expect(ratelimitConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ prefix: "markdown-video:projects", timeout: 1_000 })
+      expect.objectContaining({ prefix: "markdown-video:projects:read", timeout: 1_000 })
+    );
+    expect(ratelimitConstructor).toHaveBeenCalledWith(
+      expect.objectContaining({ prefix: "markdown-video:projects:write", timeout: 1_000 })
     );
     expect(ratelimitConstructor).toHaveBeenCalledWith(
       expect.objectContaining({ prefix: "markdown-video:mcp", timeout: 1_000 })
     );
+  });
+
+  it("documents the project read/write split: 30 reads per minute, 10 writes per hour", () => {
+    expect(PROJECTS_READ_RATE_LIMIT.limit).toBe(30);
+    expect(PROJECTS_READ_RATE_LIMIT.window).toBe("1 m");
+    expect(PROJECTS_READ_RATE_LIMIT.failureMode).toBe("fail-closed");
+    expect(PROJECTS_WRITE_RATE_LIMIT.limit).toBe(10);
+    expect(PROJECTS_WRITE_RATE_LIMIT.window).toBe("1 h");
+    expect(PROJECTS_WRITE_RATE_LIMIT.failureMode).toBe("fail-closed");
+    // The policies must not share a Redis key prefix, or their counters would
+    // interfere with each other.
+    expect(PROJECTS_READ_RATE_LIMIT.prefix).not.toBe(PROJECTS_WRITE_RATE_LIMIT.prefix);
+  });
+
+  it("enforces the write policy for project writes with the client IP", async () => {
+    const response = await enforceProjectWriteRateLimit(
+      request({ "x-vercel-forwarded-for": "198.51.100.55" })
+    );
+
+    expect(response).toBeNull();
+    expect(limit).toHaveBeenCalledWith("198.51.100.55");
   });
 
   it("returns 429 with retry metadata when the limiter denies a request", async () => {
@@ -112,7 +188,7 @@ describe("rate-limit enforcement", () => {
       pending: Promise.resolve(),
     });
 
-    const response = await enforceProjectRateLimit(request());
+    const response = await enforceProjectReadRateLimit(request());
 
     expect(response).not.toBeNull();
     expect(response!.status).toBe(429);
@@ -127,7 +203,7 @@ describe("rate-limit enforcement", () => {
     isRedisConfigured.mockReturnValue(false);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const response = await enforceProjectRateLimit(request());
+    const response = await enforceProjectReadRateLimit(request());
 
     expect(response).not.toBeNull();
     expect(response!.status).toBe(503);
@@ -143,7 +219,7 @@ describe("rate-limit enforcement", () => {
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const response = await enforceProjectRateLimit(request());
+    const response = await enforceProjectReadRateLimit(request());
 
     expect(response).not.toBeNull();
     expect(response!.status).toBe(503);
@@ -154,7 +230,7 @@ describe("rate-limit enforcement", () => {
     limit.mockRejectedValueOnce(new Error("redis unreachable"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
-    const response = await enforceProjectRateLimit(request());
+    const response = await enforceProjectReadRateLimit(request());
 
     expect(response).not.toBeNull();
     expect(response!.status).toBe(503);
@@ -162,7 +238,7 @@ describe("rate-limit enforcement", () => {
   });
 
   it("accepts a headers-only source for direct project-share resolution", async () => {
-    const response = await enforceProjectRateLimit({
+    const response = await enforceProjectReadRateLimit({
       headers: new Headers({ "x-forwarded-for": "198.51.100.101" }),
     });
 

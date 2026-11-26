@@ -3,7 +3,8 @@ import { headers } from "next/headers"
 import { VideoEditor } from "@components/video-editor/video-editor"
 import { ShareLinkError, type ShareLinkErrorKind } from "@components/video-editor/share-link-error"
 import { ShareProjectGate } from "@components/video-editor/share-project-gate"
-import { enforceProjectRateLimit } from "@/lib/rate-limit"
+import { enforceProjectReadRateLimit } from "@/lib/rate-limit"
+import { parseProjectMarkdown } from "@/lib/project-storage"
 import { redis } from "@/lib/redis"
 import { decodeShareMarkdownPayload } from "@/lib/share-link"
 
@@ -71,7 +72,7 @@ async function resolveSharedMarkdown(mdParam: string | undefined, projectParam: 
     // catch is only a defense against unexpected implementation errors.
     const requestHeaders = await headers()
     try {
-      const rateLimitResponse = await enforceProjectRateLimit({ headers: requestHeaders })
+      const rateLimitResponse = await enforceProjectReadRateLimit({ headers: requestHeaders })
       if (rateLimitResponse) {
         return { status: "error", kind: "project-unavailable" }
       }
@@ -81,11 +82,15 @@ async function resolveSharedMarkdown(mdParam: string | undefined, projectParam: 
     }
 
     try {
-      const redisMarkdown = await redis.get<string>(`project:${projectParam}`)
-      if (typeof redisMarkdown !== "string" || redisMarkdown.length === 0) {
+      // The Upstash client auto-deserializes JSON, so stored values may be the
+      // versioned wrapper object, a legacy plain string, or a corrupted scalar;
+      // parseProjectMarkdown normalizes all three (see lib/project-storage).
+      const storedValue = await redis.get(`project:${projectParam}`)
+      const parsedMarkdown = parseProjectMarkdown(storedValue)
+      if (parsedMarkdown === null) {
         return { status: "error", kind: "project-not-found" }
       }
-      sharedMarkdown = redisMarkdown
+      sharedMarkdown = parsedMarkdown
     } catch (error) {
       console.error("Error fetching shared project from Redis:", error)
       return { status: "error", kind: "project-unavailable" }

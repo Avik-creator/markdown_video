@@ -1,13 +1,97 @@
 import { describe, expect, it } from "vitest";
 import {
   EXPORT_EVENT_NAMES,
+  beforeSendAnalyticsEvent,
   buildExportEventProperties,
   countSceneTypes,
   encodeSceneTypeCounts,
   isCancellationError,
   normalizeToken,
+  stripUrlQueryAndHash,
   trackExportEvent,
 } from "../analytics";
+
+describe("stripUrlQueryAndHash", () => {
+  it("strips the query string from a full URL", () => {
+    expect(stripUrlQueryAndHash("https://example.com/editor?md=secret")).toBe(
+      "https://example.com/editor"
+    );
+  });
+
+  it("strips both query string and hash fragment", () => {
+    expect(stripUrlQueryAndHash("https://example.com/editor?md=secret#frag")).toBe(
+      "https://example.com/editor"
+    );
+    expect(stripUrlQueryAndHash("https://example.com/editor#frag")).toBe(
+      "https://example.com/editor"
+    );
+  });
+
+  it("handles malformed URLs where the hash precedes the question mark", () => {
+    expect(stripUrlQueryAndHash("https://example.com/editor#frag?md=secret")).toBe(
+      "https://example.com/editor"
+    );
+  });
+
+  it("strips query strings from path-only URLs", () => {
+    expect(stripUrlQueryAndHash("/editor?md=secret")).toBe("/editor");
+  });
+
+  it("leaves clean URLs unchanged", () => {
+    expect(stripUrlQueryAndHash("https://example.com/editor")).toBe(
+      "https://example.com/editor"
+    );
+    expect(stripUrlQueryAndHash("/")).toBe("/");
+  });
+
+  it("strips inline share-link markdown payloads completely", () => {
+    const markdown = "# Secret doc\n\nconfidential ? content # here";
+    const url = `https://markdownvideo.example.com/editor?md=${encodeURIComponent(markdown)}`;
+
+    const stripped = stripUrlQueryAndHash(url);
+
+    expect(stripped).toBe("https://markdownvideo.example.com/editor");
+    expect(stripped).not.toContain("md=");
+    expect(stripped).not.toContain("Secret");
+  });
+});
+
+describe("beforeSendAnalyticsEvent", () => {
+  it("strips query and hash from pageview events while preserving the event shape", () => {
+    const event = {
+      type: "pageview" as const,
+      url: "https://example.com/editor?md=secret#frag",
+    };
+
+    const result = beforeSendAnalyticsEvent(event);
+
+    expect(result).toEqual({
+      type: "pageview",
+      url: "https://example.com/editor",
+    });
+  });
+
+  it("strips query strings from custom events", () => {
+    const event = {
+      type: "event" as const,
+      url: "https://example.com/editor?md=secret",
+    };
+
+    expect(beforeSendAnalyticsEvent(event).url).toBe("https://example.com/editor");
+  });
+
+  it("never lets a query string survive in any reported URL", () => {
+    const nastyMarkdown = "!scene\n!text\nuser secrets and tokens";
+    const url = `https://example.com/editor?md=${encodeURIComponent(nastyMarkdown)}&project=abcDEF123-_`;
+
+    const result = beforeSendAnalyticsEvent({ type: "pageview", url });
+
+    expect(result.url).not.toContain("?");
+    expect(result.url).not.toContain("#");
+    expect(result.url).not.toContain("md");
+    expect(result.url).not.toContain("project");
+  });
+});
 
 describe("EXPORT_EVENT_NAMES", () => {
   it("defines the four export lifecycle events", () => {

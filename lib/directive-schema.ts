@@ -234,6 +234,7 @@ export const DIRECTIVE_SCHEMAS = [
       },
       {
         name: "fontFamily",
+        aliases: ["fontfamily"],
         type: "enum",
         required: false,
         default: "sans",
@@ -270,7 +271,7 @@ export const DIRECTIVE_SCHEMAS = [
       },
       {
         name: "i18nKey",
-        aliases: ["i18n"],
+        aliases: ["i18n", "i18nkey"],
         type: "string",
         required: false,
         description: "Localization key for multi-language support",
@@ -314,6 +315,7 @@ export const DIRECTIVE_SCHEMAS = [
       },
       {
         name: "fontSize",
+        aliases: ["fontsize"],
         type: "enum",
         required: false,
         default: "sm",
@@ -324,6 +326,7 @@ export const DIRECTIVE_SCHEMAS = [
       },
       {
         name: "fontFamily",
+        aliases: ["fontfamily"],
         type: "enum",
         required: false,
         default: "mono",

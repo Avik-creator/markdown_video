@@ -43,11 +43,9 @@ This should have an error
     ]);
   });
 
-  it("rejects an unknown animation", () => {
+  it("rejects an unknown animation in explicit inline property syntax", () => {
     const result = validateMarkdownSyntax(`!scene
-!text
-Hello
-animation: invalid_animation
+!text "Hello" at:0s duration:1s animation:invalid_animation
 `);
     expect(result.valid).toBe(false);
     expect(messages(result.errors)).toEqual([
@@ -84,13 +82,13 @@ animation: invalid_animation
 
   it.each([
     [
-      "text size",
-      `!scene\n!text\nHello\nsize: huge`,
+      "text size in explicit inline property syntax",
+      `!scene\n!text "Hello" at:0s duration:1s size:huge`,
       'Scene 1: Invalid text size "huge"',
     ],
     [
-      "text font family",
-      `!scene\n!text\nHello\nfontFamily: curly`,
+      "text font family in explicit inline property syntax",
+      `!scene\n!text "Hello" at:0s duration:1s fontFamily:curly`,
       'Scene 1: Invalid font family "curly"',
     ],
     [
@@ -169,11 +167,11 @@ animation: invalid_animation
     expect(messages(result.errors)).toContain(message);
   });
 
-  it("accepts font property keys case-insensitively", () => {
+  it("accepts font property keys in exact schema casing", () => {
     const result = validateMarkdownSyntax(`!scene
 !code
-FontSize: md
-FONTFAMILY: jetbrains
+fontSize: md
+fontFamily: jetbrains
 \`\`\`js
 const x = 1;
 \`\`\`
@@ -186,12 +184,12 @@ const x = 1;
 !text
 Hello
 animation: fadeIn
-size: huge
+stagger: -1
 `);
     expect(result.errors).toContainEqual(
       expect.objectContaining({
         line: 5,
-        message: 'Scene 1: Invalid text size "huge"',
+        message: "Scene 1: Stagger must be at least 0",
       })
     );
   });

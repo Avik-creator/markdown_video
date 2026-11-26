@@ -6,6 +6,7 @@ export { parseDiffBlock } from "./diff-parser"
 export { parseChartData } from "./chart-parser"
 export { parseLayoutChildren } from "./layout-parser"
 export {
+  classifyDirectivePropertyLine,
   directivePositionalDefault,
   directivePropertyDefault,
   getInlinePropertyValue,

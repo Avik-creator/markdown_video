@@ -41,6 +41,16 @@ import {
   type CanonicalDirectiveName,
   type DirectiveValueSchema,
 } from "../directive-schema";
+import {
+  classifyDirectivePropertyLine,
+  parseInlineArguments,
+  type InlineToken,
+} from "../parser/parsers/schema-values";
+import {
+  collectVariableDefinitions,
+  parseDirective,
+  substituteVariables,
+} from "../parser/utils";
 
 export interface ValidationError {
   line?: number;
@@ -102,7 +112,7 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
     // Validate schema-backed values directly from the source. This catches
     // invalid input that the parser currently coerces to a default (for
     // example font families, emoji sizes, countdown styles and callout styles).
-    validateSchemaBackedValues(lines, errors);
+    validateSchemaBackedValues(lines, errors, warnings);
 
     if (fenceStart !== null) {
       errors.push({
@@ -157,16 +167,9 @@ function validateScene(
   warnings: ValidationError[],
   lineOf: (...patterns: RegExp[]) => number | undefined
 ): void {
-  // Validate duration
-  if (scene.duration <= 0) {
-    errors.push({
-      line: lineOf(/^!(duration|time|length|dur)\b/i),
-      message: `Scene ${index + 1}: Duration must be positive`,
-      severity: "error",
-      suggestion: "Use !duration 3 to set a 3-second duration",
-    });
-  }
-
+  // Non-positive durations are reported by the schema-backed source
+  // validation below. Keeping a second post-parse error here duplicates the
+  // same source line (for example `!duration 0`).
   if (scene.duration > 60) {
     warnings.push({
       line: lineOf(/^!(duration|time|length|dur)\b/i),
@@ -522,12 +525,6 @@ function sceneLineFinder(scene: Scene, lines: string[]) {
 // Schema-backed source validation
 // ============================================
 
-interface InlineToken {
-  raw: string;
-  key?: string;
-  value?: string;
-}
-
 function stripQuotes(value: string): string {
   const trimmed = value.trim();
   if (trimmed.length >= 2) {
@@ -538,69 +535,6 @@ function stripQuotes(value: string): string {
     }
   }
   return trimmed;
-}
-
-/**
- * Split inline directive arguments on whitespace while preserving quoted
- * strings. Tokens such as `label:"Scan me"` remain one key/value token.
- */
-function tokenizeInlineArgs(args: string): InlineToken[] {
-  const rawTokens: string[] = [];
-  let current = "";
-  let quote: '"' | "'" | null = null;
-
-  const flush = () => {
-    if (current.length > 0) {
-      rawTokens.push(current);
-      current = "";
-    }
-  };
-
-  for (const char of args) {
-    if (quote) {
-      current += char;
-      if (char === quote) quote = null;
-    } else if (char === '"' || char === "'") {
-      quote = char;
-      current += char;
-    } else if (/\s/.test(char)) {
-      flush();
-    } else {
-      current += char;
-    }
-  }
-  flush();
-
-  const tokens: InlineToken[] = [];
-  for (let index = 0; index < rawTokens.length; index++) {
-    const raw = rawTokens[index];
-
-    // Support `key: "value"` as well as `key:"value"`.
-    const keyOnly = raw.match(/^([A-Za-z][\w-]*):$/);
-    if (keyOnly && index + 1 < rawTokens.length) {
-      const value = rawTokens[index + 1];
-      tokens.push({
-        raw: `${raw} ${value}`,
-        key: keyOnly[1],
-        value: stripQuotes(value),
-      });
-      index++;
-      continue;
-    }
-
-    const keyValue = raw.match(/^([A-Za-z][\w-]*):(.+)$/);
-    if (keyValue) {
-      tokens.push({
-        raw,
-        key: keyValue[1],
-        value: stripQuotes(keyValue[2]),
-      });
-    } else {
-      tokens.push({ raw });
-    }
-  }
-
-  return tokens;
 }
 
 /** Directives whose following block may contain schema-declared key:value lines. */
@@ -727,6 +661,13 @@ function validateSchemaValue(
 ): void {
   const value = stripQuotes(rawValue);
 
+  // Source lines are substituted with the same hoisted `!var` map the parser
+  // uses. If a `$name` reference is still present afterwards, it was not
+  // defined in visible source. Mirror the parser by leaving the text intact,
+  // and deliberately do not flag it: the value may be injected by an outer
+  // document/template pipeline the validator cannot see.
+  if (/\$\w+/.test(value)) return;
+
   switch (schema.type) {
     case "enum": {
       const values = schema.values ?? [];
@@ -782,18 +723,12 @@ function validateCameraInline(
 
   if (first.value === undefined) return;
 
-  // `zoom:1.5` is a numeric amount. `pan:left` and `shake:true` use the
-  // corresponding constrained keyframe values in the documented syntax.
-  if (key === "zoom") {
-    const valueSchema = getDirectivePositional("camera", "value");
-    if (valueSchema) validateSchemaValue(valueSchema, first.value, line, sceneIndex, errors);
-  } else if (key === "pan") {
-    const panSchema = getCameraKeyframeProperty("pan");
-    if (panSchema) validateSchemaValue(panSchema, first.value, line, sceneIndex, errors);
-  } else if (key === "shake") {
-    const shakeSchema = getCameraKeyframeProperty("shake");
-    if (shakeSchema) validateSchemaValue(shakeSchema, first.value, line, sceneIndex, errors);
-  }
+  // In inline camera position every effect token means `effect:value`, where
+  // the value is the numeric camera intensity consumed by the renderer. This
+  // is intentionally different from keyframe rows: `- pan:left` uses the pan
+  // direction enum, while `!camera pan:0.5` means effect=pan with amount 0.5.
+  const valueSchema = getDirectivePositional("camera", "value");
+  if (valueSchema) validateSchemaValue(valueSchema, first.value, line, sceneIndex, errors);
 }
 
 function validateInlineDirective(
@@ -803,16 +738,17 @@ function validateInlineDirective(
   sceneIndex: number,
   errors: ValidationError[]
 ): void {
-  const directiveMatch = line.match(/^!([\w-]+)(?=\s|$)/);
-  if (!directiveMatch) return;
+  const directive = parseDirective(line);
+  if (!directive) return;
 
-  const args = line.slice(directiveMatch[0].length).trim();
-  const tokens = tokenizeInlineArgs(args);
+  // Use the parser's effective arguments, including colon-attached shorthand
+  // injection (`!zoom:1.3` behaves as `zoom:1.3`).
+  const { tokens } = parseInlineArguments(directive.args);
 
   for (const token of tokens) {
     if (!token.key || token.value === undefined) continue;
 
-    // Camera effect shortcuts (`zoom:1.5`, `pan:left`, `shake:true`) are
+    // Camera effect shortcuts (`zoom:1.5`, `pan:0.5`, `shake:0.75`) are
     // validated by validateCameraInline rather than as normal properties.
     if (
       schema.name === "camera" &&
@@ -847,7 +783,7 @@ function validateCameraKeyframeLine(
   errors: ValidationError[]
 ): void {
   const content = line.replace(/^-\s*/, "");
-  for (const token of tokenizeInlineArgs(content)) {
+  for (const token of parseInlineArguments(content).tokens) {
     if (!token.key || token.value === undefined) continue;
     const property = getCameraKeyframeProperty(token.key);
     if (property) {
@@ -861,14 +797,37 @@ function validateBlockPropertyLine(
   line: string,
   lineNumber: number,
   sceneIndex: number,
-  errors: ValidationError[]
+  errors: ValidationError[],
+  warnings: ValidationError[]
 ): void {
-  const match = line.match(/^([A-Za-z][\w-]*)\s*:\s*(.+)$/);
-  if (!match) return;
+  const classification = classifyDirectivePropertyLine(directive, line);
 
-  const property = getDirectiveProperty(directive, match[1]);
-  if (!property) return;
-  validateSchemaValue(property, match[2], lineNumber, sceneIndex, errors);
+  if (classification.kind === "property") {
+    validateSchemaValue(
+      classification.property.schema,
+      classification.property.value,
+      lineNumber,
+      sceneIndex,
+      errors
+    );
+    return;
+  }
+
+  if (classification.kind !== "prose") return;
+
+  // A still-unresolved variable is not evidence of a typo. The parser leaves
+  // it as-is, and the value may be supplied outside the visible document.
+  if (/\$\w+/.test(classification.attempted.value)) return;
+
+  // The prose heuristic necessarily turns enum/number typos into text. Warn
+  // (rather than error) when an exact, lowercase/schema-cased key makes the
+  // line look like an attempted property. Case-mismatched keys such as
+  // `Color:` do not receive this warning; they are unambiguous prose by spec.
+  pushValidationError(warnings, {
+    line: lineNumber,
+    message: `${scenePrefix(sceneIndex)}looks like property \`${classification.attempted.key}\` but \`${classification.attempted.value}\` is not valid; treating as text`,
+    severity: "warning",
+  });
 }
 
 /**
@@ -877,14 +836,22 @@ function validateBlockPropertyLine(
  * values by falling back to defaults, so post-parse validation alone cannot
  * see those mistakes.
  */
-function validateSchemaBackedValues(lines: string[], errors: ValidationError[]): void {
+function validateSchemaBackedValues(
+  lines: string[],
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): void {
+  // Build the same hoisted variable map as the parser before validating any
+  // line. Uses before definitions therefore resolve exactly as they do in
+  // parseMarkdown; repeated names use the last definition in document order.
+  const variables = collectVariableDefinitions(lines);
   let sceneIndex = 0;
   let currentBlock: CanonicalDirectiveName | null = null;
   let inFence = false;
 
   lines.forEach((sourceLine, index) => {
     const lineNumber = index + 1;
-    const line = sourceLine.trim();
+    const line = substituteVariables(sourceLine.trim(), variables);
 
     if (line.startsWith("```")) {
       inFence = !inFence;
@@ -898,9 +865,9 @@ function validateSchemaBackedValues(lines: string[], errors: ValidationError[]):
       return;
     }
 
-    const directiveMatch = line.match(/^!([\w-]+)(?=\s|$)/);
-    if (directiveMatch) {
-      const schema = getDirectiveSchema(directiveMatch[1]);
+    const parsedDirective = parseDirective(line);
+    if (parsedDirective) {
+      const schema = getDirectiveSchema(parsedDirective.name);
       if (!schema) {
         currentBlock = null;
         return;
@@ -922,7 +889,7 @@ function validateSchemaBackedValues(lines: string[], errors: ValidationError[]):
     }
 
     if (currentBlock) {
-      validateBlockPropertyLine(currentBlock, line, lineNumber, sceneIndex, errors);
+      validateBlockPropertyLine(currentBlock, line, lineNumber, sceneIndex, errors, warnings);
     }
   });
 }

@@ -260,7 +260,9 @@ describe("MCP route", () => {
       markdown: "!scene\n!transtion fade\n!text\nHello\nanimation: wobble",
     });
     const line2 = text.indexOf('Line 2: Unknown directive "!transtion". Did you mean "!transition"?');
-    const line5 = text.indexOf('Line 5: Scene 1: Invalid animation "wobble"');
+    const line5 = text.indexOf(
+      "Line 5: Scene 1: looks like property `animation` but `wobble` is not valid; treating as text"
+    );
     expect(line2).toBeGreaterThan(-1);
     expect(line5).toBeGreaterThan(line2);
   });

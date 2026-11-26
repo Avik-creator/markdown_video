@@ -18,7 +18,12 @@ export interface ParsedDirective {
   name: string
   /** The directive name after applying KEYWORD_ALIASES. */
   canonicalName: string
-  /** Everything after the directive word on the same line. */
+  /**
+   * Effective inline arguments after the directive word. When the directive
+   * word is immediately followed by a colon (`!zoom:1.3`), the directive word
+   * is injected into the first token (`zoom:1.3`) to preserve the dialect's
+   * historical whole-line-scan shorthand semantics.
+   */
   args: string
 }
 
@@ -35,11 +40,46 @@ export function parseDirective(line: string): ParsedDirective | null {
   if (!match) return null
 
   const name = match[1].toLowerCase()
+  const rawArgs = line.slice(match[0].length)
+
+  // Colon-attached shorthand (`!zoom:1.3`, `!split:vertical`,
+  // `!device:iphone`) historically behaved as if the whole line were scanned,
+  // so the first token was `zoom:1.3`, `split:vertical`, or `device:iphone`.
+  // Reconstruct that token here rather than special-casing individual parser
+  // branches; a whitespace-separated colon (`!zoom :1.3`) does not opt in.
+  const effectiveArgs = rawArgs.startsWith(":") ? `${name}${rawArgs}` : rawArgs
+
   return {
     name,
     canonicalName: normalizeDirective(name),
-    args: line.slice(match[0].length).trim(),
+    args: effectiveArgs.trim(),
   }
+}
+
+/**
+ * Collect `!var name value` definitions using the parser's source semantics.
+ * Definitions are hoisted by a first pass over the whole document, so a use
+ * before its definition still resolves; when a name is repeated, the last
+ * definition in document order wins. Values are stored raw and are not
+ * recursively expanded.
+ */
+export function collectVariableDefinitions(
+  lines: readonly string[],
+  inheritedVariables: VideoVariables = {}
+): VideoVariables {
+  const variables: VideoVariables = { ...inheritedVariables }
+
+  for (const line of lines) {
+    const directive = parseDirective(line.trim())
+    if (directive?.canonicalName !== "var") continue
+
+    const match = directive.args.match(/^(\w+)\s+(.+)$/)
+    if (match) {
+      variables[match[1]] = match[2].trim()
+    }
+  }
+
+  return variables
 }
 
 export function isSceneDirective(line: string): boolean {

@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run"
   },
   "dependencies": {
@@ -67,7 +67,7 @@
   "pnpm": {
     "peerDependencyRules": {
       "allowedVersions": {
-        "@modelcontextprotocol/sdk": ">=1.32.0"
+        "mcp-handler>@modelcontextprotocol/sdk": ">=1.32.0"
       }
     }
   }

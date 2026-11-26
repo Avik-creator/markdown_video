@@ -279,7 +279,7 @@ THE BIG REVEAL
 animation: bounceIn
 size: 2xl
 
-!camera shake:true duration:0.5s
+!camera shake duration:0.5s
 !particles type:confetti intensity:high
 !duration 3s
 !background #ef4444

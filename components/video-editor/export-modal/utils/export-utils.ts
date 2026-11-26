@@ -1,18 +1,28 @@
 // Export utility functions
 
+import {
+  FIXED_RENDER_LAYOUT_WIDTH,
+  LOGICAL_ROOT_FONT_SIZE_PX,
+  RENDER_LAYOUT_SHORT_SIDE,
+  getRenderLayoutDimensions,
+  getSceneAspectRatioDimensions,
+} from "../../scene-preview/utils/render-layout"
+
+// Keep these names as stable export-utils API for existing callers and tests,
+// while the shared render-layout module remains the single implementation.
+export {
+  FIXED_RENDER_LAYOUT_WIDTH,
+  LOGICAL_ROOT_FONT_SIZE_PX,
+  RENDER_LAYOUT_SHORT_SIDE,
+  getRenderLayoutDimensions,
+}
+
 const SHORT_SIDE: Record<string, number> = {
   "480p": 480,
   "720p": 720,
   "1080p": 1080,
   "1440p": 1440,
   "4k": 2160,
-}
-
-const ASPECT: Record<string, [number, number]> = {
-  "16:9": [16, 9],
-  "9:16": [9, 16],
-  "1:1": [1, 1],
-  "4:3": [4, 3],
 }
 
 // libx264 with yuv420p needs even dimensions.
@@ -24,7 +34,7 @@ const even = (n: number) => Math.round(n / 2) * 2
  */
 export function getExportDimensions(resolution: string, aspectRatio: string = "16:9") {
   const short = SHORT_SIDE[resolution] ?? 1080
-  const [w, h] = ASPECT[aspectRatio] ?? ASPECT["16:9"]
+  const [w, h] = getSceneAspectRatioDimensions(aspectRatio)
   return w >= h
     ? { width: even((short * w) / h), height: even(short) }
     : { width: even(short), height: even((short * h) / w) }
@@ -42,33 +52,6 @@ export function getExportAspectRatio(
   projectAspectRatio: string = "16:9"
 ) {
   return format && VERTICAL_EXPORT_FORMATS.has(format) ? "9:16" : projectAspectRatio
-}
-
-export const FIXED_RENDER_LAYOUT_WIDTH = 1920
-export const RENDER_LAYOUT_SHORT_SIDE = 1080
-export const LOGICAL_ROOT_FONT_SIZE_PX = 16
-
-/**
- * Canonical logical composition dimensions for an aspect ratio.
- *
- * Exports are laid out in a fixed coordinate space whose short side is 1080
- * logical CSS pixels. Landscape 16:9 therefore keeps the established
- * 1920x1080 logical layout, while portrait 9:16 is composed as 1080x1920.
- * This is deliberately different from the old fixed-width-only model: using a
- * 1920px-wide layout for a 1080px-wide portrait raster made scenes lay out as
- * landscape content and then shrink into the vertical frame.
- */
-export function getRenderLayoutDimensions(aspectRatio: string = "16:9") {
-  const [w, h] = ASPECT[aspectRatio] ?? ASPECT["16:9"]
-  return w >= h
-    ? {
-        width: even((RENDER_LAYOUT_SHORT_SIDE * w) / h),
-        height: RENDER_LAYOUT_SHORT_SIDE,
-      }
-    : {
-        width: RENDER_LAYOUT_SHORT_SIDE,
-        height: even((RENDER_LAYOUT_SHORT_SIDE * h) / w),
-      }
 }
 
 export interface FrameEncoding {
@@ -311,6 +294,14 @@ export function applyRenderLayoutToClone({
   clonedPreview.style.maxHeight = "none"
   clonedPreview.style.flexShrink = "0"
   clonedPreview.style.fontSize = logicalFontSize
+  // JPEG frames have no alpha channel. Keep the rounded-corner visual on
+  // screen, but square the clone so the exported corners are scene pixels
+  // rather than black matte.
+  clonedPreview.style.borderRadius = "0"
+  // Before the first preview fit measurement the live logical frame is hidden
+  // to avoid a one-frame broken layout. That transient state must never make
+  // an export blank if capture starts during the same commit window.
+  clonedPreview.style.visibility = "visible"
 
   return true
 }

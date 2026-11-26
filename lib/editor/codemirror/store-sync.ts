@@ -17,6 +17,53 @@ export function isExternalChange(tr: Transaction): boolean {
 const COMMIT_DELAY = 500; // ms after the last keystroke before the store commit
 const VALIDATE_DELAY = 300; // ms after the last change before re-validating
 
+export interface MinimalEdit {
+  from: number;
+  to: number;
+  insert: string;
+}
+
+/**
+ * Smallest single-splice edit turning `current` into `next`: the longest
+ * common prefix and the longest common suffix (never overlapping) are left
+ * untouched, and only the differing infix is replaced.
+ *
+ * Whole-document replacements overlap every document position, so CodeMirror
+ * collapses the selection when it maps the cursor through them — users saw
+ * the caret jump to the top on undo/redo and timeline reorders. A minimal
+ * infix leaves positions outside the edit region mapped onto themselves.
+ *
+ * Applying `{ from, to, insert }` to `current` always yields exactly `next`.
+ */
+export function minimalEditRange(current: string, next: string): MinimalEdit | null {
+  if (current === next) return null;
+
+  const minLength = Math.min(current.length, next.length);
+
+  let prefix = 0;
+  while (prefix < minLength && current[prefix] === next[prefix]) {
+    prefix++;
+  }
+
+  // The suffix scan must stop before overlapping the prefix, otherwise the
+  // same characters would be counted as both unchanged head and unchanged
+  // tail (e.g. "aa" -> "aaa" would otherwise keep four characters of a
+  // three-character document).
+  let suffix = 0;
+  while (
+    suffix < minLength - prefix &&
+    current[current.length - 1 - suffix] === next[next.length - 1 - suffix]
+  ) {
+    suffix++;
+  }
+
+  return {
+    from: prefix,
+    to: current.length - suffix,
+    insert: next.slice(prefix, next.length - suffix),
+  };
+}
+
 export interface EditorStoreSyncOptions {
   view: EditorView;
   commitDelay?: number;
@@ -116,8 +163,14 @@ export class EditorStoreSync {
     const doc = this.view.state.doc;
     const current = doc.toString();
     if (current === markdown) return;
+    // Dispatch only the differing infix. Replacing the whole document would
+    // overlap every position, so CodeMirror's selection mapping would collapse
+    // the cursor (it visibly jumped to the top) on undo/redo echoes and
+    // timeline reorders even when the edit was far away from the caret.
+    const edit = minimalEditRange(current, markdown);
+    if (!edit) return;
     this.view.dispatch({
-      changes: { from: 0, to: doc.length, insert: markdown },
+      changes: edit,
       annotations: ExternalChange.of(origin ?? "store"),
     });
   }

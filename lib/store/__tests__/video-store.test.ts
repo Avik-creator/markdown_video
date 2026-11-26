@@ -82,10 +82,38 @@ describe("markdown mutation metadata", () => {
   it("bumps the runtime-only revision and leaves external mutations untagged", () => {
     const revisionBefore = useVideoStore.getState().markdownRevision;
 
-    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN, false);
+    useVideoStore
+      .getState()
+      .setMarkdown(CONTROLLED_MARKDOWN.replace("!duration 4", "!duration 5"), false);
 
     expect(useVideoStore.getState().markdownRevision).toBe(revisionBefore + 1);
     expect(useVideoStore.getState().markdownOrigin).toBeNull();
+  });
+
+  it("treats identical-text writes as no-ops without touching history or revision", () => {
+    const revisionBefore = useVideoStore.getState().markdownRevision;
+    const historyBefore = useVideoStore.getState().history;
+
+    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN);
+
+    expect(useVideoStore.getState().markdownRevision).toBe(revisionBefore);
+    expect(useVideoStore.getState().history).toBe(historyBefore);
+  });
+
+  it("keeps the redo future intact after a zero-replacement replaceAll", () => {
+    const editedMarkdown = CONTROLLED_MARKDOWN.replace("!duration 4", "!duration 3");
+    useVideoStore.getState().setMarkdown(editedMarkdown);
+    useVideoStore.getState().undo();
+    expect(useVideoStore.getState().history.future).toHaveLength(1);
+
+    useVideoStore.getState().setMarkdown(CONTROLLED_MARKDOWN);
+    expect(useVideoStore.getState().history.future).toHaveLength(1);
+
+    // A replaceAll that does change text must still clear the redo future.
+    useVideoStore.setState({ findText: "Hello", replaceText: "Hi" });
+    useVideoStore.getState().replaceAll();
+    expect(useVideoStore.getState().markdown).toContain("Hi");
+    expect(useVideoStore.getState().history.future).toHaveLength(0);
   });
 
   it("tags undo and redo mutations without changing their document behavior", () => {

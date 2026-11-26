@@ -198,12 +198,28 @@ export const useVideoStore = create<VideoStore>()(
         },
 
         setMarkdown: (markdown, addToHistory = true) => {
-          const { scenes, segments, totalDuration } =
-            parseAndComputeSegments(markdown);
-          const currentMarkdown = get().markdown;
-
+          // The origin tag is consumed by exactly one setMarkdown call —
+          // including a no-op one — so it can never leak onto a later,
+          // unrelated mutation.
           const origin = pendingMarkdownOrigin;
           pendingMarkdownOrigin = null;
+
+          const currentMarkdown = get().markdown;
+          if (markdown === currentMarkdown) {
+            // Identical-text writes must not push a duplicate history entry
+            // or clear the redo future: a zero-replacement Replace All (or
+            // any other no-op write) would otherwise destroy redo after an
+            // undo. The reparse is skipped as well — every write path
+            // (setMarkdown/undo/redo/rehydration) recomputes derived state
+            // synchronously, so identical text implies scenes, segments and
+            // totalDuration are already in sync, and nothing consumes
+            // markdownRevision outside tests, so no flow can rely on a
+            // revision bump for unchanged text.
+            return;
+          }
+
+          const { scenes, segments, totalDuration } =
+            parseAndComputeSegments(markdown);
 
           set((state) => ({
             markdown,

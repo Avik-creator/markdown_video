@@ -6,11 +6,13 @@
 // becomes a typed impossible enum value in the parse tree.
 
 import {
+  assertNever,
   getCameraKeyframeProperty,
   getDirectivePositional,
   getDirectivePositionalDefault,
   getDirectiveProperty,
   getDirectivePropertyDefault,
+  getDirectiveSchema,
   getDirectiveValueOptions,
   isOneOf,
   isOneOfCaseInsensitive,
@@ -35,6 +37,16 @@ export interface ParsedDirectiveProperty {
   value: string;
   schema: DirectivePropertySchema;
 }
+
+export interface AttemptedDirectiveProperty extends ParsedDirectiveProperty {
+  /** Exact key spelling used in the source line. */
+  key: string;
+}
+
+export type DirectivePropertyLineClassification =
+  | { kind: "property"; property: ParsedDirectiveProperty }
+  | { kind: "prose"; attempted: AttemptedDirectiveProperty }
+  | { kind: "not-property" };
 
 function stripQuotes(value: string): string {
   const trimmed = value.trim();
@@ -145,26 +157,190 @@ export function getInlinePropertyValue(
   return undefined;
 }
 
+const CSS_HEX_COLOR_PATTERN = /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i;
+const CSS_COLOR_FUNCTION_NAMES = new Set([
+  "rgb",
+  "rgba",
+  "hsl",
+  "hsla",
+  "hwb",
+  "lab",
+  "lch",
+  "oklab",
+  "oklch",
+  "var",
+  "color",
+]);
+
+function isQuotedValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed.length < 2) return false;
+  const first = trimmed[0];
+  const last = trimmed[trimmed.length - 1];
+  return (first === '"' || first === "'") && last === first;
+}
+
 /**
- * Parse a block `key:value` line only when the key belongs to the directive's
- * schema. Unknown colon-bearing lines return null so they remain ordinary
- * content exactly as written.
+ * Block property lines are prose-sensitive and therefore stricter than inline
+ * directive arguments: the key must be the schema name or alias exactly as
+ * written. In particular `fontFamily` is a property key, while `FontFamily`,
+ * `FONTFAMILY`, and `fontfamily` are prose in block position. This deliberate
+ * case-sensitive rule keeps sentence starts such as `Color: red ...` intact.
+ */
+function getCaseSensitiveDirectiveProperty(
+  directiveName: string,
+  key: string
+): DirectivePropertySchema | undefined {
+  const schema = getDirectiveProperty(directiveName, key);
+  if (!schema) return undefined;
+  if (schema.name === key || schema.aliases?.includes(key)) return schema;
+  return undefined;
+}
+
+function isFunctionalCssColor(value: string): boolean {
+  const match = value.match(/^([A-Za-z][A-Za-z0-9]*)\((.*)\)$/);
+  return match !== null && CSS_COLOR_FUNCTION_NAMES.has(match[1].toLowerCase());
+}
+
+/**
+ * Pragmatic CSS-color test used only to distinguish properties from prose.
+ * A color value is plausible when it is quoted, a single unquoted token (for
+ * example `red` or `#fff`), a hex color, or one of the CSS color-like function
+ * notations (`rgb()`, `hsl()`, `var()`, `color()`, and friends). We do not try
+ * to validate CSS color semantics here; the goal is only to keep multi-word
+ * sentences such as `color: red is my favorite` in the text content.
+ */
+function isPlausibleCssColor(value: string, wasQuoted: boolean): boolean {
+  if (wasQuoted) return true;
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (CSS_HEX_COLOR_PATTERN.test(trimmed)) return true;
+  if (!/\s/.test(trimmed)) return true;
+  return isFunctionalCssColor(trimmed);
+}
+
+/**
+ * Decide whether a value can even be represented as the property's primitive
+ * type. Range constraints are intentionally not part of this test: `0` is a
+ * number even when `exclusiveMin` makes it invalid, so it remains a property
+ * and normal validation can report the range error. By contrast, an enum or
+ * number that does not parse at all is more likely to be prose in a content
+ * block and is classified accordingly.
+ */
+function isPlausiblePropertyValue(
+  schema: DirectivePropertySchema,
+  value: string,
+  wasQuoted: boolean
+): boolean {
+  switch (schema.type) {
+    case "enum": {
+      const values = schema.values ?? [];
+      return schema.caseInsensitiveValues
+        ? isOneOfCaseInsensitive(values, value)
+        : isOneOf(values, value);
+    }
+    case "number":
+      return (
+        parseNumericValue(value, {
+          allowSecondsUnit: schema.unit === "seconds",
+        }) !== undefined
+      );
+    case "boolean":
+      return parseBooleanValue(value) !== undefined;
+    case "color":
+      return isPlausibleCssColor(value, wasQuoted);
+    case "string":
+    case "url":
+    case "array":
+    case "object":
+      return true;
+    default:
+      return assertNever(schema.type);
+  }
+}
+
+const PROSE_CAPABLE_DIRECTIVES = new Set(["text", "mockup"]);
+
+/**
+ * Only text-like blocks can preserve a non-property line as user-visible
+ * prose. Metadata-only blocks (code, terminal, particles, presenter, export)
+ * have no prose representation, so invalid typed values remain properties
+ * there and validation can report them instead of silently ignoring them.
+ */
+function directiveBlockSupportsProse(directiveName: string): boolean {
+  const canonicalName = getDirectiveSchema(directiveName)?.name ?? directiveName;
+  return PROSE_CAPABLE_DIRECTIVES.has(canonicalName);
+}
+
+/**
+ * Classify a block `key:value` line as a schema property or as prose. Parser
+ * and validator both use this classifier so they agree exactly on which lines
+ * are consumed as properties:
+ *
+ * - unknown keys and case-mismatched keys are prose;
+ * - in prose-capable blocks (`text` and `mockup`), exact schema keys are
+ *   properties only when enum/number/boolean values parse as that type
+ *   (range errors still count as numeric properties);
+ * - in prose-capable blocks, unquoted multi-word color values are prose
+ *   unless they use an accepted CSS functional notation, while quoted color
+ *   values remain properties;
+ * - in metadata-only blocks there is no prose fallback, so exact schema keys
+ *   remain properties even when their values are invalid;
+ * - free-form string/url/array/object values remain properties.
+ *
+ * The trade-off is deliberate: in a text block a typo such as
+ * `animation: typrewriter` is treated as text rather than swallowed as a
+ * broken property. Validators can use the `prose` classification to warn
+ * about the likely typo without contradicting the parser.
+ */
+export function classifyDirectivePropertyLine(
+  directiveName: string,
+  line: string
+): DirectivePropertyLineClassification {
+  const match = line.match(/^([A-Za-z][\w-]*)\s*:\s*(.+)$/);
+  if (!match) return { kind: "not-property" };
+
+  const schema = getCaseSensitiveDirectiveProperty(directiveName, match[1]);
+  if (!schema) return { kind: "not-property" };
+
+  const rawValue = match[2].trim();
+  const wasQuoted = isQuotedValue(rawValue);
+  const value = stripQuotes(rawValue);
+  const attempted: AttemptedDirectiveProperty = {
+    key: match[1],
+    name: schema.name,
+    value,
+    schema,
+  };
+
+  if (
+    directiveBlockSupportsProse(directiveName) &&
+    !isPlausiblePropertyValue(schema, value, wasQuoted)
+  ) {
+    return { kind: "prose", attempted };
+  }
+
+  return {
+    kind: "property",
+    property: {
+      name: schema.name,
+      value,
+      schema,
+    },
+  };
+}
+
+/**
+ * Parse a block `key:value` line only when it is unambiguously a property.
+ * Lines classified as prose return null so content blocks preserve them
+ * exactly as written.
  */
 export function parseDirectivePropertyLine(
   directiveName: string,
   line: string
 ): ParsedDirectiveProperty | null {
-  const match = line.match(/^([A-Za-z][\w-]*)\s*:\s*(.+)$/);
-  if (!match) return null;
-
-  const schema = getDirectiveProperty(directiveName, match[1]);
-  if (!schema) return null;
-
-  return {
-    name: schema.name,
-    value: stripQuotes(match[2]),
-    schema,
-  };
+  const classification = classifyDirectivePropertyLine(directiveName, line);
+  return classification.kind === "property" ? classification.property : null;
 }
 
 function valueSchema(
