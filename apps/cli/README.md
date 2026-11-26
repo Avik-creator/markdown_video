@@ -37,8 +37,8 @@ Chromium/Chrome for Testing remains governed by its upstream browser licenses.
 # Render a file to mp4 in the current working directory
 node apps/cli/dist/cli.js render video.md --output video.mp4
 
-# pnpm workspace shorthand from the repository root
-pnpm --filter markdown-video exec markdown-video render video.md -o video.mp4
+# The same binary when installed as a package
+markdown-video render video.md -o video.mp4
 
 # Inline markdown
 node apps/cli/dist/cli.js --markdown "# Hello" --output hello.mp4
