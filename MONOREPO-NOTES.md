@@ -3,6 +3,7 @@
 This repository is a pnpm workspace orchestrated by Turborepo.
 
 ```text
+action/    # In-repo composite GitHub Action that prepares and invokes the CLI
 apps/
   web/       # Next.js editor, landing page, API routes, and MCP route
   render-worker/ # Authenticated Node/Chromium/ffmpeg MCP rendering service
@@ -90,6 +91,12 @@ Notes:
 `@markdown-video/render-worker` is the trust boundary for server-side rendering. It does not contain scene logic; it wraps the `markdown-video` programmatic renderer in an authenticated HTTP service, validates every input before Chromium work starts, serializes bounded work through an in-process queue, and exposes `/health`, `/v1/preview`, and `/v1/video`. It depends on the compiled `@markdown-video/render-page` artifact indirectly through the CLI package, so Turbo/build ordering and Docker packaging must build core, scenes, render-page, CLI, and worker in dependency order.
 
 The worker deliberately uses an in-process semaphore rather than Redis. That is correct for one container instance but is not a distributed queue: horizontal replicas each enforce their own queue, cold starts can dominate scale-to-zero latency, and the default concurrency of one serializes expensive Chromium/ffmpeg work inside each process. Production scale-out should front replicas with a load balancer and, if needed, replace the local queue with an external job system.
+
+## `action/` boundary
+
+`action/` is the in-repo composite GitHub Action for release/preview rendering. It is intentionally not another renderer: its scripts discover the workspace that contains the action, install the filtered `markdown-video...` dependency closure, build core/scenes/render-page/CLI in dependency order, verify Chromium and ffmpeg, and then invoke `apps/cli/dist/cli.js` with argv arrays. Release-upload logic is isolated in a final step so `contents:write` tokens are not exported into Chromium or ffmpeg processes.
+
+The action is composite rather than Docker because the CLI is not published yet and a fresh Docker build would repeat the Chromium/ffmpeg/workspace build on every GitHub-hosted runner. Its caches are scoped by lockfile, Playwright version, OS/architecture, and a renderer-source content hash. `action/README.md` is the consumer contract and documents the future extraction path to a standalone `markdown-video/render-action` repository after npm/GHCR publishing exists.
 
 ## `packages/scenes` boundaries
 
