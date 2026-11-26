@@ -34,8 +34,8 @@ export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="hidden translate-y-0.5 sm:block [&_a]:text-[color:var(--landing-muted)] [&_a:hover]:text-[color:var(--landing-ink)]">
-            <GitHubStars repo="Avik-creator/markdown_video" stargazersCount={stargazersCount} />
+          <div className="hidden translate-y-0.5 sm:block">
+            <GitHubStars repo="Avik-creator/markdown_video" stargazersCount={stargazersCount} variant="landing" />
           </div>
           <Link
             href="/editor"
