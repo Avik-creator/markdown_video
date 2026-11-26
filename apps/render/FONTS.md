@@ -27,11 +27,10 @@ Color Emoji:
 | Noto Color Emoji | `family=Noto+Color+Emoji&display=swap` |
 
 The generated set contains 80 files: 69 text-family subset files and 11 color
-emoji unicode-range shard files. At generation time on 2026-11-26 the 69 text
-files' SHA-256 multiset matched all 69 `.woff2` files emitted by the editor's
-Next.js production build exactly (no missing or extra hashes). Individual
-source URLs, byte sizes, and hashes are committed in
-`src/fonts/provenance.json`.
+emoji unicode-range shard files. The editor's current Next.js production build
+emits the same 80 `.woff2` files for these families, and the complete SHA-256
+multisets match exactly (no missing or extra hashes). Individual source URLs,
+byte sizes, and hashes are committed in `src/fonts/provenance.json`.
 
 To regenerate after intentionally changing `apps/web/app/layout.tsx` font
 configuration or the emoji font choice:

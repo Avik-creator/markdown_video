@@ -92,12 +92,18 @@ components such as ZWJ, variation selector 16, keycap, skin-tone modifiers, and
 tag characters); it is a scoped fallback face, not another general text family.
 
 - The Next.js editor defines these with `next/font/google` in
-  `apps/web/app/layout.tsx`; next/font exposes its hashed family names
-  through exactly these variables.
+  `apps/web/app/layout.tsx`; its text-font fallback arrays are deliberately
+  empty so each variable contains only the primary family.
 - A Vite/headless host defines the same names with `@font-face` rules (or
   its own copy of next/font output) and **must await `document.fonts.ready`
   before capturing any frame** — early frames would rasterize fallback
   fonts.
+
+Do not embed platform fallback chains inside the primary-family variables.
+Because a CSS variable expands its entire value where it appears, doing so
+would move those fallbacks ahead of `--font-emoji` even when the outer chain
+writes the emoji variable second. Compose complete chains as primary family,
+emoji family, then platform/generic fallbacks.
 
 Every declaration carries a `var(--font-*, fallback)` chain, so rendering
 never breaks outright when a variable is missing; it degrades to the
