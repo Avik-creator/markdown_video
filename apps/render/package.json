@@ -1,0 +1,45 @@
+{
+  "name": "@markdown-video/render-page",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=20.19"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "fonts:update": "node scripts/download-fonts.mjs"
+  },
+  "dependencies": {
+    "@markdown-video/core": "workspace:*",
+    "@markdown-video/scenes": "workspace:*",
+    "framer-motion": "12.23.26",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.9",
+    "@types/node": "22.19.3",
+    "@types/react": "19.2.7",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "5.1.4",
+    "eslint": "9.39.5",
+    "tailwindcss": "4.1.9",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.74.0",
+    "vite": "6.4.6",
+    "vitest": "3.2.4"
+  }
+}
