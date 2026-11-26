@@ -11,7 +11,12 @@ import { textFontFamilyStyles } from "../utils/fonts";
 import { TypingCursor } from "../components/TypingCursor";
 
 import { useAnimation } from "framer-motion";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
+import { useVideoStore } from "@/lib/use-video-store";
+import {
+  resolveEffectiveLocale,
+  resolveSceneTextContent,
+} from "@/lib/parser/i18n";
 
 // framer-motion's variant/target types use template-literal index signatures
 // that plain records don't satisfy structurally; the values are always
@@ -64,25 +69,51 @@ function StaggeredLine({
 export function TextScene({
   scene,
   sceneTime,
+  inheritedLocale,
 }: {
   scene: Scene;
   sceneTime?: number;
+  /** Locale inherited from a containing split/mockup scene when this scene has no override. */
+  inheritedLocale?: string;
 }) {
   const animation = scene.text?.animation || "fadeIn";
   const variants = animationVariants[animation] || animationVariants.fadeIn;
   const stagger = scene.text?.stagger || 0; // Stagger delay in seconds
   const controls = useAnimation();
 
+  const locales = useVideoStore((state) => state.locales);
+  const localizationStrings = useVideoStore((state) => state.localizationStrings);
+  const defaultLocale = useVideoStore((state) => state.defaultLocale);
+  const activeLocale = useVideoStore((state) => state.activeLocale);
+
+  // Resolution is render-time and deterministic: scene override first, then a
+  // valid user selection, then the document default. The translation fallback
+  // chain itself is documented and tested in lib/parser/i18n.ts.
+  const effectiveLocale = resolveEffectiveLocale({
+    sceneLocale: scene.locale ?? inheritedLocale,
+    activeLocale,
+    locales,
+    defaultLocale,
+  });
+  const localizedContent = useMemo(() => {
+    if (!scene.text) return "";
+    return resolveSceneTextContent(scene.text, {
+      strings: localizationStrings,
+      locale: effectiveLocale,
+      defaultLocale,
+    });
+  }, [scene.text, localizationStrings, effectiveLocale, defaultLocale]);
+
   // Typewriter effect
   const { displayedText } = useTypingEffect(
-    scene.text?.content || "",
+    localizedContent,
     30,
     animation === "typewriter",
     sceneTime
   );
 
   const content =
-    animation === "typewriter" ? displayedText : scene.text?.content;
+    animation === "typewriter" ? displayedText : localizedContent;
 
   const transition =
     animation === "bounceIn"
@@ -117,7 +148,7 @@ export function TextScene({
   const typewriterCursor = (index: number) =>
     animation === "typewriter" &&
     index === lines.length - 1 &&
-    displayedText !== scene.text?.content && (
+    displayedText !== localizedContent && (
       <TypingCursor
         sceneTime={sceneTime}
         className="inline-block w-1 h-[1em] ml-1"

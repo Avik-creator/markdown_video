@@ -28,13 +28,22 @@ import { TimelineElementsOverlay } from "../components/TimelineElementsOverlay";
 export function SceneRenderer({
   scene,
   sceneTime,
+  inheritedLocale,
 }: {
   scene: Scene;
   sceneTime: number;
+  /** Locale inherited from a containing composite scene. */
+  inheritedLocale?: string;
 }) {
   switch (scene.type) {
     case "text":
-      return <TextScene scene={scene} sceneTime={sceneTime} />;
+      return (
+        <TextScene
+          scene={scene}
+          sceneTime={sceneTime}
+          inheritedLocale={inheritedLocale}
+        />
+      );
     case "code":
       return <CodeScene scene={scene} sceneTime={sceneTime} />;
     case "terminal":
@@ -44,9 +53,21 @@ export function SceneRenderer({
     case "chart":
       return <ChartScene scene={scene} sceneTime={sceneTime} />;
     case "mockup":
-      return <MockupScene scene={scene} sceneTime={sceneTime} />;
+      return (
+        <MockupScene
+          scene={scene}
+          sceneTime={sceneTime}
+          inheritedLocale={inheritedLocale}
+        />
+      );
     case "split":
-      return <SplitScene scene={scene} sceneTime={sceneTime} />;
+      return (
+        <SplitScene
+          scene={scene}
+          sceneTime={sceneTime}
+          inheritedLocale={inheritedLocale}
+        />
+      );
     case "image":
       return <ImageScene scene={scene} sceneTime={sceneTime} />;
     case "emoji":
@@ -58,7 +79,13 @@ export function SceneRenderer({
     case "progress":
       return <ProgressScene scene={scene} sceneTime={sceneTime} />;
     default:
-      return <TextScene scene={scene} sceneTime={sceneTime} />;
+      return (
+        <TextScene
+          scene={scene}
+          sceneTime={sceneTime}
+          inheritedLocale={inheritedLocale}
+        />
+      );
   }
 }
 
@@ -67,11 +94,13 @@ function SplitPanel({
   parentScene,
   side,
   sceneTime,
+  inheritedLocale,
 }: {
   panel: SplitPanelData;
   parentScene: Scene;
   side: SplitSide;
   sceneTime: number;
+  inheritedLocale?: string;
 }) {
   const panelScene = materializeSplitPanel(panel, parentScene, side);
 
@@ -82,7 +111,11 @@ function SplitPanel({
       style={{ background: panel.background }}
     >
       <div className="absolute inset-0">
-        <SceneRenderer scene={panelScene} sceneTime={sceneTime} />
+        <SceneRenderer
+          scene={panelScene}
+          sceneTime={sceneTime}
+          inheritedLocale={inheritedLocale}
+        />
       </div>
       {panelScene.timelineElements &&
         panelScene.timelineElements.length > 0 && (
@@ -104,14 +137,20 @@ function SplitPanel({
 export function SplitScene({
   scene,
   sceneTime,
+  inheritedLocale,
 }: {
   scene: Scene;
   sceneTime: number;
+  inheritedLocale?: string;
 }) {
   if (!scene.split) return null;
 
   const direction =
     scene.split.direction === "vertical" ? "vertical" : "horizontal";
+  // A scene-level !locale override applies to the split scene as a whole.
+  // Panels can still carry their own locale in programmatic/nested scene data;
+  // TextScene gives the panel's own override precedence over this inherited one.
+  const panelLocale = scene.locale ?? inheritedLocale;
 
   return (
     <div
@@ -124,6 +163,7 @@ export function SplitScene({
         parentScene={scene}
         side="left"
         sceneTime={sceneTime}
+        inheritedLocale={panelLocale}
       />
       <div data-split-divider="true" className="bg-white/10" />
       <SplitPanel
@@ -131,6 +171,7 @@ export function SplitScene({
         parentScene={scene}
         side="right"
         sceneTime={sceneTime}
+        inheritedLocale={panelLocale}
       />
     </div>
   );
