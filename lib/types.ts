@@ -374,6 +374,16 @@ export interface VideoStore {
   currentTime: number;
   showGuide: boolean;
 
+  // Localization state. `locales`, `localizationStrings`, and `defaultLocale`
+  // are derived from the markdown on every parse (like scenes), never persisted
+  // independently. `activeLocale` is the runtime-only user selection; stale or
+  // undeclared values are ignored by the display resolver.
+  locales: string[];
+  localizationStrings: LocalizationStrings;
+  defaultLocale?: string;
+  activeLocale: string | null;
+  setActiveLocale: (locale: string | null) => void;
+
   history: HistoryState;
   undo: () => void;
   redo: () => void;
