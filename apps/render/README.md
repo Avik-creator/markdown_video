@@ -34,6 +34,15 @@ before running the CLI.
   `SceneFrame`; omitting it uses the document/default resolution chain.
 - **Aspect ratio:** `?aspect=16:9|9:16|1:1|4:3` chooses the logical frame
   geometry. Invalid values fall back to `16:9`.
+- **Caption burn-in:** `?burnCaptions=1` composites generated caption cues
+  into every frame through `SceneFrame`'s captions prop. The host generates
+  cues from the loaded document with the same `@markdown-video/core` caption
+  generation (and the same active locale) the CLI uses for its SRT/VTT
+  sidecars, so burned text cannot diverge from the sidecar text. Because
+  burn-in is DOM inside the capture target, it needs no ffmpeg subtitles
+  filter, no libass, and no fontconfig, and non-Latin cues render with the
+  same font coverage as scene text. Omitting the parameter renders markup
+  identical to a host without the feature.
 
 ## `window.__mv` capture bridge
 
