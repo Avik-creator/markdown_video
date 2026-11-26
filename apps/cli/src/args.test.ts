@@ -32,6 +32,18 @@ describe("parseCliArgs", () => {
     expect(args.aspectRatio).toBe("9:16")
     expect(args.fps).toBe(24)
     expect(args.overwrite).toBe(true)
+    expect(args.denyRemoteNetwork).toBe(false)
+  })
+
+  it("parses the loopback-only browser network flag", () => {
+    const args = parseCliArgs([
+      "input.md",
+      "-o",
+      "out.mp4",
+      "--deny-remote-network",
+    ])
+
+    expect(args.denyRemoteNetwork).toBe(true)
   })
 
   it("supports inline markdown and rejects mixed input modes", () => {
