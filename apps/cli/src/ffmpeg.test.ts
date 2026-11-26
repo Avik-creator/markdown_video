@@ -113,36 +113,30 @@ describe("buildFfmpegArgs", () => {
     ])
   })
 
-  it("does not use shell-sensitive caption paths in burn-in filters", () => {
-    const args = buildFfmpegArgs({
-      plan: mp4Plan(),
-      format: "mp4",
-      quality: "high",
-      speed: "balanced",
-      fps: 30,
-      totalDuration: 5,
-      outputPath: "out.mp4",
-      overwrite: true,
-      burnCaptionsFileName: "captions.srt",
-    })
-
-    const filter = args[args.indexOf("-vf") + 1]
-    expect(filter).toBe(
-      "scale=1920:1080:flags=lanczos:out_range=limited,setsar=1,subtitles=captions.srt",
-    )
-    expect(() =>
-      buildFfmpegArgs({
-        plan: mp4Plan(),
-        format: "mp4",
+  it("never emits a subtitles filter: caption burn-in is DOM-composited at capture time", () => {
+    // Burned captions live inside the captured frames themselves, so the
+    // encoding argv must stay free of subtitle/libass filter plumbing for
+    // every format. This is what removes the ffmpeg-build dependency burn-in
+    // used to have.
+    for (const format of ["mp4", "gif"] as const) {
+      const plan = createRenderPlan({
+        resolution: "480p",
+        projectAspectRatio: "16:9",
+        format,
+        quality: "high",
+      })
+      const args = buildFfmpegArgs({
+        plan,
+        format,
         quality: "high",
         speed: "balanced",
         fps: 30,
-        totalDuration: 5,
-        outputPath: "out.mp4",
+        totalDuration: 2,
+        outputPath: `out.${format}`,
         overwrite: true,
-        burnCaptionsFileName: "captions.srt,ass=evil",
-      }),
-    ).toThrow("captions filename")
+      })
+      expect(args.join(" ")).not.toContain("subtitles")
+    }
   })
 
   it("omits music inputs for gif because the container cannot carry audio", () => {
@@ -199,28 +193,5 @@ describe("buildFfmpegArgs", () => {
     expect(filter).toContain("palettegen=max_colors=64")
     expect(filter).toContain("paletteuse")
     expect(args.at(-1)).toBe("out.gif")
-  })
-
-  it("can burn captions into gif frames through the fixed sidecar filename", () => {
-    const plan = createRenderPlan({
-      resolution: "480p",
-      projectAspectRatio: "16:9",
-      format: "gif",
-      quality: "high",
-    })
-    const args = buildFfmpegArgs({
-      plan,
-      format: "gif",
-      quality: "high",
-      speed: "balanced",
-      fps: 30,
-      totalDuration: 2,
-      outputPath: "out.gif",
-      overwrite: false,
-      burnCaptionsFileName: "captions.srt",
-    })
-
-    const filter = args[args.indexOf("-filter_complex") + 1]
-    expect(filter).toContain("fps=10,subtitles=captions.srt,split")
   })
 })

@@ -57,7 +57,12 @@ export interface RenderVideoOptions {
   allowRemoteNetwork?: boolean | undefined
   /** Base directory for relative !music file paths. Defaults to cwd. */
   markdownBaseDir?: string | undefined
-  /** Burn generated captions into video frames using ffmpeg's subtitles filter. */
+  /**
+   * Composite generated captions into video frames as DOM during capture.
+   * Burn-in needs no ffmpeg subtitles filter or libass build: captions are
+   * rendered by the browser inside the captured scene, so encoding receives
+   * frames that already contain them.
+   */
   burnCaptions?: boolean | undefined
   signal?: AbortSignal | undefined
   onProgress?: ((progress: RenderProgress) => void) | undefined
@@ -185,15 +190,18 @@ async function preparePage({
   url,
   settings,
   markdown,
+  burnCaptions = false,
 }: {
   page: Page
   url: string
   settings: RenderSettings
   markdown: string
+  burnCaptions?: boolean | undefined
 }) {
   const query = new URLSearchParams()
   query.set("aspect", settings.aspectRatio)
   if (settings.locale) query.set("locale", settings.locale)
+  if (burnCaptions) query.set("burnCaptions", "1")
   const pageUrl = `${url}/?${query.toString()}`
 
   page.setDefaultTimeout(30_000)
@@ -248,6 +256,7 @@ async function openCaptureSession({
   totalDuration,
   chromiumExecutablePath,
   allowRemoteNetwork = true,
+  burnCaptions = false,
 }: {
   markdown: string
   settings: RenderSettings
@@ -255,6 +264,7 @@ async function openCaptureSession({
   totalDuration: number
   chromiumExecutablePath?: string | undefined
   allowRemoteNetwork?: boolean | undefined
+  burnCaptions?: boolean | undefined
 }): Promise<CaptureSession> {
   let server: RenderPageServer | null = null
   let browser: Browser | null = null
@@ -296,6 +306,7 @@ async function openCaptureSession({
       url: server.url,
       settings,
       markdown,
+      burnCaptions,
     })
     if (Math.abs(browserDuration - totalDuration) > 1e-6) {
       throw new RenderError(
@@ -321,21 +332,6 @@ async function openCaptureSession({
   }
 }
 
-
-async function ffmpegSupportsSubtitles(executable: string): Promise<boolean> {
-  try {
-    const { execFile } = await import("node:child_process")
-    const { promisify } = await import("node:util")
-    const execFileAsync = promisify(execFile)
-    const { stdout } = await execFileAsync(executable, ["-hide_banner", "-filters"], {
-      timeout: 10_000,
-      maxBuffer: 4 * 1024 * 1024,
-    })
-    return /^\s*\S+\s+subtitles\s+/m.test(stdout)
-  } catch {
-    return false
-  }
-}
 
 function validateRenderInput({
   markdown,
@@ -407,10 +403,13 @@ export async function renderVideo(
     }
   }
 
+  // Burn-in is a capture-time DOM composition flag threaded to the render
+  // page, not an encode-time ffmpeg concern: frames reaching ffmpeg already
+  // contain the captions, so no subtitles filter, libass build, or font
+  // provisioning is involved on the encoding path.
   const shouldBurnCaptions = options.burnCaptions === true && hasCaptions
   const music = settings.format === "gif" ? undefined : parsed.music
-  const needsMediaTempDir = shouldBurnCaptions || music !== undefined
-  const mediaTempDir = needsMediaTempDir
+  const mediaTempDir = music !== undefined
     ? await mkdtemp(path.join(tmpdir(), "markdown-video-media-"))
     : null
 
@@ -418,15 +417,6 @@ export async function renderVideo(
   let preparedMusic
   let ffmpegArgs: string[]
   try {
-    if (shouldBurnCaptions && mediaTempDir) {
-      if (!(await ffmpegSupportsSubtitles(executable))) {
-        throw new UsageError(
-          "--burn-captions requires an ffmpeg build with the subtitles filter (libass).",
-        )
-      }
-      await writeFile(path.join(mediaTempDir, "captions.srt"), captionSidecars.srt, "utf8")
-    }
-
     preparedMusic = music && mediaTempDir
       ? await prepareMusicInput({
           music,
@@ -446,7 +436,6 @@ export async function renderVideo(
       outputPath,
       overwrite: settings.overwrite,
       ...(preparedMusic ? { music: { ...music!, inputPath: preparedMusic.inputPath } } : {}),
-      ...(shouldBurnCaptions ? { burnCaptionsFileName: "captions.srt" } : {}),
     })
   } catch (error) {
     if (mediaTempDir) await rm(mediaTempDir, { recursive: true, force: true })
@@ -473,6 +462,7 @@ export async function renderVideo(
       totalDuration,
       chromiumExecutablePath: options.chromiumExecutablePath,
       allowRemoteNetwork: options.allowRemoteNetwork ?? true,
+      burnCaptions: shouldBurnCaptions,
     })
 
     ffmpeg = startFfmpeg(executable, ffmpegArgs, {

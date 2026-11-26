@@ -56,6 +56,44 @@ try {
       path.join(goldensDir, name),
     ])
   }
+
+  // Unicode caption burn-in golden: same 480p/medium/fastest encode path as the
+  // test, with --burn-captions enabled. Frame 3 is t=0.6, mid Cyrillic cue.
+  // Visually verify the Cyrillic glyphs in this golden before committing it —
+  // the golden is the primary tofu-detection mechanism, so it must not bake in
+  // missing-glyph boxes.
+  const captionsVideoPath = path.join(tempDir, "captions-fixture.mp4")
+  run(process.execPath, [
+    path.join(cliDir, "dist/cli.js"),
+    "render",
+    "fixtures/captions-unicode-fixture.md",
+    "--output",
+    captionsVideoPath,
+    "--resolution",
+    "480p",
+    "--quality",
+    "medium",
+    "--speed",
+    "fastest",
+    "--fps",
+    "5",
+    "--overwrite",
+    "--allow-outside-cwd",
+    "--burn-captions",
+  ])
+  run("ffmpeg", [
+    "-v",
+    "error",
+    "-y",
+    "-i",
+    captionsVideoPath,
+    "-vf",
+    `select=eq(n\\,3)`,
+    "-frames:v",
+    "1",
+    path.join(goldensDir, "unicode-caption-frame-0003.png"),
+  ])
+
   console.log(`Regenerated golden frames in ${goldensDir}`)
 } finally {
   rmSync(tempDir, { recursive: true, force: true })

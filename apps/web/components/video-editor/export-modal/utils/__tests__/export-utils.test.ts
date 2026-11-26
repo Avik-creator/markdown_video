@@ -26,9 +26,6 @@ describe("generation-scoped artifact names", () => {
       paletteFileName: "palette-7.png",
       outputFileName: "output-7.gif",
       musicFileName: "music-7",
-      captionsFileName: "captions-7.srt",
-      fontDirectory: "fonts-7",
-      fontFileName: "inter-variable-latin.ttf",
       outputExtension: "gif",
     });
     expect(getExportArtifactNames(7, "reels")).toEqual({
@@ -36,9 +33,6 @@ describe("generation-scoped artifact names", () => {
       paletteFileName: "palette-7.png",
       outputFileName: "output-7.mp4",
       musicFileName: "music-7",
-      captionsFileName: "captions-7.srt",
-      fontDirectory: "fonts-7",
-      fontFileName: "inter-variable-latin.ttf",
       outputExtension: "mp4",
     });
   });
@@ -51,8 +45,13 @@ describe("generation-scoped artifact names", () => {
     expect(first.paletteFileName).not.toBe(second.paletteFileName);
     expect(first.outputFileName).not.toBe(second.outputFileName);
     expect(first.musicFileName).not.toBe(second.musicFileName);
-    expect(first.captionsFileName).not.toBe(second.captionsFileName);
-    expect(first.fontDirectory).not.toBe(second.fontDirectory);
+  });
+
+  it("allocates no caption or font artifacts: burn-in is DOM-composited", () => {
+    const names = Object.values(getExportArtifactNames(3, "mp4")).join(" ");
+    expect(names).not.toContain("caption");
+    expect(names).not.toContain("font");
+    expect(names).not.toContain(".ttf");
   });
 });
 

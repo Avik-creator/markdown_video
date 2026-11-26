@@ -57,7 +57,7 @@ node apps/cli/dist/cli.js render video.md -o video.mp4 \
 # GIF output uses a generated palette and .gif extension
 node apps/cli/dist/cli.js render video.md -o preview.gif --format gif --fps 12
 
-# Burn generated captions into the video (requires an ffmpeg build with libass)
+# Burn generated captions into the video frames (no ffmpeg build requirements)
 node apps/cli/dist/cli.js render video.md -o video.mp4 --burn-captions
 
 # Replace an existing output or explicitly allow a path outside cwd
@@ -111,12 +111,15 @@ local paths could expose service files and URLs would create egress/SSRF risk.
 When top-level `!text` scenes exist, the CLI writes `<output-stem>.srt` and
 `<output-stem>.vtt` next to the video using the same core timeline math as
 rendering. Existing sidecars are protected by the same overwrite semantics as
-the video. `--burn-captions` additionally renders those captions into frames
-through ffmpeg's `subtitles` filter using a fixed temporary sidecar filename
-and argv-array execution (never shell interpolation). Burn-in is off by
-default and requires a native ffmpeg build with libass; many minimal/Homebrew
-ffmpeg builds do not include that filter, in which case the CLI fails before
-capture with an explicit error.
+the video. `--burn-captions` additionally composites those captions into the
+frames themselves. Burn-in is DOM-composited at capture time: the render page
+generates cues from the same core caption data as the sidecars and renders
+them inside the captured scene, so ffmpeg receives frames that already
+contain the captions. That means burn-in works with any ffmpeg build (no
+libass/`subtitles` filter requirement), cue timing exactly matches the
+half-open sidecar semantics, and non-Latin captions render with the same web
+font coverage as scene text rather than depending on fontconfig. Burn-in is
+off by default.
 
 ## Encoding semantics
 
@@ -199,7 +202,29 @@ and compares the generated SRT/VTT sidecars byte-for-byte. Goldens are compared 
 rather than byte equality because anti-aliasing and compression details may
 vary slightly across platforms.
 
-Regenerate the two small committed 854×480 golden PNGs after an intentional
+The caption burn-in integration test (`render-captions-burnin.test.ts`) renders
+a five-scene Unicode fixture twice — once with `burnCaptions`, once without as a
+pixel-identical control — and asserts caption presence in the bottom band at cue
+times, caption stability within a cue, and exact half-open boundary behavior
+(the frame at t=1.0 already shows the next cue). Unicode glyph correctness is
+verified with three layered mechanisms, because tofu boxes are themselves pixels
+and a naive non-blank assertion cannot detect missing glyphs: a perceptual
+golden comparison of the Cyrillic caption frame (the primary mechanism — any
+tofu form diffs massively against the visually verified golden), a same-length
+comparison against a plane-15 private-use caption that is guaranteed tofu (real
+Cyrillic glyphs must differ from it; Chromium renders missing glyphs as repeated
+identical `.notdef` boxes, so tofu Cyrillic would be pixel-identical to the tofu
+baseline), and a saturated-yellow pixel count for the emoji caption (color emoji
+render yellow faces; tofu or monochrome fallback never can). The asserted
+scripts (Cyrillic, Greek, Vietnamese) are covered by the render page's bundled
+Inter subsets, so they render deterministically in every environment; the emoji
+assertion relies on a color emoji font, which is present on macOS, preinstalled
+on GitHub's ubuntu runners, and installed in the render-worker image. CJK and
+other system-font-dependent scripts are deliberately not asserted: they fall
+back to system fonts exactly like scene text always has, and CI runners do not
+ship CJK fonts.
+
+Regenerate the small committed 854×480 golden PNGs after an intentional
 scene-rendering change:
 
 ```sh

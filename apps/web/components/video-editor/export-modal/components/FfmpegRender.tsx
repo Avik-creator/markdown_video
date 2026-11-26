@@ -34,10 +34,11 @@ import {
   copyFrameData,
   getExportArtifactNames,
 } from "../utils/export-utils";
+import { fetchBrowserMusicData } from "../utils/export-media";
 import {
-  fetchBrowserMusicData,
-  fetchCaptionFontData,
-} from "../utils/export-media";
+  beginExportCaptionBurn,
+  endExportCaptionBurn,
+} from "../utils/export-burn-captions";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -346,21 +347,14 @@ export default function FfmpegRender({
         throwIfNotCurrent();
       }
 
+      // Burn-in is DOM composition, not an ffmpeg filter: publishing the
+      // sidecar cues makes the preview shell composite them inside the
+      // captured scene frame. Every frame html2canvas rasterizes from this
+      // point on already contains the captions, with the full Unicode
+      // coverage of the document's real fonts — no MEMFS sidecar, no
+      // bundled Latin-only TTF, no libass inside ffmpeg.wasm.
       if (burnCaptions) {
-        await ffmpeg.writeFile(
-          artifactNames.captionsFileName,
-          new TextEncoder().encode(captionSidecars.srt),
-          { signal: controller.signal }
-        );
-        await ffmpeg.createDir(artifactNames.fontDirectory, { signal: controller.signal });
-        const fontData = await fetchCaptionFontData(controller.signal);
-        throwIfNotCurrent();
-        await ffmpeg.writeFile(
-          `${artifactNames.fontDirectory}/${artifactNames.fontFileName}`,
-          fontData,
-          { signal: controller.signal }
-        );
-        throwIfNotCurrent();
+        beginExportCaptionBurn(captionSidecars.cues);
       }
 
       // Pause playback and seek to start
@@ -537,7 +531,7 @@ export default function FfmpegRender({
           "-i",
           artifactNames.paletteFileName,
           "-lavfi",
-          `fps=${gifFps}${burnCaptions ? `,subtitles=${artifactNames.captionsFileName}:fontsdir=${artifactNames.fontDirectory}` : ""}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=2`,
+          `fps=${gifFps}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=2`,
           "-loop",
           "0",
           "-y",
@@ -557,8 +551,10 @@ export default function FfmpegRender({
         nextOutputFileName = "video.gif";
       } else {
         // MP4 is used for mp4, reels and shorts. The dimensions in
-        // renderPlan already encode the selected aspect ratio.
-        const subtitlesFilter = `subtitles=${artifactNames.captionsFileName}:fontsdir=${artifactNames.fontDirectory}`;
+        // renderPlan already encode the selected aspect ratio. There is
+        // deliberately no -vf subtitles branch: burned captions are already
+        // part of the captured frames, so encoding stays identical with
+        // burn-in on or off.
         const mp4Args = [
           "-v",
           "error",
@@ -570,7 +566,6 @@ export default function FfmpegRender({
           ...(music
             ? buildMusicOutputArgs(buildMusicAudioFilter(music, totalDuration))
             : []),
-          ...(burnCaptions ? ["-vf", subtitlesFilter] : []),
           "-c:v",
           "libx264",
           "-preset",
@@ -654,6 +649,10 @@ export default function FfmpegRender({
         activeRunRef.current = null;
       }
 
+      // The overlay must never outlive its capture run: reference-matched
+      // cleanup means a cancelled run cannot clear a newer run's state.
+      endExportCaptionBurn(captionSidecars.cues);
+
       // Frames, palettes, and encoded outputs are all generation-specific,
       // so this asynchronous cleanup cannot delete artifacts belonging to a
       // newer render. If the worker was terminated the MEMFS is already gone;
@@ -679,17 +678,6 @@ export default function FfmpegRender({
           } catch {}
           try {
             await ffmpeg.deleteFile(artifactNames.musicFileName);
-          } catch {}
-          try {
-            await ffmpeg.deleteFile(artifactNames.captionsFileName);
-          } catch {}
-          try {
-            await ffmpeg.deleteFile(
-              `${artifactNames.fontDirectory}/${artifactNames.fontFileName}`
-            );
-          } catch {}
-          try {
-            await ffmpeg.deleteDir(artifactNames.fontDirectory);
           } catch {}
           try {
             await ffmpeg.deleteDir(directoryToClean);

@@ -1,4 +1,5 @@
 import {
+  generateCaptions,
   getTimelineSegments,
   parseMarkdownFull,
   type ParseResult,
@@ -7,7 +8,7 @@ import {
   getSceneAtTime,
   SceneFrame,
 } from "@markdown-video/scenes";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { flushSync } from "react-dom";
 import type { RenderPageConfig } from "./render-config";
 
@@ -215,6 +216,22 @@ export function RenderHost({ config }: { config: RenderPageConfig }) {
     return () => unregisterHost(api);
   }, []);
 
+  // Caption cues are a pure function of the parsed document and the host
+  // locale — the same inputs the CLI uses for the sidecar files — so the
+  // burned text can never diverge from the downloadable SRT/VTT. They are
+  // computed only when the host configuration enables burn-in; with burn-in
+  // off the frame receives no captions prop at all and renders markup
+  // identical to a host without the feature.
+  const captionCues = useMemo(
+    () =>
+      config.burnCaptions && state
+        ? generateCaptions(state.parsed, {
+            activeLocale: config.activeLocale,
+          })
+        : [],
+    [config.burnCaptions, config.activeLocale, state]
+  );
+
   if (!state) {
     return null;
   }
@@ -229,6 +246,9 @@ export function RenderHost({ config }: { config: RenderPageConfig }) {
       scene={currentScene}
       sceneTime={sceneTime}
       aspectRatio={config.aspectRatio}
+      {...(captionCues.length > 0
+        ? { captions: { cues: captionCues, time: state.time } }
+        : {})}
       localization={{
         strings: state.parsed.localizationStrings,
         locales: state.parsed.locales,

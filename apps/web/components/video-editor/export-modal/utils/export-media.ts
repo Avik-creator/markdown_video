@@ -87,15 +87,3 @@ export async function fetchBrowserMusicData(
   }
   return readLimitedArrayBuffer(response, MAX_BROWSER_MUSIC_BYTES, "Music");
 }
-
-/** Fetch the OFL-licensed caption font bundled as a public application asset. */
-export async function fetchCaptionFontData(signal: AbortSignal): Promise<Uint8Array> {
-  const response = await fetch("/fonts/inter-variable-latin.ttf", {
-    signal,
-    credentials: "same-origin",
-  });
-  if (!response.ok) {
-    throw new Error(`Caption font download failed with HTTP status ${response.status}`);
-  }
-  return readLimitedArrayBuffer(response, 4 * 1024 * 1024, "Caption font");
-}

@@ -32,7 +32,7 @@ Options:
       --overwrite            replace an existing output file
       --allow-outside-cwd    permit output outside the working directory
       --deny-remote-network  block all non-loopback browser network requests
-      --burn-captions        burn generated captions into the video (requires ffmpeg libass)
+      --burn-captions        burn generated captions into the video frames
       --ffmpeg <path>        ffmpeg executable (default: FFMPEG_BIN or PATH)
       --chromium <path>      Chromium executable (default: Playwright browser)
   -v, --version              print version

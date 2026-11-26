@@ -19,6 +19,8 @@ import { ParticleEffect } from "../components/ParticleEffect.js";
 import { CalloutOverlay } from "../components/CalloutOverlay.js";
 import { PresenterOverlay } from "../components/PresenterOverlay.js";
 import { TimelineElementsOverlay } from "../components/TimelineElementsOverlay.js";
+import { CaptionBurnOverlay } from "../components/CaptionBurnOverlay.js";
+import type { CaptionCue } from "@markdown-video/core";
 import { EmojiScene } from "../scenes/EmojiScene.js";
 import { SceneRenderer } from "../scenes/SceneRenderer.js";
 import {
@@ -90,11 +92,33 @@ function SceneContent({
   );
 }
 
+export interface SceneFrameCaptions {
+  /**
+   * Generated caption cues from @markdown-video/core caption generation.
+   * Cue intervals are absolute video time, matching the sidecar serializers.
+   */
+  cues: readonly CaptionCue[];
+  /**
+   * Absolute video time in seconds. This is deliberately NOT sceneTime:
+   * caption cues span scene boundaries, so the host must thread the same
+   * absolute clock it uses to resolve the scene itself.
+   */
+  time: number;
+}
+
 export interface SceneFrameProps {
   /** The scene to compose. Use getSceneAtTime to derive it from a timeline. */
   scene: Scene;
   /** Time in seconds within the scene; drives all deterministic animation. */
   sceneTime: number;
+  /**
+   * Caption burn-in input. When present, the frame composites the active
+   * cue as a DOM overlay inside the capture subtree, so capture pipelines
+   * encode frames that already contain captions. When omitted (or when no
+   * cue is active at the given time) the rendered DOM is identical to a
+   * frame without captions — burn-in is strictly opt-in per frame.
+   */
+  captions?: SceneFrameCaptions | undefined;
   /**
    * Project aspect ratio key (for example "16:9" or "9:16"). The frame is
    * composed at the canonical logical size for the ratio — the short side is
@@ -135,7 +159,7 @@ export interface SceneFrameProps {
  */
 export const SceneFrame = forwardRef<HTMLDivElement, SceneFrameProps>(
   function SceneFrame(
-    { scene, sceneTime, aspectRatio, localization, className, style },
+    { scene, sceneTime, captions, aspectRatio, localization, className, style },
     ref
   ) {
     const logicalLayout = getRenderLayoutDimensions(aspectRatio);
@@ -171,6 +195,11 @@ export const SceneFrame = forwardRef<HTMLDivElement, SceneFrameProps>(
             elements={scene.timelineElements}
             sceneTime={sceneTime}
           />
+        )}
+        {/* Burned-in captions composite last: subtitles belong on top of
+            every other visual layer, including camera-transformed content. */}
+        {captions && captions.cues.length > 0 && (
+          <CaptionBurnOverlay cues={captions.cues} time={captions.time} />
         )}
       </>
     );

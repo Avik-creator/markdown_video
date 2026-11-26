@@ -52,6 +52,12 @@ export { PresenterOverlay } from "./components/PresenterOverlay.js";
 export { TimelineElementsOverlay } from "./components/TimelineElementsOverlay.js";
 export { TypingCursor } from "./components/TypingCursor.js";
 
+// Caption burn-in overlay: the DOM-composited caption layer every capture
+// pipeline shares. Purely a function of (cues, absolute time); SceneFrame
+// renders it when the host passes the captions prop.
+export { CaptionBurnOverlay } from "./components/CaptionBurnOverlay.js";
+export type { CaptionBurnOverlayProps } from "./components/CaptionBurnOverlay.js";
+
 // Deterministic typing-effect hook shared by typewriter scenes.
 export { useTypingEffect } from "./hooks/useTypingEffect.js";
 
@@ -87,7 +93,7 @@ export type { SceneLocalization } from "./localization.js";
 // Logical frame composition: the capture target every host renders, plus
 // the timeline-position helper that resolves a time to (scene, sceneTime).
 export { SceneFrame } from "./frame/SceneFrame.js";
-export type { SceneFrameProps } from "./frame/SceneFrame.js";
+export type { SceneFrameProps, SceneFrameCaptions } from "./frame/SceneFrame.js";
 export { getSceneAtTime } from "./frame/getSceneAtTime.js";
 
 // Text/code animation and scene transition variant tables.

@@ -3,6 +3,12 @@ import { ASPECT_RATIO_VALUES, isOneOf, type AspectRatio } from "@markdown-video/
 export interface RenderPageConfig {
   aspectRatio: AspectRatio;
   activeLocale: string | null;
+  /**
+   * When true, the host composites generated caption cues into every frame
+   * through SceneFrame's captions prop (DOM burn-in). When false the frame
+   * markup is identical to a host without the feature.
+   */
+  burnCaptions: boolean;
 }
 
 /**
@@ -18,21 +24,27 @@ export function parseRenderPageConfig(search: string): RenderPageConfig {
     ? requestedAspectRatio
     : "16:9";
   const requestedLocale = params.get("locale")?.trim();
+  const burnCaptionsParam = params.get("burnCaptions") ?? params.get("burn-captions");
 
   return {
     aspectRatio,
     activeLocale: requestedLocale ? requestedLocale : null,
+    burnCaptions: burnCaptionsParam === "1" || burnCaptionsParam === "true",
   };
 }
 
 export function renderPageConfigQuery({
   aspectRatio,
   activeLocale,
+  burnCaptions,
 }: RenderPageConfig): string {
   const params = new URLSearchParams();
   params.set("aspect", aspectRatio);
   if (activeLocale) {
     params.set("locale", activeLocale);
+  }
+  if (burnCaptions) {
+    params.set("burnCaptions", "1");
   }
   return params.toString();
 }
