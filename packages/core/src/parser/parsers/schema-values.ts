@@ -115,7 +115,19 @@ export function parseInlineArguments(args: string): ParsedInlineArguments {
     }
 
     const keyValue = raw.match(/^([A-Za-z][\w-]*):(.+)$/);
-    if (keyValue) {
+    // URL schemes are positional values, not key:value properties. This is
+    // especially important for document-level media directives such as
+    // `!music https://example.com/theme.mp3`: without the exclusion the URL
+    // would be misread as a property named `https`.
+    const isUrlSchemeToken =
+      keyValue !== null &&
+      (/^(https?|data|blob|file)$/i.test(keyValue[1]) ||
+        // Any scheme:// URL token is positional: in `ftp://host/file`,
+        // `ftp` is the scheme rather than a property name. Property values
+        // containing URLs (`src:https://...`) do not start their value with
+        // `//`, so they remain key:value properties.
+        keyValue[2].startsWith("//"));
+    if (keyValue && !isUrlSchemeToken) {
       tokens.push({
         raw,
         key: keyValue[1],

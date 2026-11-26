@@ -34,6 +34,7 @@ const EXPECTED_CANONICAL_DIRECTIVES = [
   "locale",
   "locales",
   "strings",
+  "music",
   "export",
 ].sort();
 
