@@ -57,6 +57,9 @@ node apps/cli/dist/cli.js render video.md -o video.mp4 \
 # GIF output uses a generated palette and .gif extension
 node apps/cli/dist/cli.js render video.md -o preview.gif --format gif --fps 12
 
+# Burn generated captions into the video (requires an ffmpeg build with libass)
+node apps/cli/dist/cli.js render video.md -o video.mp4 --burn-captions
+
 # Replace an existing output or explicitly allow a path outside cwd
 node apps/cli/dist/cli.js render video.md -o video.mp4 --overwrite
 node apps/cli/dist/cli.js render video.md -o ../video.mp4 --allow-outside-cwd
@@ -78,6 +81,42 @@ fetch remote `http(s)` URLs. When rendering untrusted markdown in automation,
 used by the render worker: `data:` and `blob:` images still work, but remote
 URLs render as blocked/broken images instead of giving the document network
 egress.
+## Music and captions
+
+A document can declare one document-level music track:
+
+```markdown
+!music ./audio/theme.mp3 volume:0.4 fade:1s loop:true
+```
+
+The track starts at 0s, loops by default when shorter than the video, is always
+truncated at the video end, and never extends the output duration. `volume` is
+linear gain in the inclusive 0-1 range. `fade` is limited to 30s and is also
+clamped to half the video duration so fade-in and fade-out never overlap. GIF
+output ignores music because the GIF container cannot carry audio. Editor preview
+playback is intentionally silent for music in this step; music is mixed only
+during export/rendering so preview cannot diverge from the deterministic ffmpeg
+clock.
+
+Relative music paths resolve against the markdown file's directory for file
+input, and against the current working directory for stdin or `--markdown`.
+Remote music must be HTTPS. The CLI downloads remote music itself before
+encoding (Chromium never fetches it), rejects credentials and non-public IP
+targets, validates redirects one at a time, pins the validated DNS answer for
+the TLS connection, and enforces a 32MB download cap. Local files are limited
+to 256MB. Programmatic renderers running with `allowRemoteNetwork: false` are
+isolated: only self-contained `data:audio/*` music is accepted there, since
+local paths could expose service files and URLs would create egress/SSRF risk.
+
+When top-level `!text` scenes exist, the CLI writes `<output-stem>.srt` and
+`<output-stem>.vtt` next to the video using the same core timeline math as
+rendering. Existing sidecars are protected by the same overwrite semantics as
+the video. `--burn-captions` additionally renders those captions into frames
+through ffmpeg's `subtitles` filter using a fixed temporary sidecar filename
+and argv-array execution (never shell interpolation). Burn-in is off by
+default and requires a native ffmpeg build with libass; many minimal/Homebrew
+ffmpeg builds do not include that filter, in which case the CLI fails before
+capture with an explicit error.
 
 ## Encoding semantics
 
@@ -87,7 +126,7 @@ then invokes native ffmpeg with array arguments (never a shell):
 
 ```text
 ffmpeg -v error -y|-n \
-  -f image2pipe -framerate <fps> -i pipe:0 \
+  -f image2pipe -c:v mjpeg -framerate <fps> -i pipe:0 \
   -vf scale=<width>:<height>:flags=lanczos:out_range=limited,setsar=1 \
   -c:v libx264 -preset <preset> -crf <crf> \
   -pix_fmt yuv420p -t <duration> <output>
@@ -99,6 +138,10 @@ intentional: Chromium screenshots are full-range JPEGs, and merely writing
 `-pix_fmt yuv420p` can otherwise leave current native ffmpeg output tagged as
 `yuvj420p`. The conversion makes the file a conventional limited-range
 yuv420p mp4 while the preset/CRF contract remains identical to browser export.
+When music is present, the mp4 command adds the prepared music file as a second
+input (with `-stream_loop -1` only when `loop:true`), maps video/audio
+explicitly, applies `volume`/`atrim`/`afade` in an output audio filtergraph,
+and encodes AAC at 128kbps. `-t <duration>` remains the hard output boundary.
 
 GIF output caps the GIF frame rate at 10fps (matching the browser exporter's
 size-oriented behavior), creates a 64-color palette, uses Bayer dithering, and
@@ -149,7 +192,10 @@ pnpm --filter markdown-video test:integration
 Set `MV_SKIP_INTEGRATION=1` to skip these tests in an environment that cannot
 provide the external binaries. The integration suite validates codec, width,
 height, fps, frame count, duration, pixel format/color range, font loading, and
-perceptual golden-frame similarity. Goldens are compared with `pixelmatch`
+perceptual golden-frame similarity. The audio/caption integration test creates
+its sine-wave WAV programmatically at test time (no binary audio fixture is
+committed), then uses ffprobe to verify the AAC stream and exact video duration
+and compares the generated SRT/VTT sidecars byte-for-byte. Goldens are compared with `pixelmatch`
 rather than byte equality because anti-aliasing and compression details may
 vary slightly across platforms.
 

@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, readFile, rm, stat, unlink } from "node:fs/promises"
+import { mkdir, mkdtemp, readFile, rm, stat, unlink, writeFile } from "node:fs/promises"
 import { existsSync } from "node:fs"
 import { tmpdir } from "node:os"
 import path from "node:path"
@@ -6,14 +6,17 @@ import { performance } from "node:perf_hooks"
 
 import { chromium, type Browser, type Locator, type Page } from "playwright"
 import {
+  captionSidecarPathsForOutput,
   createRenderPlan,
-  parseMarkdown,
+  generateCaptionSidecars,
+  parseMarkdownFull,
   validateExportInput,
   type RenderPlan,
 } from "@markdown-video/core"
 
 import { RenderError, throwIfAborted, UsageError } from "./errors.js"
 import { buildFfmpegArgs, startFfmpeg, type FFmpegProcess } from "./ffmpeg.js"
+import { prepareMusicInput } from "./music.js"
 import { resolveOutputPath } from "./paths.js"
 import { serveRenderPage, type RenderPageServer } from "./static-server.js"
 import {
@@ -52,6 +55,10 @@ export interface RenderVideoOptions {
    * false so Chromium can only reach the loopback static asset origin.
    */
   allowRemoteNetwork?: boolean | undefined
+  /** Base directory for relative !music file paths. Defaults to cwd. */
+  markdownBaseDir?: string | undefined
+  /** Burn generated captions into video frames using ffmpeg's subtitles filter. */
+  burnCaptions?: boolean | undefined
   signal?: AbortSignal | undefined
   onProgress?: ((progress: RenderProgress) => void) | undefined
 }
@@ -65,6 +72,10 @@ export interface RenderVideoResult {
   totalFrames: number
   totalDuration: number
   elapsedSeconds: number
+  captionCount?: number | undefined
+  captionPaths?: { srtPath: string; vttPath: string } | undefined
+  hasAudio?: boolean | undefined
+  captionsBurnedIn?: boolean | undefined
 }
 
 export type RenderVideoBufferOptions = Omit<
@@ -131,9 +142,9 @@ function validateMarkdown(markdown: string) {
   }
 }
 
-function parseScenes(markdown: string) {
+function parseDocument(markdown: string) {
   try {
-    return parseMarkdown(markdown)
+    return parseMarkdownFull(markdown)
   } catch (error) {
     throw new UsageError(
       `Could not parse markdown input: ${
@@ -310,6 +321,22 @@ async function openCaptureSession({
   }
 }
 
+
+async function ffmpegSupportsSubtitles(executable: string): Promise<boolean> {
+  try {
+    const { execFile } = await import("node:child_process")
+    const { promisify } = await import("node:util")
+    const execFileAsync = promisify(execFile)
+    const { stdout } = await execFileAsync(executable, ["-hide_banner", "-filters"], {
+      timeout: 10_000,
+      maxBuffer: 4 * 1024 * 1024,
+    })
+    return /^\s*\S+\s+subtitles\s+/m.test(stdout)
+  } catch {
+    return false
+  }
+}
+
 function validateRenderInput({
   markdown,
   fps,
@@ -317,7 +344,8 @@ function validateRenderInput({
   markdown: string
   fps: number
 }) {
-  const scenes = parseScenes(markdown)
+  const parsed = parseDocument(markdown)
+  const scenes = parsed.scenes
   const totalDuration = scenes.reduce(
     (sum, scene) => sum + scene.duration,
     0,
@@ -331,7 +359,7 @@ function validateRenderInput({
     throw new UsageError(validation.reason ?? "Input cannot be exported.")
   }
 
-  return { scenes, totalDuration, validation }
+  return { parsed, scenes, totalDuration, validation }
 }
 
 export async function renderVideo(
@@ -341,7 +369,7 @@ export async function renderVideo(
   validateMarkdown(options.markdown)
   const settings = resolveRenderSettings(options)
   const cwd = path.resolve(options.cwd ?? process.cwd())
-  const { totalDuration, validation } = validateRenderInput({
+  const { parsed, totalDuration, validation } = validateRenderInput({
     markdown: options.markdown,
     fps: settings.fps,
   })
@@ -364,17 +392,66 @@ export async function renderVideo(
   const outputExisted = existsSync(outputPath)
   await mkdir(path.dirname(outputPath), { recursive: true })
 
-  const executable = options.ffmpegPath ?? process.env.FFMPEG_BIN ?? "ffmpeg"
-  const ffmpegArgs = buildFfmpegArgs({
-    plan,
-    format: settings.format,
-    quality: settings.quality,
-    speed: settings.speed,
-    fps,
-    totalDuration,
-    outputPath,
-    overwrite: settings.overwrite,
+  const captionSidecars = generateCaptionSidecars(parsed, {
+    activeLocale: settings.locale ?? null,
   })
+  const hasCaptions = captionSidecars.cues.length > 0
+  const sidecarPaths = captionSidecarPathsForOutput(outputPath)
+  if (hasCaptions && !settings.overwrite) {
+    for (const captionPath of [sidecarPaths.srtPath, sidecarPaths.vttPath]) {
+      if (existsSync(captionPath)) {
+        throw new UsageError(
+          `Caption sidecar already exists: ${captionPath} (use --overwrite to replace it).`,
+        )
+      }
+    }
+  }
+
+  const shouldBurnCaptions = options.burnCaptions === true && hasCaptions
+  const music = settings.format === "gif" ? undefined : parsed.music
+  const needsMediaTempDir = shouldBurnCaptions || music !== undefined
+  const mediaTempDir = needsMediaTempDir
+    ? await mkdtemp(path.join(tmpdir(), "markdown-video-media-"))
+    : null
+
+  const executable = options.ffmpegPath ?? process.env.FFMPEG_BIN ?? "ffmpeg"
+  let preparedMusic
+  let ffmpegArgs: string[]
+  try {
+    if (shouldBurnCaptions && mediaTempDir) {
+      if (!(await ffmpegSupportsSubtitles(executable))) {
+        throw new UsageError(
+          "--burn-captions requires an ffmpeg build with the subtitles filter (libass).",
+        )
+      }
+      await writeFile(path.join(mediaTempDir, "captions.srt"), captionSidecars.srt, "utf8")
+    }
+
+    preparedMusic = music && mediaTempDir
+      ? await prepareMusicInput({
+          music,
+          markdownBaseDir: path.resolve(options.markdownBaseDir ?? cwd),
+          tempDir: mediaTempDir,
+          allowExternalMusic: options.allowRemoteNetwork ?? true,
+        })
+      : undefined
+
+    ffmpegArgs = buildFfmpegArgs({
+      plan,
+      format: settings.format,
+      quality: settings.quality,
+      speed: settings.speed,
+      fps,
+      totalDuration,
+      outputPath,
+      overwrite: settings.overwrite,
+      ...(preparedMusic ? { music: { ...music!, inputPath: preparedMusic.inputPath } } : {}),
+      ...(shouldBurnCaptions ? { burnCaptionsFileName: "captions.srt" } : {}),
+    })
+  } catch (error) {
+    if (mediaTempDir) await rm(mediaTempDir, { recursive: true, force: true })
+    throw error
+  }
 
   let session: CaptureSession | null = null
   let ffmpeg: FFmpegProcess | null = null
@@ -398,7 +475,9 @@ export async function renderVideo(
       allowRemoteNetwork: options.allowRemoteNetwork ?? true,
     })
 
-    ffmpeg = startFfmpeg(executable, ffmpegArgs)
+    ffmpeg = startFfmpeg(executable, ffmpegArgs, {
+      ...(mediaTempDir ? { cwd: mediaTempDir } : {}),
+    })
     encodingStarted = true
 
     const jpegQuality = Math.round(plan.frameQuality * 100)
@@ -435,6 +514,11 @@ export async function renderVideo(
     await ffmpeg.finish()
     encodingStarted = false
 
+    if (hasCaptions) {
+      await writeFile(sidecarPaths.srtPath, captionSidecars.srt, "utf8")
+      await writeFile(sidecarPaths.vttPath, captionSidecars.vtt, "utf8")
+    }
+
     const elapsedSeconds = (performance.now() - started) / 1000
     progress(options, {
       phase: "complete",
@@ -451,6 +535,10 @@ export async function renderVideo(
       totalFrames,
       totalDuration,
       elapsedSeconds,
+      captionCount: captionSidecars.cues.length,
+      captionPaths: hasCaptions ? sidecarPaths : undefined,
+      hasAudio: preparedMusic !== undefined,
+      captionsBurnedIn: shouldBurnCaptions,
     }
   } catch (error) {
     ffmpeg?.abort()
@@ -461,6 +549,7 @@ export async function renderVideo(
   } finally {
     if (encodingStarted) ffmpeg?.abort()
     if (session) await closeSilently(() => session!.close())
+    if (mediaTempDir) await rm(mediaTempDir, { recursive: true, force: true })
   }
 }
 

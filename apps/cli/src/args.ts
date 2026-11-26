@@ -17,6 +17,7 @@ export interface CliArgs {
   overwrite: boolean
   allowOutsideCwd: boolean
   denyRemoteNetwork: boolean
+  burnCaptions: boolean
   ffmpegPath?: string | undefined
   chromiumExecutablePath?: string | undefined
   help: boolean
@@ -47,6 +48,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
         overwrite: { type: "boolean" },
         "allow-outside-cwd": { type: "boolean" },
         "deny-remote-network": { type: "boolean" },
+        "burn-captions": { type: "boolean" },
         ffmpeg: { type: "string" },
         chromium: { type: "string" },
         help: { type: "boolean", short: "h" },
@@ -96,6 +98,7 @@ export function parseCliArgs(argv: string[]): CliArgs {
     overwrite: parsed.values.overwrite === true,
     allowOutsideCwd: parsed.values["allow-outside-cwd"] === true,
     denyRemoteNetwork: parsed.values["deny-remote-network"] === true,
+    burnCaptions: parsed.values["burn-captions"] === true,
     ffmpegPath: stringValue(parsed.values.ffmpeg),
     chromiumExecutablePath: stringValue(parsed.values.chromium),
     help: parsed.values.help === true,
