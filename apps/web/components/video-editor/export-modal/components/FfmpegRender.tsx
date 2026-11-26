@@ -21,6 +21,7 @@ import {
 import {
   createRenderPlan,
   getFrameFileName,
+  getVideoEncodingSettings,
   validateExportInput,
 } from "@markdown-video/core";
 import {
@@ -79,43 +80,6 @@ function sleep(ms: number, signal: AbortSignal) {
     signal.addEventListener("abort", handleAbort, { once: true });
   });
 }
-
-const getQualitySettings = (quality: string, speed: string) => {
-  const qualityMap: Record<
-    string,
-    Record<string, { preset: string; crf: number }>
-  > = {
-    low: {
-      fastest: { preset: "ultrafast", crf: 28 },
-      fast: { preset: "superfast", crf: 26 },
-      balanced: { preset: "fast", crf: 28 },
-      slow: { preset: "medium", crf: 28 },
-      slowest: { preset: "slow", crf: 28 },
-    },
-    medium: {
-      fastest: { preset: "superfast", crf: 23 },
-      fast: { preset: "fast", crf: 23 },
-      balanced: { preset: "medium", crf: 23 },
-      slow: { preset: "slow", crf: 23 },
-      slowest: { preset: "slower", crf: 23 },
-    },
-    high: {
-      fastest: { preset: "fast", crf: 18 },
-      fast: { preset: "medium", crf: 18 },
-      balanced: { preset: "slow", crf: 18 },
-      slow: { preset: "slower", crf: 18 },
-      slowest: { preset: "veryslow", crf: 18 },
-    },
-    ultra: {
-      fastest: { preset: "medium", crf: 15 },
-      fast: { preset: "slow", crf: 15 },
-      balanced: { preset: "slower", crf: 15 },
-      slow: { preset: "veryslow", crf: 15 },
-      slowest: { preset: "veryslow", crf: 12 },
-    },
-  };
-  return qualityMap[quality]?.[speed] || qualityMap.high.balanced;
-};
 
 export default function FfmpegRender({
   loadFunction,
@@ -321,7 +285,7 @@ export default function FfmpegRender({
       throwIfNotCurrent();
 
       frameExtension = renderPlan.frameExtension;
-      const params = getQualitySettings(
+      const params = getVideoEncodingSettings(
         exportSettings.quality,
         exportSettings.speed
       );

@@ -10,6 +10,7 @@ import {
   getFrameEncoding,
   getFrameFileName,
   getTotalFrameCount,
+  getVideoEncodingSettings,
   normalizeOutputFps,
   validateExportInput,
 } from "../render-plan.js";
@@ -157,6 +158,19 @@ describe("frame encoding helpers", () => {
   it("pads frame sequence file names", () => {
     expect(getFrameFileName(0, "jpg")).toBe("frame00000.jpg");
     expect(getFrameFileName(42, "jpg")).toBe("frame00042.jpg");
+  });
+});
+
+describe("getVideoEncodingSettings", () => {
+  it("pins the web exporter's quality and speed matrix", () => {
+    expect(getVideoEncodingSettings("low", "fastest")).toEqual({ preset: "ultrafast", crf: 28 });
+    expect(getVideoEncodingSettings("medium", "balanced")).toEqual({ preset: "medium", crf: 23 });
+    expect(getVideoEncodingSettings("high", "balanced")).toEqual({ preset: "slow", crf: 18 });
+    expect(getVideoEncodingSettings("ultra", "slowest")).toEqual({ preset: "veryslow", crf: 12 });
+  });
+
+  it("uses high/balanced as the shared fallback", () => {
+    expect(getVideoEncodingSettings("unknown", "unknown")).toEqual({ preset: "slow", crf: 18 });
   });
 });
 

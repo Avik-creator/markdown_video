@@ -72,6 +72,58 @@ export function getFrameEncoding(quality: string): FrameEncoding {
   }
 }
 
+export interface VideoEncodingSettings {
+  preset: string
+  crf: number
+}
+
+/**
+ * x264 preset/CRF pairs shared by the browser exporter and headless CLI.
+ * Quality selects the compression target; speed selects how much encoder time
+ * to spend reaching it. Unknown values deliberately fall back to the web
+ * exporter's high/balanced defaults.
+ */
+export function getVideoEncodingSettings(
+  quality: string,
+  speed: string
+): VideoEncodingSettings {
+  const qualityMap: Record<
+    string,
+    Record<string, VideoEncodingSettings>
+  > = {
+    low: {
+      fastest: { preset: "ultrafast", crf: 28 },
+      fast: { preset: "superfast", crf: 26 },
+      balanced: { preset: "fast", crf: 28 },
+      slow: { preset: "medium", crf: 28 },
+      slowest: { preset: "slow", crf: 28 },
+    },
+    medium: {
+      fastest: { preset: "superfast", crf: 23 },
+      fast: { preset: "fast", crf: 23 },
+      balanced: { preset: "medium", crf: 23 },
+      slow: { preset: "slow", crf: 23 },
+      slowest: { preset: "slower", crf: 23 },
+    },
+    high: {
+      fastest: { preset: "fast", crf: 18 },
+      fast: { preset: "medium", crf: 18 },
+      balanced: { preset: "slow", crf: 18 },
+      slow: { preset: "slower", crf: 18 },
+      slowest: { preset: "veryslow", crf: 18 },
+    },
+    ultra: {
+      fastest: { preset: "medium", crf: 15 },
+      fast: { preset: "slow", crf: 15 },
+      balanced: { preset: "slower", crf: 15 },
+      slow: { preset: "veryslow", crf: 15 },
+      slowest: { preset: "veryslow", crf: 12 },
+    },
+  }
+
+  return qualityMap[quality]?.[speed] || qualityMap.high.balanced
+}
+
 export interface RenderPlan {
   width: number
   height: number
