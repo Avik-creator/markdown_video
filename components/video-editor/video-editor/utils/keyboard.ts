@@ -97,8 +97,42 @@ export function matchesKey(event: ShortcutEventLike, key: string): boolean {
   return false;
 }
 
+export type ShortcutPlatform = "mac" | "other";
+
+/**
+ * Platform detection for shortcut modifier semantics, injectable for tests.
+ *
+ * `navigator.platform` ("MacIntel", also reported by iPads in desktop mode)
+ * is the primary signal; the user agent covers environments where platform
+ * is empty or privacy-reduced. Anything unrecognized is treated as non-mac,
+ * which keeps the more permissive modifier behavior.
+ */
+export function detectShortcutPlatform(
+  navigatorLike?: { platform?: string; userAgent?: string }
+): ShortcutPlatform {
+  const nav =
+    navigatorLike ??
+    (typeof navigator !== "undefined" ? navigator : undefined);
+  if (!nav) return "other";
+
+  if (/^mac/i.test(nav.platform ?? "")) return "mac";
+  if (/macintosh|mac os x/i.test(nav.userAgent ?? "")) return "mac";
+  return "other";
+}
+
 /**
  * Match an application shortcut that explicitly uses Ctrl or Cmd.
+ *
+ * The modifier rules are platform-dependent:
+ *
+ * - On macOS only Cmd (metaKey) matches, never bare Ctrl. macOS turns
+ *   Ctrl+letter keys into emacs-style text-editing bindings — Ctrl+N next
+ *   line, Ctrl+E end of line, Ctrl+F forward character, Ctrl+H delete-back,
+ *   Ctrl+O open-line — so hijacking them for application shortcuts (new,
+ *   export, find, replace, open) would break text editing in the editor.
+ *   Pressing Ctrl and Cmd together is not the shortcut either.
+ * - On other platforms Ctrl or Cmd matches, as before: Windows and Linux
+ *   have no emacs-binding conflict, and users may press either modifier.
  *
  * Shift must match exactly: Ctrl+Z is undo, Ctrl+Shift+Z is redo, and
  * Ctrl+Shift+F must not accidentally trigger a Ctrl+F binding. Alt always
@@ -108,10 +142,16 @@ export function matchesKey(event: ShortcutEventLike, key: string): boolean {
 export function matchesCtrlOrMetaShortcut(
   event: ShortcutEventLike,
   key: string,
-  options: { shiftKey?: boolean } = {}
+  options: { shiftKey?: boolean; platform?: ShortcutPlatform } = {}
 ): boolean {
+  const platform = options.platform ?? detectShortcutPlatform();
+  const modifierMatch =
+    platform === "mac"
+      ? event.metaKey && !event.ctrlKey
+      : event.ctrlKey || event.metaKey;
+
   return (
-    (event.ctrlKey || event.metaKey) &&
+    modifierMatch &&
     !event.altKey &&
     event.shiftKey === Boolean(options.shiftKey) &&
     matchesKey(event, key)
