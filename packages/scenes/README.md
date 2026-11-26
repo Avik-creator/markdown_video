@@ -78,8 +78,18 @@ list is exported as `SCENE_FONT_CSS_VARIABLES`:
 | `--font-fira-family` | code `fira` |
 | `--font-source-code-family` | code `source` |
 | `--font-inconsolata-family` | code `inconsolata` |
+| `--font-emoji` | color emoji fallback in every font chain |
 
-(`code` font `courier` is a system font and needs no variable.)
+(`code` font `courier` is a system font and needs no primary-family variable,
+but its chain still uses `--font-emoji` for emoji codepoints.)
+
+Scene chains place `var(--font-emoji, …)` immediately after the primary family
+variable. That ordering keeps ASCII digits, letters, and other text-presentation
+characters in the text font while giving emoji a deterministic host-controlled
+family before browser/platform fallback. The emoji `@font-face` must carry a
+`unicode-range` limited to emoji-related codepoints (including sequence
+components such as ZWJ, variation selector 16, keycap, skin-tone modifiers, and
+tag characters); it is a scoped fallback face, not another general text family.
 
 - The Next.js editor defines these with `next/font/google` in
   `apps/web/app/layout.tsx`; next/font exposes its hashed family names

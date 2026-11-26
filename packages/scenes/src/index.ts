@@ -105,6 +105,7 @@ export {
   codeFontFamilyStyles,
   SCENE_TEXT_FONT_VARIABLES,
   SCENE_CODE_FONT_VARIABLES,
+  SCENE_EMOJI_FONT_VARIABLE,
   SCENE_FONT_CSS_VARIABLES,
 } from "./utils/fonts.js";
 export type { FontFamilyStyle } from "./utils/fonts.js";

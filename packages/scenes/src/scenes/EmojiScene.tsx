@@ -3,6 +3,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 import { cn } from "../cn.js";
+import { textFontFamilyStyles } from "../utils/fonts.js";
 import type { Scene } from "@markdown-video/core";
 
 export function EmojiScene({
@@ -77,6 +78,7 @@ export function EmojiScene({
     >
       <motion.span
         className={cn(sizeClasses[emoji.size || "xl"])}
+        style={textFontFamilyStyles.sans}
         animate={
           sceneTime !== undefined
             ? emoji.animate === "spin"
