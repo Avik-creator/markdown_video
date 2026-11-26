@@ -39,10 +39,10 @@ import { extractFrame, ffprobeJson } from "./helpers.js"
 //      glyphs as hex-digit boxes (a Pango/Firefox behavior Chromium does not
 //      implement) could still pass this assertion — the golden covers that case.
 //   3. Emoji color: the 😀 caption must contain saturated yellow pixels. Tofu or
-//      monochrome fallback glyphs can never be yellow. Requires a color emoji
-//      font in the environment — present on macOS (Apple Color Emoji), on CI
-//      ubuntu runners (fonts-noto-color-emoji preinstalled), and in the
-//      production render-worker image (which installs fonts-noto-color-emoji).
+//      monochrome fallback glyphs can never be yellow. Color is guaranteed
+//      environment-independently because the render host bundles the Noto
+//      Color Emoji COLRv1 webfont and loads it through @font-face, bypassing
+//      system font fallback entirely (see apps/render/FONTS.md).
 //
 // Japanese/Arabic/Hindi are deliberately not asserted here: those scripts fall
 // back to system fonts (exactly like scene text always has), and CI runners
