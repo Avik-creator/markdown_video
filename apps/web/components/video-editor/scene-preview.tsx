@@ -16,6 +16,11 @@ import { cn } from "@/lib/utils";
 // Scene composition lives in @markdown-video/scenes; this shell only adds
 // editor state, on-screen fitting and zoom around the package's SceneFrame.
 import { SceneFrame, getSceneAtTime } from "@markdown-video/scenes";
+import {
+  getExportCaptionBurnCues,
+  getExportCaptionBurnCuesServerSnapshot,
+  subscribeExportCaptionBurn,
+} from "./export-modal/utils/export-burn-captions";
 
 // Frame embedding cannot change during the lifetime of a document, so there
 // is no external event to subscribe to. useSyncExternalStore still gives us
@@ -62,6 +67,17 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
       subscribeToFrameEmbedding,
       getEmbeddedClientSnapshot,
       getEmbeddedServerSnapshot
+    );
+
+    // Caption burn-in exists only while an export capture runs. The cues are
+    // absolute-timeline data and the store's currentTime IS the absolute
+    // video clock the capture loop seeks through, so the overlay composes
+    // exactly what the encoded frame should contain — and nothing at all in
+    // normal editing/preview, where no capture state is published.
+    const burnCues = useSyncExternalStore(
+      subscribeExportCaptionBurn,
+      getExportCaptionBurnCues,
+      getExportCaptionBurnCuesServerSnapshot
     );
 
     const { currentScene, sceneTime } = useMemo(
@@ -138,6 +154,9 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
             sceneTime={sceneTime}
             aspectRatio={aspectRatio}
             localization={sceneLocalization}
+            {...(burnCues
+              ? { captions: { cues: burnCues, time: currentTime } }
+              : {})}
             className="absolute left-0 top-0"
             style={{
               transform: fitTransform

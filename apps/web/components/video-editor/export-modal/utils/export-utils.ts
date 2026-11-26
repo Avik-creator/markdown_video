@@ -18,9 +18,6 @@ export interface ExportArtifactNames {
   paletteFileName: string
   outputFileName: string
   musicFileName: string
-  captionsFileName: string
-  fontDirectory: string
-  fontFileName: string
   outputExtension: "mp4" | "gif"
 }
 
@@ -28,6 +25,11 @@ export interface ExportArtifactNames {
  * All mutable files inside ffmpeg's shared MEMFS are generation-scoped. An
  * asynchronous cleanup from an old run can therefore never delete the output
  * or palette belonging to a newer run.
+ *
+ * Captions deliberately have no MEMFS artifacts: burn-in is DOM-composited
+ * into the captured frames themselves and sidecar downloads are blob URLs
+ * built directly from the generated text, so no caption or font file ever
+ * enters the ffmpeg filesystem.
  */
 export function getExportArtifactNames(
   generation: number,
@@ -43,9 +45,6 @@ export function getExportArtifactNames(
     paletteFileName: `palette-${safeGeneration}.png`,
     outputFileName: `output-${safeGeneration}.${outputExtension}`,
     musicFileName: `music-${safeGeneration}`,
-    captionsFileName: `captions-${safeGeneration}.srt`,
-    fontDirectory: `fonts-${safeGeneration}`,
-    fontFileName: `inter-variable-latin.ttf`,
     outputExtension,
   }
 }

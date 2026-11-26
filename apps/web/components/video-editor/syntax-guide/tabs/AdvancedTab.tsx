@@ -428,8 +428,9 @@ These words become captions`}
           default, is truncated at video end, and never extends duration.
           Remote music must use HTTPS (and CORS in browser export). SRT/VTT
           captions are generated from top-level text scenes; burn-in is
-          optional and off by default. Browser burn-in uses a bundled Latin
-          Inter font subset. GIF output cannot carry audio.
+          optional and off by default. Burned captions render with the same
+          fonts as the rest of the video, so non-Latin text is fully
+          supported. GIF output cannot carry audio.
         </p>
       </Section>
 
