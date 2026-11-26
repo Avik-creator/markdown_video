@@ -93,56 +93,58 @@ and FFmpeg compiles the same scenes to MP4 or GIF in the browser. Nothing is ren
 ## 🏗️ Project Structure
 
 ```
-app/
-  ├── layout.tsx              # Root layout
-  ├── page.tsx                # Landing page
-  ├── editor/
-  │   └── page.tsx            # Video editor interface
-  ├── api/
-  │   ├── projects/route.ts   # API endpoint for temporary share snapshots
-  │   └── mcp/[transport]/    # MCP server (10 tools over the parser)
-  └── globals.css
-components/
-  ├── landing/                # Landing page components
-  ├── ui/                     # Reusable UI components (50+ Radix UI based)
-  └── video-editor/
-      ├── markdown-editor.tsx     # Markdown input editor
-      ├── scene-preview/          # Video scene renderer
-      │   ├── scenes/             # Different scene type renderers
-      │   ├── components/         # Preview helpers
-      │   └── utils/              # Rendering utilities
-      ├── timeline.tsx            # Timeline scrubber
-      ├── export-modal/           # Video export with FFmpeg
-      ├── templates-panel.tsx     # Template selection
-      ├── theme-selector.tsx      # Theme customization
-      └── keyboard-shortcuts.tsx  # Shortcuts reference
-lib/
-  ├── mcp/
-  │   ├── syntax-validator.ts # Validation shared with the MCP tools
-  │   └── documentation.ts    # Directive docs served over MCP
-  ├── parser/
-  │   ├── index.ts            # Main markdown parser
-  │   ├── parsers/            # Specialized parsers for different scenes
-  │   ├── constants.ts        # Scene types and directives
-  │   ├── timeline.ts         # Timeline parsing
-  │   └── utils.ts            # Helper utilities
-  ├── types.ts                # TypeScript type definitions
-  ├── use-video-store.ts      # Zustand video state management
-  ├── redis.ts                # Redis client for share snapshots
-  ├── github.ts               # GitHub API integration
-  ├── templates.ts            # Template definitions
-  └── utils.ts                # General utilities
-public/
-  ├── og-image.png            # Open Graph image for sharing
-  └── site.webmanifest        # PWA manifest
+apps/web/                       # Next.js application
+  ├── app/
+  │   ├── layout.tsx            # Root layout
+  │   ├── page.tsx              # Landing page
+  │   ├── editor/
+  │   │   └── page.tsx          # Video editor interface
+  │   ├── api/
+  │   │   ├── projects/route.ts # API endpoint for temporary share snapshots
+  │   │   └── mcp/[transport]/  # MCP server (10 tools over the parser)
+  │   └── globals.css
+  ├── components/
+  │   ├── landing/              # Landing page components
+  │   ├── ui/                   # Reusable UI components (50+ Radix UI based)
+  │   └── video-editor/
+  │       ├── markdown-editor.tsx     # Markdown input editor
+  │       ├── scene-preview/          # Video scene renderer
+  │       │   ├── scenes/             # Different scene type renderers
+  │       │   ├── components/         # Preview helpers
+  │       │   └── utils/              # Rendering utilities
+  │       ├── timeline.tsx            # Timeline scrubber
+  │       ├── export-modal/           # Video export with FFmpeg
+  │       ├── templates-panel.tsx     # Template selection
+  │       ├── theme-selector.tsx      # Theme customization
+  │       └── keyboard-shortcuts.tsx  # Shortcuts reference
+  ├── lib/
+  │   ├── mcp/
+  │   │   ├── syntax-validator.ts # Validation shared with the MCP tools
+  │   │   └── documentation.ts    # Directive docs served over MCP
+  │   ├── parser/
+  │   │   ├── index.ts            # Main markdown parser
+  │   │   ├── parsers/            # Specialized parsers for different scenes
+  │   │   ├── constants.ts        # Scene types and directives
+  │   │   ├── timeline.ts         # Timeline parsing
+  │   │   └── utils.ts            # Helper utilities
+  │   ├── types.ts                # TypeScript type definitions
+  │   ├── use-video-store.ts      # Zustand video state management
+  │   ├── redis.ts                # Redis client for share snapshots
+  │   ├── github.ts               # GitHub API integration
+  │   ├── templates.ts            # Template definitions
+  │   └── utils.ts                # General utilities
+  └── public/
+      ├── og-image.png          # Open Graph image for sharing
+      └── site.webmanifest      # PWA manifest
+packages/                       # Future shared packages
 ```
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ or higher
-- pnpm, npm, or yarn
+- Node.js 20.9 or higher (Node.js 22 is used in CI)
+- pnpm 10.25.0 (pinned in `packageManager`; run `corepack enable` if pnpm is not installed)
 
 ### Installation
 
@@ -150,7 +152,7 @@ public/
 
    ```bash
    git clone https://github.com/Avik-creator/markdown_video.git
-   cd markdown-to-video
+   cd markdown_video
    ```
 
 2. **Install dependencies**:
@@ -162,7 +164,7 @@ public/
 3. **Set up environment variables** (optional for local development):
 
    ```bash
-   cp .env.template .env.local
+   cp apps/web/.env.template apps/web/.env.local
    ```
 
 4. **Run the development server**:
@@ -191,10 +193,13 @@ public/
 
 ## 📦 Available Scripts
 
+Run these from the repository root (they delegate to workspace packages through Turborepo; `apps/web` is currently the only application package):
+
 - `pnpm dev` - Start the development server with hot reload
 - `pnpm build` - Build the application for production
 - `pnpm start` - Start the production server
-- `pnpm typecheck` - Type-check the project with `tsc`
+- `pnpm lint` - Lint the workspace with ESLint
+- `pnpm typecheck` - Generate Next.js route types and type-check with `tsc`
 - `pnpm test` - Run the test suite with Vitest
 
 ## 🤝 Contributing

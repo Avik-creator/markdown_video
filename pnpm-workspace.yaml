@@ -1,0 +1,7 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+peerDependencyRules:
+  allowedVersions:
+    "mcp-handler>@modelcontextprotocol/sdk": ">=1.32.0"

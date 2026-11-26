@@ -8,9 +8,11 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+In this workspace, the Next.js package and its bundled docs are installed under `apps/web/node_modules/next/` rather than directly under the repository-root `node_modules/`.
+
 ## Verification
 
-Use the CI sequence after code changes:
+Run the CI sequence from the repository root after code changes. The root scripts delegate to workspace packages through Turborepo:
 
 ```sh
 pnpm install --frozen-lockfile
@@ -21,4 +23,4 @@ pnpm test
 pnpm build
 ```
 
-`pnpm lint` may report non-blocking warnings, but must have zero errors. The full test suite is Vitest and currently includes jsdom/React integration tests as well as pure parser/store/export tests.
+The same `lint`, `typecheck`, `test`, `build`, and `dev` scripts also work standalone inside `apps/web`. `pnpm lint` may report non-blocking warnings, but must have zero errors. The full test suite is Vitest and currently includes jsdom/React integration tests as well as pure parser/store/export tests.
