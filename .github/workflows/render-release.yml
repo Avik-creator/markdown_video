@@ -1,0 +1,86 @@
+name: Render release video
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      markdown-path:
+        description: Markdown file to render, relative to the repository root
+        required: false
+        default: release.md
+        type: string
+      output-name:
+        description: MP4 output path/name, relative to the repository root
+        required: false
+        default: markdown-video.mp4
+        type: string
+      release-tag:
+        description: Existing release tag for asset upload; only needed for manual runs
+        required: false
+        default: ""
+        type: string
+      upload-release-asset:
+        description: Upload the rendered MP4 to the selected release tag
+        required: false
+        default: false
+        type: boolean
+
+# Release asset mutation is the only write this workflow needs. The token is
+# passed only to the action's upload step; Chromium/rendering never receives it.
+permissions:
+  contents: write
+
+concurrency:
+  group: render-release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check for markdown source
+        id: markdown
+        shell: bash
+        env:
+          MARKDOWN_PATH: ${{ inputs.markdown-path || 'release.md' }}
+        run: |
+          if [[ -f "$MARKDOWN_PATH" ]]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No markdown-video source found at $MARKDOWN_PATH; skipping release render."
+          fi
+
+      - name: Render release video
+        id: render
+        if: steps.markdown.outputs.exists == 'true'
+        uses: ./action
+        with:
+          markdown-path: ${{ inputs.markdown-path || 'release.md' }}
+          output-name: ${{ inputs.output-name || 'markdown-video.mp4' }}
+          format: mp4
+          resolution: 1080p
+          quality: high
+          speed: balanced
+          aspect-ratio: 16:9
+          fps: "30"
+          overwrite: "true"
+          allow-remote-network: "true"
+          upload-release-asset: ${{ github.event_name == 'release' || inputs['upload-release-asset'] }}
+          release-tag: ${{ github.event.release.tag_name || inputs['release-tag'] }}
+
+      # Manual workflow_dispatch runs cannot always upload to a real release
+      # during testing, so keep the render as a short-lived workflow artifact as
+      # well. Release runs also get the public release asset through the action.
+      - name: Upload workflow artifact
+        if: steps.markdown.outputs.exists == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: markdown-video-release-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.render.outputs.mp4-path }}
+          if-no-files-found: error
+          retention-days: 14

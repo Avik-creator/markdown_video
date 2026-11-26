@@ -1,0 +1,107 @@
+name: Render video previews
+
+on:
+  pull_request:
+    paths:
+      - "*.video.md"
+      - "**/*.video.md"
+
+# This workflow intentionally uses pull_request, not pull_request_target. The
+# job below is further restricted to same-repository PRs, so forked markdown is
+# never rendered beside a write-capable token. pull-requests:write is needed
+# only by the final comment step.
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: render-preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  render-previews:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Select changed video documents
+        id: select
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          rm -rf mv-previews
+          mkdir -p mv-previews
+          node .github/scripts/select-video-previews.mjs
+
+      # Dogfood the composite action for the first preview. It installs the
+      # renderer toolchain once; additional selected files are rendered with the
+      # same canonical CLI in the next step without repeating setup cost.
+      - name: Render first GIF preview
+        if: steps.select.outputs.file1 != ''
+        uses: ./action
+        with:
+          markdown-path: ${{ steps.select.outputs.file1 }}
+          output-name: mv-previews/preview-1.gif
+          format: gif
+          resolution: 480p
+          quality: low
+          speed: fastest
+          fps: "10"
+          overwrite: "true"
+          allow-remote-network: "false"
+          upload-release-asset: "false"
+
+      - name: Render additional GIF previews
+        if: steps.select.outputs.selected-count != '0' && steps.select.outputs.selected-count != '1'
+        shell: bash
+        env:
+          FILE2: ${{ steps.select.outputs.file2 }}
+          FILE3: ${{ steps.select.outputs.file3 }}
+        run: |
+          render_preview() {
+            local index="$1"
+            local file="$2"
+            if [[ -z "$file" ]]; then
+              return 0
+            fi
+            node apps/cli/dist/cli.js render "$file" \
+              --output "mv-previews/preview-${index}.gif" \
+              --format gif \
+              --resolution 480p \
+              --quality low \
+              --speed fastest \
+              --fps 10 \
+              --overwrite \
+              --deny-remote-network
+          }
+          render_preview 2 "$FILE2"
+          render_preview 3 "$FILE3"
+
+      - name: Upload preview artifact
+        id: artifact
+        if: steps.select.outputs.selected-count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: markdown-video-preview-pr-${{ github.event.pull_request.number }}-${{ github.run_attempt }}
+          path: mv-previews
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Create or update PR comment
+        if: steps.select.outputs.selected-count != '0'
+        shell: bash
+        env:
+          MV_GITHUB_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SELECTED_COUNT: ${{ steps.select.outputs.selected-count }}
+          FILE_1: ${{ steps.select.outputs.file1 }}
+          FILE_2: ${{ steps.select.outputs.file2 }}
+          FILE_3: ${{ steps.select.outputs.file3 }}
+          ARTIFACT_URL: ${{ steps.artifact.outputs.artifact-url }}
+        run: node .github/scripts/upsert-preview-comment.mjs
