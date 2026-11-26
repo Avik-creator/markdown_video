@@ -6,8 +6,16 @@ export {
   resolveOutputPath,
 } from "./paths.js"
 export {
+  MAX_PREVIEW_FRAME_COUNT,
+  renderFrames,
   renderVideo,
+  renderVideoToBuffer,
+  type RenderedFrame,
+  type RenderFramesOptions,
+  type RenderFramesResult,
   type RenderProgress,
+  type RenderVideoBufferOptions,
+  type RenderVideoBufferResult,
   type RenderVideoOptions,
   type RenderVideoResult,
 } from "./render.js"
