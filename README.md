@@ -6,7 +6,7 @@ Transform your Markdown into animated videos with a custom syntax that brings yo
 
 ## ✨ Features
 
-- **MCP server** — an [MCP](https://modelcontextprotocol.io) endpoint at `/api/mcp` exposes 10 tools (`validate_syntax`, `parse_markdown`, `list_directives`, `get_directive_docs`, `search_docs`, `get_examples`, `get_suggestions`, `generate_template`, `quick_check`, `quick_reference`) so a coding agent can author and validate scenes against the same parser the editor uses.
+- **MCP server** — an [MCP](https://modelcontextprotocol.io) endpoint at `/api/mcp` exposes 12 tools: ten authoring/documentation/validation tools plus `render_preview` and `render_video` for direct screenshots and temporary MP4 URLs so a coding agent can author and validate scenes against the same parser the editor uses.
 
 - **Custom Markdown Syntax**: Write videos using an intuitive extended Markdown syntax with custom directives
 - **Rich Scene Types**: Support for text, code, images, terminal, diffs, charts, mockups, QR codes, countdowns, progress bars, and more
@@ -69,10 +69,11 @@ flowchart LR
 
     PARSE["lib/parser<br/>index + code, chart,<br/>diff, terminal parsers"]
     STORE["lib/use-video-store<br/>Zustand"]
-    MCP["/api/mcp<br/>10 tools: syntax validation + docs"]
+    MCP["/api/mcp<br/>12 tools: authoring + rendering"]
     FF["@ffmpeg/ffmpeg<br/>wasm, in the browser"]
     MP4["MP4 or GIF download"]
-    REDIS[("Upstash Redis<br/>temporary share snapshots")]
+    REDIS[("Upstash Redis<br/>shares, rate limits,<br/>temporary mp4 artifacts")]
+    WORKER["render-worker container<br/>Chromium + native ffmpeg"]
 
     MD --> ED
     ED --> PARSE
@@ -85,10 +86,12 @@ flowchart LR
     ED <-->|"/api/projects"| REDIS
     AGENT --> MCP
     MCP --> PARSE
+    MCP --> WORKER
+    MCP --> REDIS
 ```
 
-Rendering and export both happen client-side — the parser produces scenes, the preview draws them,
-and FFmpeg compiles the same scenes to MP4 or GIF in the browser. Nothing is rendered on a server.
+Interactive editing and manual export remain client-side: the parser produces scenes, the preview draws them,
+and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts in Redis for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
 
 ## 🏗️ Project Structure
 
@@ -101,7 +104,8 @@ apps/web/                       # Next.js application
   │   │   └── page.tsx          # Video editor interface
   │   ├── api/
   │   │   ├── projects/route.ts # API endpoint for temporary share snapshots
-  │   │   └── mcp/[transport]/  # MCP server (10 tools over the parser)
+  │   │   ├── renders/[id]/    # Range-capable temporary MP4 serving
+  │   │   └── mcp/[transport]/  # MCP server (12 tools, including rendering)
   │   └── globals.css
   ├── components/
   │   ├── landing/              # Landing page components
@@ -136,8 +140,21 @@ apps/web/                       # Next.js application
   └── public/
       ├── og-image.png          # Open Graph image for sharing
       └── site.webmanifest      # PWA manifest
-packages/                       # Future shared packages
+apps/render-worker/             # Authenticated server-side Chromium/ffmpeg renderer
+packages/                       # Shared core/scenes packages
 ```
+
+## ☁️ Deploying MCP rendering
+
+The normal editor needs only the existing web deployment. Enabling `render_preview`/`render_video` additionally requires:
+
+1. Deploy the worker image with the repository root as Docker context:
+   `docker build -t markdown-video-render-worker -f apps/render-worker/Dockerfile .`
+   Run it with `RENDER_WORKER_SHARED_SECRET` (at least 32 random characters). Optional worker limits are `PORT`, `HOST`, `RENDER_WORKER_CONCURRENCY` (default `1`, max `4`), and `RENDER_WORKER_QUEUE_LIMIT` (default `8`). Prefer a private network; if public, always use HTTPS at the platform/load balancer. Restrict container egress where your host supports it—the browser already blocks non-loopback scene image requests, but network policy is still useful defense in depth.
+2. Configure the web app with the same `RENDER_WORKER_SHARED_SECRET` and `RENDER_WORKER_URL`, plus either `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL`/`KV_REST_API_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` to the canonical public web origin so returned render URLs are not host-header derived.
+3. Rendered MP4s use IDs containing 128 bits of cryptographic randomness, expire after **1 hour**, and are capped at **6 MiB** before base64 encoding (8 MiB in Redis, chosen below Upstash's common 10 MB request ceiling). `render_preview` allows **10 requests/IP/hour**, `render_video` **5/IP/hour**, and video reads **120/IP/minute**; these policies are fail-closed because rendering is expensive.
+
+The tools are absent only in the sense that they return configuration tool errors when these variables are missing; read-only authoring MCP tools continue to work.
 
 ## 🚀 Getting Started
 

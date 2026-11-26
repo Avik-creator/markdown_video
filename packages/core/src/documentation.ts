@@ -219,6 +219,10 @@ underscores with optional single-hyphen separators (for example \`en\`,
 \`key:\` lines and translations are indented \`locale: value\` lines; quotes
 are optional and multiple \`!strings\` blocks merge.
 
+## Server-side rendering via MCP
+
+When the deployment configures a render worker, \`render_preview\` returns 3–6 PNG image blocks and \`render_video\` returns a temporary MP4 URL. Both enforce a 30s duration cap. Use a short \`!duration\` for every scene, preview before rendering video, and prefer explicit preview times such as \`[0, 2, 5]\` for animation checks. Remote image URLs are blocked in the isolated render worker; inline/local images should be preferred. Rendered MP4 URLs expire after one hour.
+
 ## Complete Example
 \`\`\`markdown
 !var mainColor #3b82f6

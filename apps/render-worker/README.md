@@ -172,17 +172,23 @@ the matching Chromium browser in the build stage, deploys only production
 workspace dependencies with `pnpm deploy`, and runs as the pre-existing
 non-root `node` user.
 
-Verified vs untested:
+Verified locally:
 
 - The `pnpm deploy --prod --legacy` packaging mechanism was verified on the
   host, and the resulting deployed directory successfully started and rendered
   a preview locally.
 - The end-to-end worker integration tests passed on the host with Chromium and
   ffmpeg.
-- The Dockerfile itself has **not** been built in this environment because no
-  Docker daemon is running. It has been statically inspected, but the exact
-  apt dependency installation, base-image digest pull, and container runtime
-  behavior remain untested until `docker build` runs in CI or locally.
+- `docker build -t markdown-video-render-worker:dev -f apps/render-worker/Dockerfile .`
+  completed successfully with the repository root as build context.
+- The built container was run locally; `/health` returned 200, an
+  unauthenticated preview returned 401, an authenticated `/v1/preview` returned
+  five 1280×720 PNG frames, and an authenticated low-cost `/v1/video` request
+  returned a valid ISO mp4 with the expected metadata headers.
+
+The exact container verification was performed on an arm64 Apple Silicon host.
+Multi-architecture publishing and deployment-platform health checks remain
+operations concerns rather than guarantees of this local smoke test.
 
 ## Deployment
 

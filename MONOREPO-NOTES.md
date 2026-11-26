@@ -5,6 +5,9 @@ This repository is a pnpm workspace orchestrated by Turborepo.
 ```text
 apps/
   web/       # Next.js editor, landing page, API routes, and MCP route
+  render-worker/ # Authenticated Node/Chromium/ffmpeg MCP rendering service
+  render/    # Vite render page consumed by the CLI and worker
+  cli/       # markdown-video CLI and programmatic renderer library
 packages/
   core/      # Parser, directive schema, validation/docs, share codec, types, and render geometry
   scenes/    # React scene renderers, overlays, deterministic animation math, and SceneFrame composition
@@ -81,6 +84,12 @@ Notes:
 3. Vercel detects the pnpm workspace and install command automatically. Do not override the install command unless a deployment log shows otherwise.
 4. Existing environment variables do not move. Keep `NEXT_PUBLIC_SITE_URL` and either the `UPSTASH_REDIS_REST_*` or `KV_REST_API_*` variables configured for the appropriate environments.
 5. If using the Vercel CLI instead of the dashboard, use version 20.1.0 or newer and link/manage the project from the repository root so the `apps/web` root-directory mapping is preserved.
+
+## `apps/render-worker` boundary
+
+`@markdown-video/render-worker` is the trust boundary for server-side rendering. It does not contain scene logic; it wraps the `markdown-video` programmatic renderer in an authenticated HTTP service, validates every input before Chromium work starts, serializes bounded work through an in-process queue, and exposes `/health`, `/v1/preview`, and `/v1/video`. It depends on the compiled `@markdown-video/render-page` artifact indirectly through the CLI package, so Turbo/build ordering and Docker packaging must build core, scenes, render-page, CLI, and worker in dependency order.
+
+The worker deliberately uses an in-process semaphore rather than Redis. That is correct for one container instance but is not a distributed queue: horizontal replicas each enforce their own queue, cold starts can dominate scale-to-zero latency, and the default concurrency of one serializes expensive Chromium/ffmpeg work inside each process. Production scale-out should front replicas with a load balancer and, if needed, replace the local queue with an external job system.
 
 ## `packages/scenes` boundaries
 
