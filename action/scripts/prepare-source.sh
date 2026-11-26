@@ -20,8 +20,8 @@ find_renderer_root() {
   # the same parent lookup works there too. If the action is later extracted to
   # a standalone repository whose root is the action directory, the first
   # iteration also handles that layout.
-  local depth
-  for depth in 0 1 2 3 4 5; do
+  local depth=0
+  while [[ "$depth" -le 5 ]]; do
     if [[ -f "$candidate/package.json" &&
           -f "$candidate/pnpm-lock.yaml" &&
           -f "$candidate/pnpm-workspace.yaml" &&
@@ -39,6 +39,7 @@ find_renderer_root() {
       break
     fi
     candidate="$parent"
+    depth=$((depth + 1))
   done
 
   return 1

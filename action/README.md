@@ -140,7 +140,36 @@ These are local arm64/container numbers, not a GitHub runner guarantee. The
 browser download dominates cold cost, so the Playwright cache is the most
 important warm-path optimization. GitHub-hosted Ubuntu images already contain
 most Chromium system libraries; the dependency-install fallback should normally
-be skipped. Warm-path timing still needs a real GitHub run for exact numbers.
+be skipped.
+
+A warm-cache approximation using persistent Docker volumes for the pnpm store,
+Chromium, and exact build output (plus ffmpeg already present) measured 1.3s
+pnpm activation, 1.6s filtered install, effectively 0s build because the cache
+was current, 1.9s Chromium verification, and 0.6s ffmpeg verification — about
+**5.5s of setup before rendering**. Rendering the 6s fixture at 480p/12fps took
+another 6.7s. If the runner image lacks ffmpeg, the measured apt install cost
+above is incurred on every fresh hosted runner because system apt state is not
+covered by the action caches. Exact GitHub-hosted timings still need a first
+real workflow run.
+
+## Dogfooding workflows in this repository
+
+`.github/workflows/render-release.yml` runs on `release: published`, checks out
+the release tag, renders root `release.md` when it exists, uploads the MP4 as a
+release asset, and also stores a short-lived workflow artifact. It skips
+cleanly with a notice when the selected markdown path is absent. The workflow
+also has `workflow_dispatch` inputs for the markdown path, output name, release
+tag, and upload toggle. Manual runs default to no release upload because local
+development cannot create real GitHub releases for verification; the asset
+upload path therefore still needs its first real release (or a deliberate
+manual run against an existing release tag) before it can be considered
+end-to-end verified.
+
+`.github/workflows/render-preview.yml` renders GIFs for up to three changed
+`*.video.md` files in same-repository PRs and upserts one marked PR comment.
+The comment links to a short-lived workflow artifact zip; it is not an inline
+image because GitHub's REST API has no supported binary attachment endpoint for
+issue/PR comments.
 
 ## Security notes
 
