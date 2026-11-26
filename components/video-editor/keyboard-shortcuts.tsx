@@ -35,8 +35,9 @@ const shortcuts = [
       { keys: ["Ctrl", "/"], description: "Toggle comment" },
       { keys: ["Ctrl", "F"], description: "Find" },
       { keys: ["Ctrl", "H"], description: "Find & Replace" },
-      { keys: ["Ctrl", "S"], description: "Save project" },
+      { keys: ["Ctrl", "N"], description: "New project" },
       { keys: ["Ctrl", "O"], description: "Open project" },
+      { keys: ["Ctrl", "S"], description: "Save project" },
     ],
   },
   {

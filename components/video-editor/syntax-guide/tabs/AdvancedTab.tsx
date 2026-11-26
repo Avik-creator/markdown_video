@@ -1,6 +1,7 @@
 "use client";
 
 import { CodeExample, Section, DirectiveDoc } from "../components";
+import { directiveOptions, schemaValues } from "../schema";
 
 export function AdvancedTab() {
   return (
@@ -24,14 +25,7 @@ $ npm run dev
           <DirectiveDoc
             directive="!terminal"
             description="Terminal/CLI scene"
-            options={[
-              "!terminal",
-              "!shell",
-              "!cli",
-              "!console",
-              "!cmd",
-              "!bash",
-            ]}
+            options={directiveOptions("terminal")}
           />
         </div>
       </Section>
@@ -68,7 +62,7 @@ Angular: 60
           <DirectiveDoc
             directive="type:"
             description="Chart type"
-            options={["bar", "pie", "donut", "line"]}
+            options={schemaValues("chart", "type")}
           />
           <DirectiveDoc
             directive="animate: true"
@@ -102,7 +96,7 @@ fit: cover
           <DirectiveDoc
             directive="device:"
             description="Device type"
-            options={["iphone", "ipad", "macbook", "browser", "android"]}
+            options={schemaValues("mockup", "device")}
           />
           <DirectiveDoc directive="bg:" description="Screen background color" />
           <DirectiveDoc
@@ -112,7 +106,7 @@ fit: cover
           <DirectiveDoc
             directive="fit:"
             description="Image fit mode"
-            options={["cover", "contain", "fill"]}
+            options={schemaValues("mockup", "fit")}
           />
           <DirectiveDoc
             directive="color:"
@@ -121,7 +115,7 @@ fit: cover
           <DirectiveDoc
             directive="size:"
             description="Text size"
-            options={["sm", "md", "lg", "xl"]}
+            options={schemaValues("mockup", "size")}
           />
         </div>
         <p className="text-xs text-muted-foreground mt-2">
@@ -137,6 +131,11 @@ fit: cover
           title="split.md"
           code={`!scene
 !layout split:horizontal
+left:
+!text
+Left panel copy
+right:
+!image src:/screenshot.png fit:contain
 
 !duration 4s
 !background #1e1e2e`}
@@ -145,9 +144,19 @@ fit: cover
           <DirectiveDoc
             directive="split:"
             description="Split direction"
-            options={["horizontal", "vertical"]}
+            options={schemaValues("layout", "split")}
+          />
+          <DirectiveDoc
+            directive="left: / right:"
+            description="Optional panel labels for child content"
           />
         </div>
+        <p className="text-xs text-muted-foreground mt-2">
+          Child directives are assigned to panels in order (first left/top,
+          then right/bottom). Use explicit left: and right: labels to direct
+          content instead; in vertical layouts those labels mean top and
+          bottom respectively.
+        </p>
       </Section>
 
       {/* Emoji */}
@@ -164,12 +173,12 @@ fit: cover
           <DirectiveDoc
             directive="size:"
             description="Emoji size"
-            options={["sm", "md", "lg", "xl", "2xl"]}
+            options={schemaValues("emoji", "size")}
           />
           <DirectiveDoc
             directive="animate:"
             description="Animation"
-            options={["bounce", "spin", "pulse", "shake", "none"]}
+            options={schemaValues("emoji", "animate")}
           />
         </div>
       </Section>
@@ -191,6 +200,7 @@ fit: cover
             description="QR code size in pixels"
           />
           <DirectiveDoc directive="color:" description="QR code color" />
+          <DirectiveDoc directive="bg:" description="QR background color" />
           <DirectiveDoc directive='label:"text"' description="Label below QR" />
         </div>
       </Section>
@@ -210,7 +220,7 @@ fit: cover
           <DirectiveDoc
             directive="style:"
             description="Display style"
-            options={["digital", "circle", "minimal"]}
+            options={schemaValues("countdown", "style")}
           />
           <DirectiveDoc directive="color:" description="Countdown color" />
         </div>
@@ -238,7 +248,7 @@ fit: cover
           <DirectiveDoc
             directive="style:"
             description="Display style"
-            options={["bar", "circle", "semicircle"]}
+            options={schemaValues("progress", "style")}
           />
           <DirectiveDoc
             directive="animate:"
@@ -304,7 +314,7 @@ size: 2xl
           <DirectiveDoc
             directive="pan:"
             description="Pan direction"
-            options={["left", "right", "up", "down"]}
+            options={schemaValues("camera", "pan")}
           />
           <DirectiveDoc
             directive="shake:"
@@ -314,7 +324,7 @@ size: 2xl
           <DirectiveDoc
             directive="shakeIntensity:"
             description="Shake intensity"
-            options={["low", "medium", "high"]}
+            options={schemaValues("camera", "shakeIntensity")}
           />
         </div>
         <p className="text-xs text-muted-foreground mt-2">
@@ -349,12 +359,12 @@ includeSubtitles: true`}
           <DirectiveDoc
             directive="format:"
             description="Export target format"
-            options={["mp4", "reels", "shorts", "slides", "gif"]}
+            options={schemaValues("export", "format")}
           />
           <DirectiveDoc
             directive="aspectRatio:"
             description="Video aspect ratio"
-            options={["16:9", "9:16", "1:1", "4:3"]}
+            options={schemaValues("export", "aspectRatio")}
           />
           <DirectiveDoc
             directive="safeArea:"
@@ -364,7 +374,7 @@ includeSubtitles: true`}
           <DirectiveDoc
             directive="quality:"
             description="Export quality"
-            options={["low", "medium", "high", "ultra"]}
+            options={schemaValues("export", "quality")}
           />
           <DirectiveDoc
             directive="resolution:"
@@ -471,7 +481,7 @@ welcome:
               </code>{" "}
               (Windows/Linux) to toggle comments. Comments are prefixed with{" "}
               <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
-                //
+                {"//"}
               </code>
             </p>
           </div>

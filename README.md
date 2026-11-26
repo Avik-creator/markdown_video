@@ -1,6 +1,6 @@
 # 🎬 Markdown to Video
 
-Transform your Markdown into stunning videos with a custom syntax that brings your content to life. Markdown to Video is a powerful Next.js-based web application that converts Markdown content into professional-quality videos with rich animations, transitions, and interactive scenes.
+Transform your Markdown into animated videos with a custom syntax that brings your content to life. Markdown to Video is a Next.js-based web application that converts Markdown content into videos with rich animations, transitions, and scene types.
 
 ![Markdown to Video Showcase](./public/og-image.png)
 
@@ -10,7 +10,7 @@ Transform your Markdown into stunning videos with a custom syntax that brings yo
 
 - **Custom Markdown Syntax**: Write videos using an intuitive extended Markdown syntax with custom directives
 - **Rich Scene Types**: Support for text, code, images, terminal, diffs, charts, mockups, QR codes, countdowns, progress bars, and more
-- **FFmpeg Integration**: Export videos directly to MP4 or other formats using FFmpeg
+- **FFmpeg.wasm Export**: Render and download MP4 videos or animated GIFs in the browser
 - **Real-time Preview**: See your video content as you edit it with live scene previews
 - **Errors as you type**: Unknown directives and invalid values are marked on the line that caused them, with one-click fixes for typos
 - **Autocomplete**: Directive names after `!`, and allowed values for properties like `transition`, `animation:` and `type:`
@@ -19,14 +19,15 @@ Transform your Markdown into stunning videos with a custom syntax that brings yo
 - **Code Syntax Highlighting**: Beautiful syntax highlighting for multiple programming languages
 - **Scene Transitions**: Smooth transitions between scenes (fade, slide, wipe, zoom, magic effects)
 - **Terminal & Diff Support**: Render terminal commands and code diffs with syntax highlighting
-- **Chart Rendering**: Create interactive charts (bar, line, pie, donut) embedded in videos
+- **Chart Rendering**: Create animated charts (bar, line, pie, donut) embedded in videos
 - **Video Variables**: Define and reuse variables throughout your markdown
-- **Project Management**: Save and manage projects via Redis backend
-- **Keyboard Shortcuts**: Boost productivity with comprehensive keyboard shortcuts
+- **Local Projects**: Autosave one document in browser storage, and open/save it as a `.mdv` file; there is no multi-project library yet
+- **Keyboard Shortcuts**: Boost productivity with keyboard shortcuts for common editor actions
 - **Find & Replace**: Quickly edit content across your markdown
 - **Theme Support**: Light and dark theme with customizable color schemes
-- **Responsive Design**: Fully responsive interface that works on all devices
-- **Share & Embed**: Generate shareable links and embed videos
+- **Experimental Sharing**: Generate links that open a project in the editor; large-project links require a configured Redis backend and expire after 7 days. There is no dedicated embed player yet; iframe embeds currently expose the editor UI
+
+> **Platform note:** The editor is designed primarily for modern desktop browsers. Mobile editing is not optimized yet, and browser-based export can be resource-intensive for longer videos.
 
 ## 🤖 Use it from an AI agent (MCP)
 
@@ -70,8 +71,8 @@ flowchart LR
     STORE["lib/use-video-store<br/>Zustand"]
     MCP["/api/mcp<br/>10 tools: syntax validation + docs"]
     FF["@ffmpeg/ffmpeg<br/>wasm, in the browser"]
-    MP4["MP4 download"]
-    REDIS[("Upstash Redis<br/>project persistence")]
+    MP4["MP4 or GIF download"]
+    REDIS[("Upstash Redis<br/>temporary share snapshots")]
 
     MD --> ED
     ED --> PARSE
@@ -87,7 +88,7 @@ flowchart LR
 ```
 
 Rendering and export both happen client-side — the parser produces scenes, the preview draws them,
-and FFmpeg compiles the same scenes to MP4 in the browser. Nothing is rendered on a server.
+and FFmpeg compiles the same scenes to MP4 or GIF in the browser. Nothing is rendered on a server.
 
 ## 🏗️ Project Structure
 
@@ -98,7 +99,7 @@ app/
   ├── editor/
   │   └── page.tsx            # Video editor interface
   ├── api/
-  │   ├── projects/route.ts   # API endpoint for project management
+  │   ├── projects/route.ts   # API endpoint for temporary share snapshots
   │   └── mcp/[transport]/    # MCP server (10 tools over the parser)
   └── globals.css
 components/
@@ -127,7 +128,7 @@ lib/
   │   └── utils.ts            # Helper utilities
   ├── types.ts                # TypeScript type definitions
   ├── use-video-store.ts      # Zustand video state management
-  ├── redis.ts                # Redis client for project persistence
+  ├── redis.ts                # Redis client for share snapshots
   ├── github.ts               # GitHub API integration
   ├── templates.ts            # Template definitions
   └── utils.ts                # General utilities
@@ -182,10 +183,8 @@ public/
 - **Markdown Parsing**: Custom parser with extended syntax support
 - **Video Rendering**: [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/) - Browser-based video encoding
 - **Screenshot to Canvas**: [HTML2Canvas Pro](https://html2canvas.hertzen.com/) - DOM to canvas rendering
-- **Form Handling**: [React Hook Form](https://react-hook-form.com/) with Zod validation
-- **Charts**: [Recharts](https://recharts.org/) - React chart library
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) - React animation library
-- **Database**: [Upstash Redis](https://upstash.com/) - Serverless Redis for project persistence
+- **Database**: [Upstash Redis](https://upstash.com/) - Optional serverless Redis backend for large share links
 - **Icons**: [Lucide React](https://lucide.dev/) - SVG icon library
 - **Toast Notifications**: [Sonner](https://sonner.emilkowal.ski/) - Toast notification system
 - **Themes**: [Next.js Themes](https://github.com/pacocoursey/next-themes) - Theme switching
@@ -237,7 +236,6 @@ Built with amazing open-source libraries:
 - [Zustand](https://zustand-demo.pmnd.rs/)
 - [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/)
 - [Framer Motion](https://www.framer.com/motion/)
-- [Recharts](https://recharts.org/)
 
 ## 📧 Support
 

@@ -1,14 +1,41 @@
+import { getDirectiveValueOptions } from "@/lib/directive-schema";
+
+function schemaValue(directive: string, property: string, value: string): string {
+  const options = getDirectiveValueOptions(directive, property);
+  if (!options.includes(value)) {
+    throw new Error(`"${value}" is not a schema-valid ${directive}.${property} value`);
+  }
+  return value;
+}
+
+// Snippet choices are validated against the schema at module load, so editor
+// quick-inserts cannot drift from the values validation and completions offer.
+const V = {
+  bounceIn: schemaValue("text", "animation", "bounceIn"),
+  slideUp: schemaValue("text", "animation", "slideUp"),
+  text2xl: schemaValue("text", "size", "2xl"),
+  textLg: schemaValue("text", "size", "lg"),
+  transitionFade: schemaValue("transition", "type", "fade"),
+  transitionSlide: schemaValue("transition", "type", "slide"),
+  transitionZoom: schemaValue("transition", "type", "zoom"),
+  chartBar: schemaValue("chart", "type", "bar"),
+  mockupIphone: schemaValue("mockup", "device", "iphone"),
+  presenterBottomRight: schemaValue("presenter", "position", "bottom-right"),
+  confetti: schemaValue("particles", "type", "confetti"),
+  highIntensity: schemaValue("particles", "intensity", "high"),
+} as const;
+
 /** Snippets for the editor's quick-insert buttons. */
 export const EXAMPLE_TEMPLATES = {
   intro: `!scene
 !text
 Welcome to My Video
-animation: bounceIn
-size: 2xl
+animation: ${V.bounceIn}
+size: ${V.text2xl}
 
 !duration 3s
 !background #3b82f6
-!transition fade`,
+!transition ${V.transitionFade}`,
   code: `!scene
 !code
 highlight: 2-4
@@ -22,12 +49,12 @@ console.log(greeting)
 
 !duration 4s
 !background #1e1e2e
-!transition slide`,
+!transition ${V.transitionSlide}`,
   text: `!scene
 !text
 Add your message here
-animation: slideUp
-size: lg
+animation: ${V.slideUp}
+size: ${V.textLg}
 
 !duration 3s
 !background #8b5cf6`,
@@ -39,31 +66,31 @@ $ npm run dev
 
 !duration 5s
 !background #0d0d0d
-!transition slide`,
+!transition ${V.transitionSlide}`,
   chart: `!scene
-!chart type:bar animate:true
+!chart type:${V.chartBar} animate:true
 React: 85
 Vue: 70
 Angular: 60
 
 !duration 5s
 !background #1e1e2e
-!transition fade`,
+!transition ${V.transitionFade}`,
   mockup: `!scene
-!mockup device:iphone
+!mockup device:${V.mockupIphone}
 
-!presenter position:bottom-right
+!presenter position:${V.presenterBottomRight}
 !duration 4s
 !background #1a1a24
-!transition zoom`,
+!transition ${V.transitionZoom}`,
   particles: `!scene
 !text
 Celebration Time!
-animation: bounceIn
-size: 2xl
+animation: ${V.bounceIn}
+size: ${V.text2xl}
 
-!particles type:confetti intensity:high
+!particles type:${V.confetti} intensity:${V.highIntensity}
 !duration 4s
 !background #ec4899
-!transition fade`,
+!transition ${V.transitionFade}`,
 };

@@ -1,23 +1,30 @@
 // Chart data parsing
 
-import type { ChartDataItem } from "../../types"
+import type { ChartDataItem, VideoVariables } from "../../types"
+import { substituteVariables } from "../utils"
 
-export function parseChartData(lines: string[], startIndex: number): { data: ChartDataItem[]; endIndex: number } {
+const CHART_VALUE_PATTERN = /^(.+?):\s*(-?(?:\d+(?:\.\d+)?|\.\d+))(?:\s+(.+))?$/
+
+export function parseChartData(
+  lines: string[],
+  startIndex: number,
+  variables: VideoVariables = {}
+): { data: ChartDataItem[]; endIndex: number } {
   const data: ChartDataItem[] = []
   let i = startIndex
 
   while (i < lines.length) {
-    const line = lines[i].trim()
+    const line = substituteVariables(lines[i].trim(), variables)
 
     if (line.startsWith("!") || line === "---") {
       break
     }
 
-    const match = line.match(/^(.+?):\s*(\d+)(?:\s+(.+))?$/)
+    const match = line.match(CHART_VALUE_PATTERN)
     if (match) {
       data.push({
         label: match[1].trim(),
-        value: Number.parseInt(match[2], 10),
+        value: Number.parseFloat(match[2]),
         color: match[3]?.trim(),
       })
     }

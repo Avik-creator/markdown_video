@@ -74,6 +74,7 @@ export function EditorHeader({
           disabled={!canUndo()}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           title="Undo (Ctrl+Z)"
+          aria-label="Undo"
         >
           <Undo2 className="w-4 h-4" />
         </Button>
@@ -84,6 +85,7 @@ export function EditorHeader({
           disabled={!canRedo()}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           title="Redo (Ctrl+Shift+Z)"
+          aria-label="Redo"
         >
           <Redo2 className="w-4 h-4" />
         </Button>
@@ -99,6 +101,8 @@ export function EditorHeader({
           }}
           disabled={zoom <= 50}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          title="Zoom out"
+          aria-label="Zoom out"
         >
           <ZoomOut className="w-4 h-4" />
         </Button>
@@ -112,6 +116,8 @@ export function EditorHeader({
           }}
           disabled={zoom >= 150}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          title="Zoom in"
+          aria-label="Zoom in"
         >
           <ZoomIn className="w-4 h-4" />
         </Button>
@@ -148,6 +154,7 @@ export function EditorHeader({
           onClick={() => setShowFind(true)}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           title="Find (Ctrl+F)"
+          aria-label="Find"
         >
           <Search className="w-4 h-4" />
         </Button>
@@ -158,6 +165,7 @@ export function EditorHeader({
           onClick={() => setShowShortcuts(true)}
           className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           title="Keyboard Shortcuts (K)"
+          aria-label="Keyboard shortcuts"
         >
           <Keyboard className="w-4 h-4" />
         </Button>
@@ -165,7 +173,9 @@ export function EditorHeader({
 
       <div className="flex items-center gap-4">
         <button
+          type="button"
           onClick={() => togglePanel("templates")}
+          aria-pressed={rightPanel === "templates"}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
             "hover:translate-x-0.5"
@@ -173,12 +183,13 @@ export function EditorHeader({
         >
           <CornerMarkers />
           <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-            <span className="hidden sm:inline">Templates</span>
-            <span className="sm:hidden">Templates</span>
+            Templates
           </span>
         </button>
         <button
+          type="button"
           onClick={() => togglePanel("guide")}
+          aria-pressed={rightPanel === "guide"}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
             "hover:translate-x-0.5"
@@ -194,6 +205,7 @@ export function EditorHeader({
         <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
 
         <button
+          type="button"
           onClick={() => setShowShareModal(true)}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
@@ -202,11 +214,11 @@ export function EditorHeader({
         >
           <CornerMarkers />
           <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-            <span className="hidden sm:inline">Share</span>
-            <span className="sm:hidden">Share</span>
+            Share
           </span>
         </button>
         <button
+          type="button"
           onClick={() => setShowExportModal(true)}
           className={cn(
             "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
@@ -215,8 +227,7 @@ export function EditorHeader({
         >
           <CornerMarkers />
           <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-            <span className="hidden sm:inline">Export</span>
-            <span className="sm:hidden">Export</span>
+            Export
           </span>
         </button>
       </div>

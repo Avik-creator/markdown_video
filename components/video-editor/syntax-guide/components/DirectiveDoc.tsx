@@ -7,7 +7,7 @@ export function DirectiveDoc({
 }: {
   directive: string
   description: string
-  options?: string[]
+  options?: readonly string[]
 }) {
   return (
     <div className="space-y-1">

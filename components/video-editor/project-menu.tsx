@@ -2,6 +2,8 @@
 
 import { useCallback } from "react"
 import { useVideoStore } from "@/lib/use-video-store"
+import { NEW_PROJECT_MARKDOWN } from "@/lib/default-markdown"
+import { flushPendingEditorText } from "@/lib/editor/codemirror/store-sync"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,25 +13,15 @@ import {
 } from "@components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import CornerMarkers from "@components/CornerMarkers"
-import { FileText, FolderOpen, Save, FilePlus, Trash2 } from "lucide-react"
-
-const DEFAULT_MARKDOWN = `!scene
-!text
-Hello World
-animation: bounceIn
-size: 2xl
-
-!duration 3s
-!background #3b82f6
-!transition fade`
+import { FolderOpen, Save, FilePlus, Trash2 } from "lucide-react"
 
 export function ProjectMenu() {
-  const markdown = useVideoStore((state) => state.markdown)
   const setMarkdown = useVideoStore((state) => state.setMarkdown)
 
   const handleNew = useCallback(() => {
     if (confirm("Create new project? Unsaved changes will be lost.")) {
-      setMarkdown(DEFAULT_MARKDOWN)
+      flushPendingEditorText()
+      setMarkdown(NEW_PROJECT_MARKDOWN)
     }
   }, [setMarkdown])
 
@@ -41,6 +33,7 @@ export function ProjectMenu() {
       const file = (e.target as HTMLInputElement).files?.[0]
       if (file) {
         const text = await file.text()
+        flushPendingEditorText()
         setMarkdown(text)
       }
     }
@@ -48,17 +41,19 @@ export function ProjectMenu() {
   }, [setMarkdown])
 
   const handleSave = useCallback(() => {
-    const blob = new Blob([markdown], { type: "text/markdown" })
+    flushPendingEditorText()
+    const blob = new Blob([useVideoStore.getState().markdown], { type: "text/markdown" })
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
     a.download = "project.mdv"
     a.click()
     URL.revokeObjectURL(url)
-  }, [markdown])
+  }, [])
 
   const handleClear = useCallback(() => {
     if (confirm("Clear all content?")) {
+      flushPendingEditorText()
       setMarkdown("")
     }
   }, [setMarkdown])

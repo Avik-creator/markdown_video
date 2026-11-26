@@ -5,9 +5,61 @@ import { cn } from "@/lib/utils";
 import type { Scene } from "@/lib/types";
 import { useTypingEffect } from "../hooks/useTypingEffect";
 import { animationVariants, textSizeClasses } from "../utils/constants";
+import { interpolateVariantState } from "../utils/interpolate";
+import { staggeredLineProgress } from "../utils/animation-math";
+import { textFontFamilyStyles } from "../utils/fonts";
+import { TypingCursor } from "../components/TypingCursor";
 
 import { useAnimation } from "framer-motion";
 import { useEffect } from "react";
+
+// framer-motion's variant/target types use template-literal index signatures
+// that plain records don't satisfy structurally; the values are always
+// numbers or strings.
+type VariantState = Record<string, any>;
+
+/**
+ * A single line of staggered text. In deterministic mode (sceneTime
+ * provided) the line's animation state is a pure function of the line's
+ * staggered progress, applied via controls.set — no wall-clock animation —
+ * so preview and export render identical frames.
+ */
+function StaggeredLine({
+  initial,
+  animate,
+  progress,
+  deterministic,
+  variants,
+  children,
+}: {
+  initial: VariantState;
+  animate: VariantState;
+  progress: number;
+  deterministic: boolean;
+  variants?: {
+    hidden: VariantState;
+    visible: VariantState;
+  };
+  children: React.ReactNode;
+}) {
+  const controls = useAnimation();
+
+  useEffect(() => {
+    if (deterministic) {
+      controls.set(interpolateVariantState(initial, animate, progress));
+    }
+  }, [deterministic, initial, animate, progress, controls]);
+
+  return (
+    <motion.div
+      variants={variants}
+      initial={deterministic ? initial : undefined}
+      animate={deterministic ? controls : undefined}
+    >
+      {children}
+    </motion.div>
+  );
+}
 
 export function TextScene({
   scene,
@@ -42,12 +94,7 @@ export function TextScene({
   // Split content into lines for multi-line support
   const lines = content?.split("\n") || [];
 
-  const fontFamilyStyles: Record<string, React.CSSProperties> = {
-    serif: { fontFamily: "'Playfair Display', serif" },
-    sans: { fontFamily: "'Inter', sans-serif" },
-    mono: { fontFamily: "'IBM Plex Mono', monospace" },
-    display: { fontFamily: "'Merriweather', serif" },
-  };
+  const fontFamilyStyles = textFontFamilyStyles;
 
   // Handle deterministic animation for export
   useEffect(() => {
@@ -55,30 +102,42 @@ export function TextScene({
       const duration = 0.5;
       const progress = Math.min(sceneTime / duration, 1);
 
-      // Simple interpolation for common properties
-      const initial = variants.initial as any;
-      const animate = variants.animate as any;
-
-      const currentState: any = {};
-      for (const key in animate) {
-        if (
-          typeof animate[key] === "number" &&
-          typeof initial[key] === "number"
-        ) {
-          currentState[key] =
-            initial[key] + (animate[key] - initial[key]) * progress;
-        } else {
-          currentState[key] = progress >= 1 ? animate[key] : initial[key];
-        }
-      }
-      controls.set(currentState);
+      controls.set(
+        interpolateVariantState(
+          variants.initial as VariantState,
+          variants.animate as VariantState,
+          progress
+        )
+      );
     } else {
       controls.start(variants.animate);
     }
   }, [sceneTime, variants, controls]);
 
-  // If stagger is enabled, use container with staggerChildren
+  const typewriterCursor = (index: number) =>
+    animation === "typewriter" &&
+    index === lines.length - 1 &&
+    displayedText !== scene.text?.content && (
+      <TypingCursor
+        sceneTime={sceneTime}
+        className="inline-block w-1 h-[1em] ml-1"
+        style={{ backgroundColor: textColor }}
+      />
+    );
+
+  // If stagger is enabled, each line reveals independently, offset by
+  // index * stagger — mirroring framer-motion's staggerChildren/orchestration
+  // as a pure function of sceneTime.
   if (stagger > 0) {
+    // Child variants must use "hidden" and "visible" to work with staggerChildren
+    const childVariants = {
+      hidden: variants.initial as VariantState,
+      visible: {
+        ...(variants.animate as VariantState),
+        transition: transition,
+      },
+    };
+
     const containerVariants = {
       hidden: { opacity: 1 },
       visible: {
@@ -87,15 +146,6 @@ export function TextScene({
           staggerChildren: stagger,
           delayChildren: 0.1,
         },
-      },
-    };
-
-    // Child variants must use "hidden" and "visible" to work with staggerChildren
-    const childVariants = {
-      hidden: variants.initial,
-      visible: {
-        ...variants.animate,
-        transition: transition,
       },
     };
 
@@ -117,21 +167,21 @@ export function TextScene({
           }}
         >
           {lines.map((line, index) => (
-            <motion.div
+            <StaggeredLine
               key={index}
+              initial={variants.initial as VariantState}
+              animate={variants.animate as VariantState}
+              progress={
+                sceneTime !== undefined
+                  ? staggeredLineProgress(sceneTime, index, stagger)
+                  : 0
+              }
+              deterministic={sceneTime !== undefined}
               variants={childVariants}
-              animate={sceneTime !== undefined ? controls : undefined}
             >
               {line}
-              {animation === "typewriter" &&
-                index === lines.length - 1 &&
-                displayedText !== scene.text?.content && (
-                  <span
-                    className="inline-block w-1 h-[1em] ml-1 animate-pulse"
-                    style={{ backgroundColor: textColor }}
-                  />
-                )}
-            </motion.div>
+              {typewriterCursor(index)}
+            </StaggeredLine>
           ))}
         </div>
       </motion.div>
@@ -160,14 +210,7 @@ export function TextScene({
         {lines.map((line, index) => (
           <div key={index}>
             {line}
-            {animation === "typewriter" &&
-              index === lines.length - 1 &&
-              displayedText !== scene.text?.content && (
-                <span
-                  className="inline-block w-1 h-[1em] ml-1 animate-pulse"
-                  style={{ backgroundColor: textColor }}
-                />
-              )}
+            {typewriterCursor(index)}
           </div>
         ))}
       </div>

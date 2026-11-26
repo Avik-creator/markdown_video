@@ -5,9 +5,17 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -18,6 +26,16 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        timeout-minutes: 10
+      # Gate on critical advisories in production dependencies. Dev-only
+      # advisories are still visible in `pnpm audit` output locally.
+      - run: pnpm audit --prod --audit-level=critical
+        timeout-minutes: 5
+      - run: pnpm lint
+        timeout-minutes: 5
       - run: pnpm typecheck
+        timeout-minutes: 5
       - run: pnpm test
+        timeout-minutes: 10
       - run: pnpm build
+        timeout-minutes: 15

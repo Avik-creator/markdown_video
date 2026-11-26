@@ -2,6 +2,7 @@
 // Provides documentation, validation, and guide tools for AI assistants
 
 import { createMcpHandler } from "mcp-handler";
+import type { McpServerOptions } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { version } from "../../../../package.json";
 import { z } from "zod";
 import {
@@ -17,15 +18,139 @@ import {
   searchDocumentation,
 } from "@/lib/mcp/documentation";
 import { parseMarkdownFull } from "@/lib/parser";
+import { enforceMcpRateLimit } from "@/lib/rate-limit";
 
-const handler = createMcpHandler(
+const MAX_MCP_MARKDOWN_LENGTH = 100_000;
+const MAX_MCP_DIRECTIVE_LENGTH = 100;
+const MAX_MCP_SEARCH_QUERY_LENGTH = 200;
+
+// 512 KiB leaves room for the advertised 100k-character markdown input even
+// when it is mostly four-byte UTF-8 text, plus JSON-RPC overhead, while staying
+// well below the SDK transport's 4 MiB default. mcp-handler@1.1.0 does not
+// expose or forward the SDK's maxRequestBodySize transport option and reads the
+// body itself before constructing the transport, so this route must enforce the
+// bound before handing the request to it.
+const MAX_MCP_REQUEST_BODY_BYTES = 512 * 1024;
+const MCP_BASE_PATH = "/api/mcp";
+const STREAMABLE_HTTP_PATH = `${MCP_BASE_PATH}/mcp`;
+// Every documented tool argument object is flat and has at most one useful
+// property. 100 elements is generous client headroom while preventing very
+// wide/deep argument trees from reaching schema validation or tool handlers.
+const MAX_MCP_TOOL_INPUT_ELEMENTS = 100;
+
+type RequestBodyReadResult =
+  | { status: "ok"; bytes: Uint8Array }
+  | { status: "too-large" };
+
+function requestBodyTooLargeResponse() {
+  return new Response(
+    JSON.stringify({
+      jsonrpc: "2.0",
+      error: {
+        code: -32000,
+        message: `Payload Too Large: Request body must not exceed ${MAX_MCP_REQUEST_BODY_BYTES} bytes`,
+      },
+      id: null,
+    }),
+    {
+      status: 413,
+      headers: { "content-type": "application/json" },
+    }
+  );
+}
+
+function hasDeclaredOversizedBody(request: Request) {
+  const contentLength = Number(request.headers.get("content-length"));
+  return Number.isFinite(contentLength) && contentLength > MAX_MCP_REQUEST_BODY_BYTES;
+}
+
+function isStreamableHttpPost(request: Request) {
+  return request.method === "POST" && new URL(request.url).pathname === STREAMABLE_HTTP_PATH;
+}
+
+async function readRequestBodyWithLimit(request: Request): Promise<RequestBodyReadResult> {
+  if (!request.body) {
+    return { status: "ok", bytes: new Uint8Array(0) };
+  }
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteLength = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) {
+        break;
+      }
+
+      byteLength += value.byteLength;
+      if (byteLength > MAX_MCP_REQUEST_BODY_BYTES) {
+        try {
+          await reader.cancel("Request body too large");
+        } catch {
+          // The stream may already have errored; the body is still rejected.
+        }
+        return { status: "too-large" };
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(byteLength);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return { status: "ok", bytes };
+}
+
+function copyRequestWithBody(request: Request, body: Uint8Array) {
+  const copy = new Request(request.url, {
+    method: request.method,
+    headers: new Headers(request.headers),
+    // `bytes` is allocated at its exact length above, so its backing buffer is
+    // safe to pass directly (and TypeScript's BodyInit accepts ArrayBuffer but
+    // not the wider ArrayBufferLike type of the Uint8Array backing store).
+    body: body.buffer as ArrayBuffer,
+    signal: request.signal,
+  });
+
+  // mcp-handler supports an optional non-standard auth property when its auth
+  // wrapper is used. Preserve it across the bounded-body copy.
+  const auth = (request as Request & { auth?: unknown }).auth;
+  if (auth !== undefined) {
+    (copy as Request & { auth?: unknown }).auth = auth;
+  }
+
+  return copy;
+}
+
+const serverOptions = {
+  serverInfo: { name: "markdown-video", version },
+  capabilities: {
+    tools: {},
+  },
+  maxToolInputElements: MAX_MCP_TOOL_INPUT_ELEMENTS,
+} satisfies McpServerOptions & {
+  serverInfo: { name: string; version: string };
+};
+
+const mcpHandler = createMcpHandler(
   (server) => {
     // Tool 1: Validate Markdown Syntax
     server.tool(
       "validate_syntax",
       "Validates markdown syntax for markdown_video and returns detailed error reports",
       {
-        markdown: z.string().describe("The markdown content to validate"),
+        markdown: z
+          .string()
+          .max(MAX_MCP_MARKDOWN_LENGTH)
+          .describe("The markdown content to validate"),
       },
       async ({ markdown }) => {
         const result = validateMarkdownSyntax(markdown);
@@ -70,7 +195,10 @@ ${result.valid ? "✨ Your markdown syntax is valid!" : "🔧 Please fix the err
       "quick_check",
       "Performs a quick syntax check without full validation",
       {
-        markdown: z.string().describe("The markdown content to check"),
+        markdown: z
+          .string()
+          .max(MAX_MCP_MARKDOWN_LENGTH)
+          .describe("The markdown content to check"),
       },
       async ({ markdown }) => {
         const result = quickSyntaxCheck(markdown);
@@ -99,6 +227,7 @@ ${result.issues.length > 0 ? `⚠️  Issues Found:\n${result.issues.map((i) => 
       {
         directive: z
           .string()
+          .max(MAX_MCP_DIRECTIVE_LENGTH)
           .describe("The directive name (e.g., 'scene', 'text', 'code')"),
       },
       async ({ directive }) => {
@@ -211,6 +340,7 @@ ${sections}
       {
         query: z
           .string()
+          .max(MAX_MCP_SEARCH_QUERY_LENGTH)
           .describe("Search query (directive name, alias, or keyword)"),
       },
       async ({ query }) => {
@@ -307,7 +437,10 @@ ${sections}
       "parse_markdown",
       "Parses markdown and returns detailed scene information",
       {
-        markdown: z.string().describe("The markdown content to parse"),
+        markdown: z
+          .string()
+          .max(MAX_MCP_MARKDOWN_LENGTH)
+          .describe("The markdown content to parse"),
       },
       async ({ markdown }) => {
         try {
@@ -370,6 +503,7 @@ ${scenesText}`,
       {
         markdown: z
           .string()
+          .max(MAX_MCP_MARKDOWN_LENGTH)
           .describe("The partial markdown content to get suggestions for"),
       },
       async ({ markdown }) => {
@@ -631,19 +765,46 @@ ${template}
       }
     );
   },
-  {
-    serverInfo: { name: "markdown-video", version },
-    capabilities: {
-      tools: {},
-    },
-  },
+  serverOptions,
   {
     redisUrl: process.env.REDIS_URL,
-    basePath: "/api/mcp",
+    basePath: MCP_BASE_PATH,
     verboseLogs: process.env.NODE_ENV === "development",
     maxDuration: 60,
+    // REDIS_URL is not configured for this deployment, and the legacy SSE
+    // transport throws without it. Streamable HTTP remains available at /mcp.
+    disableSse: true,
   }
 );
+
+async function handler(request: Request): Promise<Response> {
+  const isStreamablePost = isStreamableHttpPost(request);
+
+  const rateLimitResponse = await enforceMcpRateLimit(request);
+  if (rateLimitResponse) {
+    return rateLimitResponse;
+  }
+
+  // A truthful Content-Length lets us reject before reading any body bytes.
+  // Chunked/lying clients are still bounded by the streaming read below.
+  if (isStreamablePost && hasDeclaredOversizedBody(request)) {
+    return requestBodyTooLargeResponse();
+  }
+
+  if (!isStreamablePost) {
+    return mcpHandler(request);
+  }
+
+  const bodyResult = await readRequestBodyWithLimit(request);
+  if (bodyResult.status === "too-large") {
+    return requestBodyTooLargeResponse();
+  }
+
+  // The original stream has been consumed by the bounded read. Hand
+  // mcp-handler an equivalent request with the bounded bytes so its streamable
+  // HTTP transport can parse and respond normally.
+  return mcpHandler(copyRequestWithBody(request, bodyResult.bytes));
+}
 
 export { handler as GET, handler as POST };
 

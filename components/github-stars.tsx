@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, useSpring, useTransform } from "framer-motion";
+import { motion, useReducedMotion, useSpring, useTransform } from "framer-motion";
 
 type GitHubStarsProps = {
   repo: string;
@@ -10,6 +10,8 @@ type GitHubStarsProps = {
 
 export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
   const [isHovered, setIsHovered] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+  const formattedStars = new Intl.NumberFormat("en-US").format(stargazersCount);
 
   // Smooth spring animation starting from 0
   const springValue = useSpring(0, {
@@ -29,9 +31,11 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
   );
 
   useEffect(() => {
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       springValue.set(stargazersCount);
     }, 100);
+
+    return () => clearTimeout(timeout);
   }, [stargazersCount, springValue]);
 
   return (
@@ -40,11 +44,14 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
         href={`https://github.com/${repo}`}
         target="_blank"
         rel="noopener noreferrer"
+        aria-label={`View ${repo} on GitHub (${formattedStars} stars)`}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
-        className="inline-flex items-center gap-2 text-gray-700 dark:text-stone-300 underline decoration-gray-500 dark:decoration-stone-400 decoration-[0.5px] underline-offset-4 transition-colors hover:text-gray-900 dark:hover:text-stone-200 hover:decoration-gray-700 dark:hover:decoration-stone-200 relative"
-        whileHover={{ scale: 1.02 }}
-        whileTap={{ scale: 0.98 }}
+        onFocus={() => setIsHovered(true)}
+        onBlur={() => setIsHovered(false)}
+        className="inline-flex items-center gap-2 rounded-sm text-gray-700 dark:text-stone-300 underline decoration-gray-500 dark:decoration-stone-400 decoration-[0.5px] underline-offset-4 transition-colors hover:text-gray-900 dark:hover:text-stone-200 hover:decoration-gray-700 dark:hover:decoration-stone-200 relative focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-950"
+        whileHover={shouldReduceMotion ? undefined : { scale: 1.02 }}
+        whileTap={shouldReduceMotion ? undefined : { scale: 0.98 }}
         transition={{ type: "spring", stiffness: 400, damping: 17 }}
       >
         {/* GitHub Icon with smooth rotation */}
@@ -55,7 +62,7 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
             height="20"
             className="relative z-10"
             animate={{
-              rotate: isHovered ? [0, -12, 12, -8, 0] : 0,
+              rotate: isHovered && !shouldReduceMotion ? [0, -12, 12, -8, 0] : 0,
             }}
             transition={{
               duration: 0.6,
@@ -69,7 +76,7 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
           </motion.svg>
 
           {/* Star particles on hover */}
-          {isHovered && (
+          {isHovered && !shouldReduceMotion && (
             <>
               {[...Array(6)].map((_, i) => (
                 <motion.div
@@ -97,7 +104,7 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
         <motion.span
           className="text-sm font-medium tabular-nums relative z-10"
           animate={{
-            scale: isHovered ? [1, 1.05, 1] : 1,
+            scale: isHovered && !shouldReduceMotion ? [1, 1.05, 1] : 1,
           }}
           transition={{
             duration: 0.3,
@@ -115,7 +122,7 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
           fill="currentColor"
           className="relative z-10"
           animate={
-            isHovered
+            isHovered && !shouldReduceMotion
               ? {
                   y: [-2, -6, -2],
                   rotate: [0, 360],
@@ -133,7 +140,8 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
 
       {/* Tooltip */}
       <motion.div
-        className="absolute top-full left-1/2 -translate-x-1/2 mt-2 px-3 py-1.5 bg-gray-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs rounded-md whitespace-nowrap pointer-events-none shadow-lg z-50"
+        aria-hidden="true"
+        className="absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden sm:block px-3 py-1.5 bg-gray-900 dark:bg-neutral-100 text-white dark:text-neutral-900 text-xs rounded-md whitespace-nowrap pointer-events-none shadow-lg z-50"
         initial={{ opacity: 0, y: -5, scale: 0.9 }}
         animate={
           isHovered
@@ -142,7 +150,7 @@ export function GitHubStars({ repo, stargazersCount }: GitHubStarsProps) {
         }
         transition={{ duration: 0.2 }}
       >
-        {new Intl.NumberFormat("en-US").format(stargazersCount)} stars on GitHub
+        {formattedStars} stars on GitHub
         <div className="absolute bottom-full left-1/2 -translate-x-1/2 -mb-px border-4 border-transparent border-b-gray-900 dark:border-b-neutral-100" />
       </motion.div>
     </div>
