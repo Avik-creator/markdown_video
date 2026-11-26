@@ -1206,6 +1206,59 @@ export const DIRECTIVE_SCHEMAS = [
     ],
   },
   {
+    name: "music",
+    aliases: [],
+    description:
+      "Adds document-level background music. The track starts at 0s, is truncated at video end, loops by default when shorter, and never extends video duration. Remote music must use HTTPS; browser availability also depends on CORS.",
+    syntax: "!music <url|file> [volume:0.4] [fade:1s] [loop:true]",
+    category: "meta",
+    examples: [
+      "!music https://example.com/theme.mp3 volume:0.4 fade:1s",
+      "!music ./audio/theme.mp3 volume:0.25 fade:0.5s loop:false",
+    ],
+    positional: [
+      {
+        name: "src",
+        type: "url",
+        required: true,
+        description:
+          "HTTPS URL, data/blob URL, or local/relative audio file. CLI paths resolve relative to the markdown file; browser paths resolve against the app origin.",
+      },
+    ],
+    properties: [
+      {
+        name: "volume",
+        type: "number",
+        required: false,
+        default: 0.4,
+        description: "Music volume as linear gain from 0 (silent) to 1 (full)",
+        min: 0,
+        max: 1,
+        errorLabel: "music volume",
+      },
+      {
+        name: "fade",
+        type: "number",
+        required: false,
+        default: 1,
+        description:
+          "Fade-in/fade-out duration in seconds (0-30). Renderers clamp the effective fade to half the video duration so start/end fades do not overlap.",
+        unit: "seconds",
+        min: 0,
+        max: 30,
+        errorLabel: "music fade duration",
+      },
+      {
+        name: "loop",
+        type: "boolean",
+        required: false,
+        default: true,
+        description: "Repeat the music when it is shorter than the video",
+        errorLabel: "music loop",
+      },
+    ],
+  },
+  {
     name: "export",
     aliases: [],
     description: "Configures export settings",

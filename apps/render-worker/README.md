@@ -105,6 +105,14 @@ job protocol rather than longer synchronous MCP calls.
   SSRF-like egress primitive against services reachable from the worker.
   Remote `http(s)` image URLs therefore render as broken images in this
   worker; that is an intentional security trade-off, not a parser error.
+- `!music` follows the same isolation boundary. Remote and local-file music
+  sources are rejected in the worker because audio fetching would create
+  network egress or local-file access outside the per-render temporary
+  directory. Self-contained `data:audio/*` URLs remain supported within the
+  existing markdown/body size caps and are mixed into the returned mp4.
+- Caption sidecars are an implementation detail of the CLI output path inside
+  the temporary render directory; the worker response remains only the mp4
+  bytes and does not expose sidecars or caption burn-in controls.
 - Chromium still executes a real browser rendering untrusted markdown. Run the
   worker in an isolated container/network namespace, give it no cloud metadata
   or internal-network access it does not need, and keep egress restricted at

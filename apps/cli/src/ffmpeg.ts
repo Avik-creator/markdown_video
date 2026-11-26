@@ -2,7 +2,11 @@ import { once } from "node:events"
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process"
 
 import {
+  buildMusicAudioFilter,
+  buildMusicInputArgs,
+  buildMusicOutputArgs,
   getVideoEncodingSettings,
+  type MusicTrack,
   type RenderPlan,
 } from "@markdown-video/core"
 
@@ -19,6 +23,10 @@ export interface FFmpegCommandInput {
   totalDuration: number
   outputPath: string
   overwrite: boolean
+  /** Prepared local/temporary input file for document music. Ignored for GIF. */
+  music?: (Pick<MusicTrack, "volume" | "fade" | "loop"> & { inputPath: string }) | undefined
+  /** Fixed captions filename in the ffmpeg process cwd when burn-in is enabled. */
+  burnCaptionsFileName?: string | undefined
 }
 
 /**
@@ -37,11 +45,25 @@ export function buildFfmpegArgs(input: FFmpegCommandInput): string[] {
     overwriteFlag,
     "-f",
     "image2pipe",
+    // Chromium screenshots are always JPEG in the video path. Naming the
+    // decoder avoids relying on image2pipe probe behavior, which differs
+    // across ffmpeg major versions when concatenated frames are streamed.
+    "-c:v",
+    "mjpeg",
     "-framerate",
     String(fps),
     "-i",
     "pipe:0",
+    ...(input.music && input.format !== "gif" ? buildMusicInputArgs(input.music, input.music.inputPath) : []),
   ]
+
+  if (input.burnCaptionsFileName !== undefined &&
+      !/^[A-Za-z0-9_.-]+$/.test(input.burnCaptionsFileName)) {
+    throw new RenderError("Internal error: captions filename is not safe for a filter argument.")
+  }
+  const subtitlesFilter = input.burnCaptionsFileName
+    ? `,subtitles=${input.burnCaptionsFileName}`
+    : ""
 
   if (input.format === "gif") {
     // Browsers commonly quantize animated GIFs heavily; a 64-color palette keeps
@@ -49,7 +71,8 @@ export function buildFfmpegArgs(input: FFmpegCommandInput): string[] {
     const gifFps = Math.min(fps, 10)
     const explicitFilter =
       `scale=${plan.width}:${plan.height}:flags=lanczos,` +
-      `fps=${gifFps},` +
+      `fps=${gifFps}` +
+      `${subtitlesFilter},` +
       "split[x][y];[x]palettegen=max_colors=64[p];[y][p]paletteuse=dither=bayer:bayer_scale=2"
     return [
       ...base,
@@ -68,10 +91,14 @@ export function buildFfmpegArgs(input: FFmpegCommandInput): string[] {
   // than merely naming yuv420p: otherwise current native ffmpeg preserves the
   // input's yuvj420p full-range pixel format, which is not the compatibility
   // target promised by the shared web-export arguments.
+  const musicOutputArgs = input.music && input.format !== "gif"
+    ? buildMusicOutputArgs(buildMusicAudioFilter(input.music, totalDuration))
+    : []
   return [
     ...base,
+    ...musicOutputArgs,
     "-vf",
-    `scale=${plan.width}:${plan.height}:flags=lanczos:out_range=limited,setsar=1`,
+    `scale=${plan.width}:${plan.height}:flags=lanczos:out_range=limited,setsar=1${subtitlesFilter}`,
     "-c:v",
     "libx264",
     "-preset",
@@ -110,10 +137,15 @@ function ffmpegFailure(prefix: string, stderr: string) {
   return new RenderError(tail ? `${prefix}\n${tail}` : prefix)
 }
 
-export function startFfmpeg(executable: string, args: string[]): FFmpegProcess {
+export function startFfmpeg(
+  executable: string,
+  args: string[],
+  options: { cwd?: string | undefined } = {},
+): FFmpegProcess {
   const child: ChildProcessWithoutNullStreams = spawn(executable, args, {
     shell: false,
     stdio: ["pipe", "pipe", "pipe"],
+    ...(options.cwd ? { cwd: options.cwd } : {}),
   })
 
   let stderr = ""

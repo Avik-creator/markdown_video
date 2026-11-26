@@ -238,6 +238,11 @@ export const DEFAULTS = {
   imageFit: propertyDefault<ImageFit>("image", "fit"),
   imagePosition: propertyDefault<ImagePosition>("image", "position"),
 
+  // Music
+  musicVolume: propertyDefault<number>("music", "volume"),
+  musicFade: propertyDefault<number>("music", "fade"),
+  musicLoop: propertyDefault<boolean>("music", "loop"),
+
   // Export
   exportFormat: propertyDefault<ExportFormat>("export", "format"),
   exportFps: propertyDefault<number>("export", "fps"),

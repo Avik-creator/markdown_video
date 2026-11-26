@@ -217,6 +217,26 @@ export default function RenderOptions() {
         onChange={(value) => setExportSettings({ speed: value })}
       />
 
+
+      <div className="space-y-2">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={exportSettings.burnCaptions === true}
+            onChange={(event) =>
+              setExportSettings({ burnCaptions: event.target.checked })
+            }
+            className="mt-1 h-4 w-4 accent-pink-500"
+          />
+          <span>
+            <span className="block text-sm text-zinc-300">Burn captions into video</span>
+            <span className="block text-xs text-zinc-500 mt-1">
+              Off by default. SRT/VTT sidecars are generated either way when text scenes exist.
+            </span>
+          </span>
+        </label>
+      </div>
+
       {/* FPS Control */}
       <div>
         <label className="text-sm text-zinc-400 flex items-center gap-2 mb-2">

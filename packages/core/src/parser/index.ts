@@ -5,6 +5,7 @@ import type {
   CameraKeyframe,
   Chapter,
   LocalizationStrings,
+  MusicTrack,
   Scene,
   SceneSourceMap,
   VideoVariables,
@@ -113,6 +114,47 @@ export interface ParseResult {
   localizationStrings: LocalizationStrings;
   /** First valid locale in `!locales`; no separate default-locale directive exists. */
   defaultLocale?: string;
+  /** Most recent valid document-level `!music` directive, if one was declared. */
+  music?: MusicTrack;
+}
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
+
+function parseMusicTrack(directiveArgs: string): MusicTrack | null {
+  const { positional } = parseInlineArguments(directiveArgs);
+  const src = firstInlineValue(positional, 0);
+  if (!src) return null;
+
+  const parsedVolume = parseDirectiveNumericValue(
+    "music",
+    "volume",
+    getInlinePropertyValue("music", directiveArgs, "volume")
+  );
+  const parsedFade = parseDirectiveNumericValue(
+    "music",
+    "fade",
+    getInlinePropertyValue("music", directiveArgs, "fade")
+  );
+
+  // The renderer remains deterministic even while the validator is reporting
+  // an out-of-range document: out-of-range numeric values clamp into the
+  // schema's bounds rather than becoming impossible gain/fade values.
+  return {
+    src,
+    volume:
+      parsedVolume === undefined
+        ? DEFAULTS.musicVolume
+        : clampNumber(parsedVolume, 0, 1),
+    fade:
+      parsedFade === undefined
+        ? DEFAULTS.musicFade
+        : clampNumber(parsedFade, 0, 30),
+    loop:
+      parseBooleanValue(getInlinePropertyValue("music", directiveArgs, "loop")) ??
+      DEFAULTS.musicLoop,
+  };
 }
 
 function consumeDirectiveTail(lines: string[], startIndex: number): number {
@@ -150,6 +192,7 @@ function parseMarkdownInternal(
   const scenes: Scene[] = [];
   const chapters: Chapter[] = [];
   let locales: string[] = [];
+  let music: MusicTrack | undefined;
   const localizationStrings: LocalizationStrings = {};
   const lines = markdown.split(/\r?\n/);
   // First pass: collect hoisted variable definitions. Nested layout parsing
@@ -1294,7 +1337,8 @@ function parseMarkdownInternal(
 
             case DIRECTIVE_CASES.SCENE:
             case DIRECTIVE_CASES.LOCALES:
-            case DIRECTIVE_CASES.STRINGS: {
+            case DIRECTIVE_CASES.STRINGS:
+            case DIRECTIVE_CASES.MUSIC: {
               // Scene boundaries are handled by the outer loop. Global blocks
               // inside a scene are ignored consistently with unknown metadata.
               i++;
@@ -1354,6 +1398,15 @@ function parseMarkdownInternal(
         // default. Document-level use is therefore ignored; the default comes
         // from the first entry in !locales.
         i++;
+      } else if (globalDirectiveName === DIRECTIVE_CASES.MUSIC) {
+        // Exactly one document music track is supported. As with !locales,
+        // the most recent syntactically usable declaration replaces the
+        // previous one so document order has one unambiguous meaning.
+        const parsedMusic = parseMusicTrack(globalDirective?.args || "");
+        if (parsedMusic) {
+          music = parsedMusic;
+        }
+        i++;
       } else if (globalDirectiveName === DIRECTIVE_CASES.EXPORT) {
         // !export block - skip for now, handled at application level
         i++;
@@ -1377,6 +1430,7 @@ function parseMarkdownInternal(
     locales,
     localizationStrings,
     defaultLocale: locales[0],
+    ...(music ? { music } : {}),
   };
 }
 

@@ -219,9 +219,35 @@ underscores with optional single-hyphen separators (for example \`en\`,
 \`key:\` lines and translations are indented \`locale: value\` lines; quotes
 are optional and multiple \`!strings\` blocks merge.
 
+## Music and captions
+\`\`\`markdown
+!music https://example.com/theme.mp3 volume:0.4 fade:1s loop:true
+
+!scene
+!text
+These words become captions
+\`\`\`
+
+\`!music\` is document-level metadata. The track starts at 0s, loops by
+default when shorter than the video, is always truncated at video end, and
+never extends the video duration. \`volume\` is linear gain from 0 to 1;
+\`fade\` is bounded to 30s and renderers also clamp it to half the video
+duration so fade-in and fade-out never overlap. Remote music must use HTTPS.
+Browser export requires the remote server to allow CORS. GIF export cannot
+carry audio, so music is ignored for GIF output. Music is an export feature in
+this step: preview playback remains silent rather than approximating fades and
+loop timing with a separate browser clock.
+
+Captions are generated from top-level \`!text\` scenes using the exact scene
+boundaries from the core timeline. Exports provide SRT and WebVTT sidecars;
+burn-in is optional and off by default. Staggered text lines are represented
+as sequential cues using the renderer's deterministic stagger timing (0.1s plus
+index times stagger), while unstaggered multi-line text is one cue because all
+lines appear together.
+
 ## Server-side rendering via MCP
 
-When the deployment configures a render worker, \`render_preview\` returns 3–6 PNG image blocks and \`render_video\` returns a temporary MP4 URL. Both enforce a 30s duration cap. Use a short \`!duration\` for every scene, preview before rendering video, and prefer explicit preview times such as \`[0, 2, 5]\` for animation checks. Remote image URLs are blocked in the isolated render worker; inline/local images should be preferred. Rendered MP4 URLs expire after one hour.
+When the deployment configures a render worker, \`render_preview\` returns 3–6 PNG image blocks and \`render_video\` returns a temporary MP4 URL. Both enforce a 30s duration cap. Use a short \`!duration\` for every scene, preview before rendering video, and prefer explicit preview times such as \`[0, 2, 5]\` for animation checks. Remote image URLs are blocked in the isolated render worker; inline/local images should be preferred. \`!music\` in the worker supports only inline \`data:audio/*\` sources; remote/local music is rejected there. Rendered MP4 URLs expire after one hour.
 
 ## Complete Example
 \`\`\`markdown

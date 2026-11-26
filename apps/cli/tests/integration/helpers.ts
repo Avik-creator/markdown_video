@@ -32,7 +32,7 @@ export async function ffprobeJson(outputPath: string) {
     "-v",
     "error",
     "-show_entries",
-    "stream=codec_name,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_range:format=duration",
+    "stream=codec_name,codec_type,width,height,r_frame_rate,avg_frame_rate,nb_frames,pix_fmt,color_range,duration:format=duration",
     "-of",
     "json",
     outputPath,

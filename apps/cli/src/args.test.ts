@@ -21,6 +21,7 @@ describe("parseCliArgs", () => {
       "--fps",
       "24",
       "--overwrite",
+      "--burn-captions",
     ])
 
     expect(args.command).toBe("render")
@@ -33,6 +34,7 @@ describe("parseCliArgs", () => {
     expect(args.fps).toBe(24)
     expect(args.overwrite).toBe(true)
     expect(args.denyRemoteNetwork).toBe(false)
+    expect(args.burnCaptions).toBe(true)
   })
 
   it("parses the loopback-only browser network flag", () => {

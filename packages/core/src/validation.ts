@@ -132,6 +132,8 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
     // Calculate total duration
     const totalDuration = scenes.reduce((sum, scene) => sum + scene.duration, 0);
 
+    validateMusicDirectives(lines, totalDuration, errors, warnings);
+
     // Check for excessively long videos
     if (totalDuration > 600) {
       warnings.push({
@@ -161,6 +163,162 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
       totalDuration: 0,
     };
   }
+}
+
+
+function validateMusicDirectives(
+  lines: string[],
+  totalDuration: number,
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): void {
+  const variables = collectVariableDefinitions(lines);
+  let insideScene = false;
+  let inFence = false;
+  let seenDocumentMusic = false;
+
+  lines.forEach((sourceLine, index) => {
+    const lineNumber = index + 1;
+    const line = substituteVariables(sourceLine.trim(), variables);
+
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+      return;
+    }
+    if (inFence) return;
+
+    if (line === "---") {
+      insideScene = false;
+      return;
+    }
+
+    const directive = parseDirective(line);
+    if (!directive) return;
+
+    const schema = getDirectiveSchema(directive.name);
+    if (!schema) return;
+    if (schema.name === "scene") {
+      insideScene = true;
+      return;
+    }
+    if (schema.name !== "music") return;
+
+    if (insideScene) {
+      warnings.push({
+        line: lineNumber,
+        message: "!music is document-level metadata and is ignored inside a scene",
+        severity: "warning",
+        suggestion: "Move it before the first scene or after a scene separator",
+      });
+      return;
+    }
+
+    if (seenDocumentMusic) {
+      warnings.push({
+        line: lineNumber,
+        message: "Only one music track is supported; this later !music replaces the earlier one",
+        severity: "warning",
+      });
+    }
+    seenDocumentMusic = true;
+
+    const { tokens, positional } = parseInlineArguments(directive.args);
+    const src = positional[0];
+    if (!src) {
+      errors.push({
+        line: lineNumber,
+        message: "!music requires an HTTPS URL or audio file path as its first argument",
+        severity: "error",
+        suggestion: "Use: !music https://example.com/theme.mp3 volume:0.4 fade:1s",
+      });
+      return;
+    }
+
+    if (positional.length > 1) {
+      warnings.push({
+        line: lineNumber,
+        message: `Extra positional music argument "${positional[1]}" is ignored`,
+        severity: "warning",
+        suggestion: "Put options in key:value form, for example volume:0.4 fade:1s loop:false",
+      });
+    }
+
+    for (const token of tokens) {
+      if (token.key && !getDirectiveProperty("music", token.key)) {
+        warnings.push({
+          line: lineNumber,
+          message: `Unknown !music option "${token.key}" is ignored`,
+          severity: "warning",
+          suggestion: "Valid options: volume, fade, loop",
+        });
+      }
+    }
+
+    if (/^http:\/\//i.test(src) || src.startsWith("//")) {
+      errors.push({
+        line: lineNumber,
+        message: "Remote music must use HTTPS",
+        severity: "error",
+        suggestion: `Use https: instead of http: in "${src}"`,
+      });
+      return;
+    }
+
+    if (/^https:\/\//i.test(src)) {
+      try {
+        const url = new URL(src);
+        if (url.username || url.password) {
+          errors.push({
+            line: lineNumber,
+            message: "Music URLs must not embed credentials",
+            severity: "error",
+            suggestion: "Remove the username/password and use a CORS-accessible HTTPS URL",
+          });
+        }
+      } catch {
+        errors.push({
+          line: lineNumber,
+          message: `Invalid music URL "${src}"`,
+          severity: "error",
+        });
+      }
+      return;
+    }
+
+    if (/^(data|blob):/i.test(src)) return;
+
+    // Other URI schemes are not portable renderer inputs. Single-letter
+    // Windows drive prefixes are treated as local paths rather than schemes;
+    // quote such paths when they contain spaces.
+    const scheme = src.match(/^([A-Za-z][A-Za-z0-9+.-]*):/);
+    if (scheme && scheme[1].length > 1) {
+      errors.push({
+        line: lineNumber,
+        message: `Unsupported music source scheme "${scheme[1]}:"`,
+        severity: "error",
+        suggestion: "Use an HTTPS URL, data/blob URL, or local/relative audio file path",
+      });
+    }
+
+    const fadeToken = tokens.find((token) => token.key?.toLowerCase() === "fade");
+    if (fadeToken?.value) {
+      const rawFade = fadeToken.value.replace(/s$/i, "");
+      const fade = Number.parseFloat(rawFade);
+      if (
+        Number.isFinite(fade) &&
+        fade >= 0 &&
+        fade <= 30 &&
+        totalDuration > 0 &&
+        fade > totalDuration / 2
+      ) {
+        warnings.push({
+          line: lineNumber,
+          message: `Music fade (${fade}s) exceeds half the video duration (${totalDuration}s); renderers clamp the effective fade`,
+          severity: "warning",
+        });
+      }
+    }
+  });
 }
 
 // ============================================
@@ -941,6 +1099,7 @@ function blockContextFor(directive: CanonicalDirectiveName): CanonicalDirectiveN
     case "locale":
     case "locales":
     case "strings":
+    case "music":
       return null;
     default:
       return assertNever(directive);

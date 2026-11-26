@@ -45,6 +45,7 @@ export type {
   SceneSourceMap,
   Scene,
   LocalizationStrings,
+  MusicTrack,
   ExportSettings,
   VideoProject,
   TimelineSegment,
@@ -59,6 +60,38 @@ export {
   getSceneAtTime,
 } from "./parser/index.js";
 export type { ParseResult } from "./parser/index.js";
+
+// Pure caption extraction and SRT/WebVTT sidecar serialization. Cue timing is
+// derived from the same timeline segments used for preview/export.
+export {
+  TEXT_STAGGER_DELAY_CHILDREN_SECONDS,
+  normalizeCaptionText,
+  generateCaptions,
+  getCaptionCueAtTime,
+  escapeVttText,
+  serializeSrt,
+  serializeVtt,
+  generateCaptionSidecars,
+} from "./captions.js";
+export type {
+  CaptionCue,
+  CaptionSource,
+  GenerateCaptionsOptions,
+  CaptionSidecars,
+} from "./captions.js";
+
+// Shared ffmpeg argv/filter fragments for optional document music. These are
+// pure data builders; host renderers still own process spawning and path I/O.
+export {
+  formatFfmpegSeconds,
+  formatFfmpegGain,
+  getEffectiveMusicFade,
+  buildMusicAudioFilter,
+  buildMusicInputArgs,
+  buildMusicOutputArgs,
+  captionSidecarPathsForOutput,
+} from "./music-ffmpeg.js";
+export type { CaptionSidecarPaths } from "./music-ffmpeg.js";
 
 // Parser tables retained for authoring UI and editor tooling. The uppercase
 // plural arrays are schema-derived compatibility names; new consumers can use

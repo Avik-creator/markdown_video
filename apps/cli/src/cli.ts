@@ -32,6 +32,7 @@ Options:
       --overwrite            replace an existing output file
       --allow-outside-cwd    permit output outside the working directory
       --deny-remote-network  block all non-loopback browser network requests
+      --burn-captions        burn generated captions into the video (requires ffmpeg libass)
       --ffmpeg <path>        ffmpeg executable (default: FFMPEG_BIN or PATH)
       --chromium <path>      Chromium executable (default: Playwright browser)
   -v, --version              print version
@@ -92,6 +93,7 @@ export async function main(argv = process.argv.slice(2)) {
 
   const cwd = process.cwd()
   let markdown: string
+  let markdownBaseDir = cwd
   if (args.markdown !== null) {
     markdown = args.markdown
   } else if (args.inputPath === "-") {
@@ -101,6 +103,7 @@ export async function main(argv = process.argv.slice(2)) {
     if (path.resolve(cwd, args.outputPath) === inputPath) {
       throw new UsageError("Input and output paths must be different files.")
     }
+    markdownBaseDir = path.dirname(inputPath)
     markdown = await readFile(inputPath, "utf8")
   }
 
@@ -132,6 +135,8 @@ export async function main(argv = process.argv.slice(2)) {
       overwrite: args.overwrite,
       allowOutsideCwd: args.allowOutsideCwd,
       allowRemoteNetwork: !args.denyRemoteNetwork,
+      markdownBaseDir,
+      burnCaptions: args.burnCaptions,
       ffmpegPath: args.ffmpegPath,
       chromiumExecutablePath: args.chromiumExecutablePath,
       signal: abort.signal,

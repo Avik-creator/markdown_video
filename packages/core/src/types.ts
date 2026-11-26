@@ -194,6 +194,25 @@ export interface VideoVariables {
   [key: string]: string;
 }
 
+/**
+ * Document-level background music declared by `!music`.
+ *
+ * `src` is deliberately unresolved source text: browser hosts interpret
+ * relative paths against the application origin and CLI hosts interpret them
+ * relative to the markdown document (or cwd for inline/stdin input). Remote
+ * music is HTTPS-only; local paths, data URLs, and browser blob URLs are host
+ * capabilities rather than guarantees in every renderer.
+ */
+export interface MusicTrack {
+  src: string;
+  /** Linear playback gain in the inclusive range 0-1. */
+  volume: number;
+  /** Requested fade-in/fade-out duration in seconds. */
+  fade: number;
+  /** Repeat the source when it is shorter than the video. */
+  loop: boolean;
+}
+
 export interface SceneImage {
   src: string;
   alt?: string;
@@ -307,6 +326,8 @@ export interface ExportSettings {
   aspectRatio?: AspectRatioType;
   safeArea?: boolean; // For reels/shorts
   includeSubtitles?: boolean;
+  /** Burn generated captions into exported frames; off by default. */
+  burnCaptions?: boolean;
   locale?: string; // Export in specific language
   fps?: number; // Output FPS (5-60)
 }
@@ -322,6 +343,7 @@ export interface VideoProject {
   locales?: string[]; // Supported locales (e.g., ["en", "es", "fr"])
   localizationStrings?: LocalizationStrings; // i18n strings
   defaultLocale?: string; // Default locale
+  music?: MusicTrack; // Document-level background music
   exportSettings?: ExportSettings; // Export configuration
 }
 

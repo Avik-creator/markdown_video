@@ -6,6 +6,7 @@ import type {
   AspectRatio,
   ExportSettings,
   LocalizationStrings,
+  MusicTrack,
   Scene,
   SourceRange,
   TimelineSegment,
@@ -45,6 +46,8 @@ export interface VideoStore {
   locales: string[];
   localizationStrings: LocalizationStrings;
   defaultLocale?: string;
+  /** Document-level !music track derived from markdown on every parse. */
+  music?: MusicTrack;
   activeLocale: string | null;
   setActiveLocale: (locale: string | null) => void;
 
