@@ -89,7 +89,7 @@ export function Features() {
                 </p>
                 <div className="mt-6">
                   <CodeLine>
-                    claude mcp add --transport http markdown-video https://markdown-video-theta.vercel.app/api/mcp/mcp
+                    claude mcp add --transport http markdown-video https://markdownvideo.avikmukherjee.com/api/mcp/mcp
                   </CodeLine>
                 </div>
               </div>

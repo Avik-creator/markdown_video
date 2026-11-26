@@ -36,7 +36,7 @@ The hosted MCP server lets Claude, Cursor or any MCP client write and check scen
 Claude Code:
 
 ```bash
-claude mcp add --transport http markdown-video https://markdown-video-theta.vercel.app/api/mcp/mcp
+claude mcp add --transport http markdown-video https://markdownvideo.avikmukherjee.com/api/mcp/mcp
 ```
 
 Cursor, Windsurf and other clients that take a JSON config:
@@ -45,7 +45,7 @@ Cursor, Windsurf and other clients that take a JSON config:
 {
   "mcpServers": {
     "markdown-video": {
-      "url": "https://markdown-video-theta.vercel.app/api/mcp/mcp"
+      "url": "https://markdownvideo.avikmukherjee.com/api/mcp/mcp"
     }
   }
 }
