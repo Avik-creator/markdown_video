@@ -70,7 +70,7 @@ export function SyntaxDemo() {
               review, generate it with an agent, then render the same file locally or in CI.
             </p>
 
-            <div className="mt-9 overflow-x-auto rounded-[14px] border border-[color:var(--landing-line)] bg-[#ebe5d6] px-4 py-3 font-mono text-[11.5px] leading-relaxed shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+            <div className="mt-9 overflow-x-auto rounded-[14px] border border-[color:var(--landing-line)] bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
               <code className="whitespace-pre">{cliExample}</code>
             </div>
           </Reveal>
@@ -87,9 +87,9 @@ export function SyntaxDemo() {
                 {documentExample}
               </pre>
               <div className="mt-5 grid gap-px overflow-hidden rounded-[12px] border border-white/10 bg-white/10 font-mono text-[10.5px] text-white/62 sm:grid-cols-3">
-                <span className="bg-[#191714] px-3 py-2">01 parse directives</span>
-                <span className="bg-[#191714] px-3 py-2">02 rasterize scenes</span>
-                <span className="bg-[#191714] px-3 py-2">03 encode mp4 + sidecars</span>
+                <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">01 parse directives</span>
+                <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">02 rasterize scenes</span>
+                <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">03 encode mp4 + sidecars</span>
               </div>
             </div>
           </Reveal>

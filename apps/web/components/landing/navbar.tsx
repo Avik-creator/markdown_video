@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { GitHubStars } from "@/components/github-stars";
+import { LandingThemeToggle } from "./theme-toggle";
 
 export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
   return (
@@ -33,13 +34,14 @@ export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
           </a>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <div className="hidden translate-y-0.5 sm:block">
             <GitHubStars repo="Avik-creator/markdown_video" stargazersCount={stargazersCount} variant="landing" />
           </div>
+          <LandingThemeToggle />
           <Link
             href="/editor"
-            className="inline-flex h-10 items-center rounded-full bg-[color:var(--landing-ink)] px-4 text-[13px] font-medium text-[color:var(--landing-paper)] shadow-[0_8px_18px_rgba(23,21,18,0.14)] transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+            className="inline-flex h-10 items-center rounded-full bg-[color:var(--landing-ink)] px-4 text-[13px] font-medium text-[color:var(--landing-paper)] landing-action-shadow-sm transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
           >
             open editor
           </Link>

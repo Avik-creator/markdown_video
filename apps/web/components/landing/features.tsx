@@ -13,7 +13,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function CodeLine({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-[12px] border border-[color:var(--landing-line)]/70 bg-[#ebe5d6] px-4 py-3 font-mono text-[11.5px] leading-relaxed text-[color:var(--landing-ink)] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]">
+    <div className="overflow-x-auto rounded-[12px] border border-[color:var(--landing-line)]/70 bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed text-[color:var(--landing-ink)] shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
       <code className="whitespace-nowrap">{children}</code>
     </div>
   );

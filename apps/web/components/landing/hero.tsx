@@ -48,7 +48,7 @@ export function Hero() {
               <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
                 <Link
                   href="/editor"
-                  className="inline-flex h-12 items-center rounded-full bg-[color:var(--landing-ink)] px-6 text-[15px] font-medium text-[color:var(--landing-paper)] shadow-[0_14px_28px_rgba(23,21,18,0.16)] transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+                  className="inline-flex h-12 items-center rounded-full bg-[color:var(--landing-ink)] px-6 text-[15px] font-medium text-[color:var(--landing-paper)] landing-action-shadow transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
                 >
                   write in the editor
                 </Link>

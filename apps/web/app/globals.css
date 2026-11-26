@@ -163,6 +163,7 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: var(--background);
 }
 
 ::selection {
@@ -181,46 +182,119 @@ html {
   }
 }
 
-/* Landing-page paper system. These tokens are scoped to the homepage so the
-   editor's dark-first UI keeps its existing contrast and component colors. */
-.landing-paper {
+/* Landing-page paper tokens. They are global so the document overscroll can
+   follow the homepage surface, but only landing components consume them. */
+:root {
   --landing-paper: #f4f0e6;
   --landing-paper-deep: #e7e1cf;
   --landing-card: #fbf8ef;
+  --landing-code-bg: #ebe5d6;
   --landing-ink: #171512;
   --landing-muted: #6f6a5e;
   --landing-faint: #817a6d;
   --landing-line: #d3ccba;
   --landing-accent: #a81645;
   --landing-accent-deep: #780f31;
+  --landing-inset-highlight: rgba(255, 255, 255, 0.55);
+  --landing-card-highlight: rgba(255, 255, 255, 0.72);
+  --landing-card-shadow:
+    0 18px 48px rgba(42, 35, 25, 0.09),
+    0 3px 10px rgba(42, 35, 25, 0.045);
+  --landing-dark-card-bg: #191714;
+  --landing-dark-card-border: rgba(255, 255, 255, 0.08);
+  --landing-dark-card-shadow:
+    0 20px 54px rgba(42, 35, 25, 0.16),
+    0 3px 12px rgba(42, 35, 25, 0.08);
+  --landing-action-shadow: 0 14px 28px rgba(23, 21, 18, 0.16);
+  --landing-action-shadow-sm: 0 8px 18px rgba(23, 21, 18, 0.14);
+  --landing-outline: color-mix(in oklab, var(--landing-ink) 30%, transparent);
+  --landing-registration: color-mix(in oklab, var(--landing-ink) 52%, transparent);
+  --landing-ruler-line: color-mix(in oklab, var(--landing-ink) 30%, transparent);
+}
+
+/* Warm ink paper: a deep brown-charcoal room rather than a black inversion.
+   The crimson accent is lifted toward rose so it remains AA-legible on the
+   dark surface, while cream ink keeps the editorial hierarchy intact. */
+.dark {
+  --landing-paper: #17130f;
+  --landing-paper-deep: #100d0a;
+  --landing-card: #282219;
+  --landing-code-bg: #1d1812;
+  --landing-ink: #f1e7d5;
+  --landing-muted: #b9ad97;
+  --landing-faint: #948974;
+  --landing-line: #443a2d;
+  --landing-accent: #e55780;
+  --landing-accent-deep: #ed6f92;
+  --landing-inset-highlight: rgba(255, 239, 214, 0.07);
+  --landing-card-highlight: rgba(255, 239, 214, 0.07);
+  --landing-card-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.38),
+    0 4px 18px rgba(0, 0, 0, 0.24);
+  --landing-dark-card-bg: #100d0a;
+  --landing-dark-card-border: rgba(244, 230, 203, 0.14);
+  --landing-dark-card-shadow:
+    0 24px 64px rgba(0, 0, 0, 0.48),
+    0 3px 14px rgba(0, 0, 0, 0.3);
+  --landing-action-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.38),
+    0 3px 12px rgba(0, 0, 0, 0.24);
+  --landing-action-shadow-sm:
+    0 12px 26px rgba(0, 0, 0, 0.34),
+    0 2px 8px rgba(0, 0, 0, 0.22);
+  --landing-outline: color-mix(in oklab, var(--landing-ink) 42%, transparent);
+  --landing-registration: color-mix(in oklab, var(--landing-ink) 38%, transparent);
+  --landing-ruler-line: color-mix(in oklab, var(--landing-ink) 24%, transparent);
+}
+
+html:has(.landing-paper),
+body:has(.landing-paper) {
+  background-color: var(--landing-paper);
+}
+
+.landing-paper {
   color: var(--landing-ink);
   background-color: var(--landing-paper);
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E"),
     linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0));
+  background-repeat: repeat, no-repeat;
   font-optical-sizing: auto;
+}
+
+.dark .landing-paper {
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse 58rem 30rem at 78% -6%, rgba(229, 87, 128, 0.095), rgba(229, 87, 128, 0) 68%),
+    linear-gradient(180deg, rgba(255, 239, 214, 0.045), rgba(255, 239, 214, 0) 42%);
+  background-repeat: repeat, no-repeat, no-repeat;
 }
 
 .landing-card {
   background: var(--landing-card);
   border: 1px solid color-mix(in oklab, var(--landing-line) 82%, transparent);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.72) inset,
-    0 18px 48px rgba(42, 35, 25, 0.09),
-    0 3px 10px rgba(42, 35, 25, 0.045);
+    inset 0 1px 0 var(--landing-card-highlight),
+    var(--landing-card-shadow);
 }
 
 .landing-dark-card {
-  background: #191714;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    0 20px 54px rgba(42, 35, 25, 0.16),
-    0 3px 12px rgba(42, 35, 25, 0.08);
+  background: var(--landing-dark-card-bg);
+  border: 1px solid var(--landing-dark-card-border);
+  box-shadow: var(--landing-dark-card-shadow);
+}
+
+.landing-action-shadow {
+  box-shadow: var(--landing-action-shadow);
+}
+
+.landing-action-shadow-sm {
+  box-shadow: var(--landing-action-shadow-sm);
 }
 
 .landing-outline-word {
   color: transparent;
-  -webkit-text-stroke: 1px color-mix(in oklab, var(--landing-ink) 30%, transparent);
+  -webkit-text-stroke: 1px var(--landing-outline);
 }
 
 .landing-grid-lines {
@@ -235,7 +309,7 @@ html {
   position: relative;
   width: 22px;
   height: 22px;
-  border: 1px solid color-mix(in oklab, var(--landing-ink) 52%, transparent);
+  border: 1px solid var(--landing-registration);
   border-radius: 999px;
   opacity: 0.56;
 }
@@ -244,7 +318,7 @@ html {
 .registration-mark::after {
   content: "";
   position: absolute;
-  background: color-mix(in oklab, var(--landing-ink) 52%, transparent);
+  background: var(--landing-registration);
 }
 
 .registration-mark::before {
@@ -264,7 +338,7 @@ html {
 .landing-ruler {
   background-image: repeating-linear-gradient(
     to right,
-    color-mix(in oklab, var(--landing-ink) 30%, transparent) 0 1px,
+    var(--landing-ruler-line) 0 1px,
     transparent 1px 12px
   );
 }
