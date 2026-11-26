@@ -11,12 +11,12 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { Scene } from "@markdown-video/core";
 import { parseMarkdown } from "@markdown-video/core";
-import { CodeScene } from "../../scenes/CodeScene";
-import { TextScene } from "../../scenes/TextScene";
-import { CountdownScene } from "../../scenes/CountdownScene";
-import { ProgressScene } from "../../scenes/ProgressScene";
-import { SplitScene } from "../../scenes/SplitScene";
-import { TerminalScene } from "../../scenes/TerminalScene";
+import { CodeScene } from "../CodeScene.js";
+import { TextScene } from "../TextScene.js";
+import { CountdownScene } from "../CountdownScene.js";
+import { ProgressScene } from "../ProgressScene.js";
+import { SplitScene } from "../SplitScene.js";
+import { TerminalScene } from "../TerminalScene.js";
 
 function scene(overrides: Partial<Scene>): Scene {
   return {

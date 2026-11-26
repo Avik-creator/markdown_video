@@ -3,7 +3,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 import type { Scene } from "@markdown-video/core";
-import { countdownDigitState, springProgress } from "@markdown-video/scenes";
+import { countdownDigitState, springProgress } from "../utils/animation-math.js";
 
 function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value));

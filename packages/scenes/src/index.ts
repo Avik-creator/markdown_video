@@ -55,6 +55,35 @@ export { TypingCursor } from "./components/TypingCursor.js";
 // Deterministic typing-effect hook shared by typewriter scenes.
 export { useTypingEffect } from "./hooks/useTypingEffect.js";
 
+// Scene renderers: one component per scene type plus the SceneRenderer
+// router used for both top-level scenes and nested composite content.
+export {
+  TerminalScene,
+  TextScene,
+  CodeScene,
+  DiffScene,
+  ChartScene,
+  MockupScene,
+  SplitScene,
+  SceneRenderer,
+  ImageScene,
+  EmojiScene,
+  QRScene,
+  CountdownScene,
+  ProgressScene,
+} from "./scenes/index.js";
+
+// Localization contract: document-level locale data travels through React
+// context so scenes stay free of host state management. Hosts provide parsed
+// document values (and optionally a user-selected active locale) anywhere
+// above the scene tree.
+export {
+  SceneLocalizationContext,
+  SceneLocalizationProvider,
+  useSceneLocalization,
+} from "./localization.js";
+export type { SceneLocalization } from "./localization.js";
+
 // Text/code animation and scene transition variant tables.
 export {
   textSizeClasses,

@@ -27,10 +27,13 @@ import {
 import { useMeasuredPreviewSize } from "./scene-preview/utils/use-measured-preview-size";
 import { cn } from "@/lib/utils";
 
-// Import extracted scene components
-import { EmojiScene, SceneRenderer } from "./scene-preview/scenes";
+// Scene rendering lives in @markdown-video/scenes; this shell only adds
+// editor state, fitting and zoom around the package's composition.
 import {
   CameraWrapper,
+  EmojiScene,
+  SceneRenderer,
+  SceneLocalizationProvider,
   ParticleEffect,
   CalloutOverlay,
   PresenterOverlay,
@@ -150,6 +153,24 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     const currentTime = useVideoStore((state) => state.currentTime);
     const aspectRatio = useVideoStore((state) => state.aspectRatio);
     const zoom = useVideoStore((state) => state.zoom);
+    const locales = useVideoStore((state) => state.locales);
+    const localizationStrings = useVideoStore(
+      (state) => state.localizationStrings
+    );
+    const defaultLocale = useVideoStore((state) => state.defaultLocale);
+    const activeLocale = useVideoStore((state) => state.activeLocale);
+
+    // Document localization data is editor state; scenes read it through
+    // the package's context contract instead of touching the store.
+    const sceneLocalization = useMemo(
+      () => ({
+        strings: localizationStrings,
+        locales,
+        defaultLocale,
+        activeLocale,
+      }),
+      [localizationStrings, locales, defaultLocale, activeLocale]
+    );
     const isEmbedded = useSyncExternalStore(
       subscribeToFrameEmbedding,
       getEmbeddedClientSnapshot,
@@ -202,6 +223,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     }
 
     return (
+      <SceneLocalizationProvider value={sceneLocalization}>
       <div
         className={cn(
           "flex-1 min-h-0 min-w-0 flex bg-[#0d0d12]",
@@ -297,6 +319,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
           </div>
         </div>
       </div>
+      </SceneLocalizationProvider>
     );
   }
 );

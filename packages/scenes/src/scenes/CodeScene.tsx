@@ -2,11 +2,11 @@
 
 import { motion, useAnimation } from "framer-motion";
 import { useMemo, useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../cn.js";
 import type { Scene } from "@markdown-video/core";
-import { highlightSyntax } from "@markdown-video/scenes";
-import { codeFontFamilyStyles } from "@markdown-video/scenes";
-import { TypingCursor } from "@markdown-video/scenes";
+import { highlightSyntax } from "../utils/code-highlighting.js";
+import { codeFontFamilyStyles } from "../utils/fonts.js";
+import { TypingCursor } from "../components/TypingCursor.js";
 
 function CodeBlock({
   code,

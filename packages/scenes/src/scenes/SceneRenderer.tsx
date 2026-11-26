@@ -6,19 +6,19 @@ import {
   splitGridStyle,
   type SplitPanel as SplitPanelData,
   type SplitSide,
-} from "@markdown-video/scenes";
-import { ChartScene } from "./ChartScene";
-import { CodeScene } from "./CodeScene";
-import { CountdownScene } from "./CountdownScene";
-import { DiffScene } from "./DiffScene";
-import { EmojiScene } from "./EmojiScene";
-import { ImageScene } from "./ImageScene";
-import { MockupScene } from "./MockupScene";
-import { ProgressScene } from "./ProgressScene";
-import { QRScene } from "./QRScene";
-import { TerminalScene } from "./TerminalScene";
-import { TextScene } from "./TextScene";
-import { TimelineElementsOverlay } from "@markdown-video/scenes";
+} from "../utils/split-layout.js";
+import { ChartScene } from "./ChartScene.js";
+import { CodeScene } from "./CodeScene.js";
+import { CountdownScene } from "./CountdownScene.js";
+import { DiffScene } from "./DiffScene.js";
+import { EmojiScene } from "./EmojiScene.js";
+import { ImageScene } from "./ImageScene.js";
+import { MockupScene } from "./MockupScene.js";
+import { ProgressScene } from "./ProgressScene.js";
+import { QRScene } from "./QRScene.js";
+import { TerminalScene } from "./TerminalScene.js";
+import { TextScene } from "./TextScene.js";
+import { TimelineElementsOverlay } from "../components/TimelineElementsOverlay.js";
 
 /**
  * Routes a scene to the same renderer used for top-level scenes. Split panels

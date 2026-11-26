@@ -1,18 +1,18 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { cn } from "@/lib/utils";
+import { cn } from "../cn.js";
 import type { Scene } from "@markdown-video/core";
-import { useTypingEffect } from "@markdown-video/scenes";
-import { animationVariants, textSizeClasses } from "@markdown-video/scenes";
-import { interpolateVariantState } from "@markdown-video/scenes";
-import { staggeredLineProgress } from "@markdown-video/scenes";
-import { textFontFamilyStyles } from "@markdown-video/scenes";
-import { TypingCursor } from "@markdown-video/scenes";
+import { useTypingEffect } from "../hooks/useTypingEffect.js";
+import { animationVariants, textSizeClasses } from "../utils/constants.js";
+import { interpolateVariantState } from "../utils/interpolate.js";
+import { staggeredLineProgress } from "../utils/animation-math.js";
+import { textFontFamilyStyles } from "../utils/fonts.js";
+import { TypingCursor } from "../components/TypingCursor.js";
 
 import { useAnimation } from "framer-motion";
 import { useEffect, useMemo } from "react";
-import { useVideoStore } from "@/lib/use-video-store";
+import { useSceneLocalization } from "../localization.js";
 import {
   resolveEffectiveLocale,
   resolveSceneTextContent,
@@ -81,10 +81,12 @@ export function TextScene({
   const stagger = scene.text?.stagger || 0; // Stagger delay in seconds
   const controls = useAnimation();
 
-  const locales = useVideoStore((state) => state.locales);
-  const localizationStrings = useVideoStore((state) => state.localizationStrings);
-  const defaultLocale = useVideoStore((state) => state.defaultLocale);
-  const activeLocale = useVideoStore((state) => state.activeLocale);
+  // Localization data arrives through React context rather than a global
+  // store: the editor feeds its document/playback state in at the shell,
+  // while headless hosts can pass parsed document values (or nothing) for
+  // the same deterministic resolution chain.
+  const { locales, strings, defaultLocale, activeLocale } =
+    useSceneLocalization();
 
   // Resolution is render-time and deterministic: scene override first, then a
   // valid user selection, then the document default. The translation fallback
@@ -98,11 +100,11 @@ export function TextScene({
   const localizedContent = useMemo(() => {
     if (!scene.text) return "";
     return resolveSceneTextContent(scene.text, {
-      strings: localizationStrings,
+      strings,
       locale: effectiveLocale,
       defaultLocale,
     });
-  }, [scene.text, localizationStrings, effectiveLocale, defaultLocale]);
+  }, [scene.text, strings, effectiveLocale, defaultLocale]);
 
   // Typewriter effect
   const { displayedText } = useTypingEffect(

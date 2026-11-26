@@ -2,11 +2,11 @@
 
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
-import { cn } from "@/lib/utils";
+import { cn } from "../cn.js";
 import type { Scene } from "@markdown-video/core";
-import { TextScene } from "./TextScene";
-import { CodeScene } from "./CodeScene";
-import { ImageScene } from "./ImageScene";
+import { TextScene } from "./TextScene.js";
+import { CodeScene } from "./CodeScene.js";
+import { ImageScene } from "./ImageScene.js";
 
 interface DeviceStyle {
   width: number;
