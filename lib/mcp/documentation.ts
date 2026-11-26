@@ -186,6 +186,39 @@ Use \`---\` to separate scenes
 !background $brandColor
 \`\`\`
 
+## Localization
+\`\`\`markdown
+!locales en es fr
+
+!strings
+welcome:
+  en: "Welcome"
+  es: "Bienvenido"
+  fr: "Bienvenue"
+
+---
+
+!scene
+!text i18n:welcome
+
+---
+
+!scene
+!locale es
+!text i18n:welcome
+\`\`\`
+
+The first valid locale in \`!locales\` is the document default; no separate
+default-locale directive exists. \`!locale\` is valid only inside a scene and
+overrides the user/document locale for that scene. Translation resolution is:
+effective locale → default locale → first translation defined for the key →
+non-empty inline text in the same text object → the literal key (so missing translations
+are visible during editing). Locale/key tokens use ASCII letters, digits and
+underscores with optional single-hyphen separators (for example \`en\`,
+\`pt-BR\`, \`welcome-title\`). In \`!strings\`, key lines are unindented
+\`key:\` lines and translations are indented \`locale: value\` lines; quotes
+are optional and multiple \`!strings\` blocks merge.
+
 ## Complete Example
 \`\`\`markdown
 !var mainColor #3b82f6

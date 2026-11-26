@@ -1,6 +1,7 @@
 // Syntax validation utilities for markdown_video
 import { parseMarkdownFull } from "../parser";
-import type { Scene } from "../types";
+import { isLocalizationToken } from "../parser/i18n";
+import type { LocalizationStrings, Scene, VideoVariables } from "../types";
 import {
   SCENE_DIRECTIVES,
   ANIMATION_TYPES,
@@ -80,7 +81,15 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
   try {
     // Parse the markdown
     const result = parseMarkdownFull(markdown);
-    const { scenes, chapters, variables } = result;
+    const {
+      scenes,
+      chapters,
+      variables,
+      locales,
+      localizationStrings,
+    } = result;
+
+    validateLocalization(lines, variables, locales, localizationStrings, scenes, errors, warnings);
 
     // Validate scenes
     if (scenes.length === 0) {
@@ -157,6 +166,374 @@ export function validateMarkdownSyntax(markdown: string): ValidationResult {
   }
 }
 
+// ============================================
+// Localization validation
+// ============================================
+
+function validateLocalesDirective(
+  args: string,
+  lineNumber: number,
+  insideScene: boolean,
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): void {
+  if (insideScene) {
+    warnings.push({
+      line: lineNumber,
+      message: "!locales is document-level metadata and is ignored inside a scene",
+      severity: "warning",
+      suggestion: "Move it before the first scene or after a scene separator",
+    });
+  }
+
+  const { tokens, positional } = parseInlineArguments(args);
+  const positionalTokens = tokens.filter((token) => token.key === undefined);
+  let validLocaleCount = 0;
+
+  for (const token of tokens) {
+    if (token.key !== undefined) {
+      errors.push({
+        line: lineNumber,
+        message: `Invalid locale token "${token.raw}" in !locales`,
+        severity: "error",
+        suggestion: "Use whitespace-separated locale codes such as: !locales en es fr",
+      });
+      continue;
+    }
+
+    const positionalIndex = positionalTokens.indexOf(token);
+    const locale = positional[positionalIndex] ?? token.raw;
+    if (!isLocalizationToken(locale)) {
+      errors.push({
+        line: lineNumber,
+        message: `Invalid locale token "${locale}" in !locales`,
+        severity: "error",
+        suggestion: "Use letters, digits, underscores, and hyphens (for example en or pt-BR)",
+      });
+    } else {
+      validLocaleCount++;
+    }
+  }
+
+  if (validLocaleCount === 0) {
+    errors.push({
+      line: lineNumber,
+      message: "!locales requires at least one locale token",
+      severity: "error",
+      suggestion: "Use whitespace-separated locale codes such as: !locales en es fr",
+    });
+  }
+}
+
+function validateLocaleDirective(
+  args: string,
+  lineNumber: number,
+  insideScene: boolean,
+  declaredLocales: readonly string[],
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): void {
+  const { positional } = parseInlineArguments(args);
+  const locale = positional[0];
+
+  if (!insideScene) {
+    warnings.push({
+      line: lineNumber,
+      message: "!locale outside a scene is ignored; it is a scene-level override",
+      severity: "warning",
+      suggestion: "Place !locale inside a scene, or use !locales to choose the document default",
+    });
+  }
+
+  if (!locale) {
+    errors.push({
+      line: lineNumber,
+      message: "!locale requires a locale code",
+      severity: "error",
+    });
+    return;
+  }
+
+  if (!isLocalizationToken(locale)) {
+    errors.push({
+      line: lineNumber,
+      message: `Invalid locale token "${locale}" in !locale`,
+      severity: "error",
+      suggestion: "Use letters, digits, underscores, and hyphens (for example en or pt-BR)",
+    });
+    return;
+  }
+
+  if (!declaredLocales.includes(locale)) {
+    warnings.push({
+      line: lineNumber,
+      message: `Locale "${locale}" is not declared in !locales`,
+      severity: "warning",
+      suggestion: declaredLocales.length > 0
+        ? `Declared locales: ${declaredLocales.join(", ")}`
+        : "Declare locales at document level, for example: !locales en es fr",
+    });
+  }
+}
+
+interface StringsKeyState {
+  name: string;
+  line: number;
+  translationCount: number;
+}
+
+function hasUnclosedQuotedValue(value: string): boolean {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) return false;
+  const first = trimmed[0];
+  if (first !== '"' && first !== "'") return false;
+  return trimmed.length < 2 || trimmed[trimmed.length - 1] !== first;
+}
+
+/**
+ * Validate the indentation-sensitive `!strings` grammar from raw source.
+ * The parser intentionally stays lenient; malformed lines are errors here
+ * because they are silently unavailable at render time otherwise. Missing or
+ * partial translations are warnings because partial localization documents
+ * are legitimate while in progress.
+ *
+ * Returns the first line index after the block.
+ */
+function validateStringsBlock(
+  lines: readonly string[],
+  startIndex: number,
+  declaredLocales: readonly string[],
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): number {
+  let currentKey: StringsKeyState | null = null;
+  let index = startIndex;
+
+  const finishCurrentKey = () => {
+    if (currentKey && currentKey.translationCount === 0) {
+      warnings.push({
+        line: currentKey.line,
+        message: `String key "${currentKey.name}" has no translation lines`,
+        severity: "warning",
+        suggestion: `Add indented translations, for example:  en: "Text"`,
+      });
+    }
+  };
+
+  while (index < lines.length) {
+    const rawLine = lines[index];
+    const trimmed = rawLine.trim();
+    const lineNumber = index + 1;
+
+    if (trimmed.startsWith("!") || trimmed === "---") {
+      break;
+    }
+
+    if (!trimmed) {
+      index++;
+      continue;
+    }
+
+    const indentation = rawLine.match(/^[ \t]*/)?.[0] ?? "";
+    const isIndented = indentation.length > 0;
+
+    if (!isIndented) {
+      finishCurrentKey();
+      const keyMatch = trimmed.match(/^([^\s:]+)\s*:\s*$/);
+      if (keyMatch && isLocalizationToken(keyMatch[1])) {
+        currentKey = {
+          name: keyMatch[1],
+          line: lineNumber,
+          translationCount: 0,
+        };
+      } else {
+        currentKey = null;
+        errors.push({
+          line: lineNumber,
+          message: "Malformed !strings key line; expected an unindented `key:` line with no inline value",
+          severity: "error",
+        });
+      }
+      index++;
+      continue;
+    }
+
+    const translationMatch = trimmed.match(/^([^\s:]+)\s*:\s*(.*)$/);
+    if (!currentKey) {
+      errors.push({
+        line: lineNumber,
+        message: "!strings translation line has no preceding unindented string key",
+        severity: "error",
+      });
+    } else if (!translationMatch) {
+      errors.push({
+        line: lineNumber,
+        message: "Malformed !strings translation line; expected an indented `locale: value` line",
+        severity: "error",
+      });
+    } else if (!isLocalizationToken(translationMatch[1])) {
+      errors.push({
+        line: lineNumber,
+        message: `Invalid locale token "${translationMatch[1]}" in !strings`,
+        severity: "error",
+        suggestion: "Use letters, digits, underscores, and hyphens (for example en or pt-BR)",
+      });
+    } else {
+      currentKey.translationCount++;
+      const locale = translationMatch[1];
+      const value = translationMatch[2];
+
+      if (hasUnclosedQuotedValue(value)) {
+        errors.push({
+          line: lineNumber,
+          message: `Unclosed quote in !strings translation for "${currentKey.name}" (${locale})`,
+          severity: "error",
+        });
+      }
+
+      if (!declaredLocales.includes(locale)) {
+        warnings.push({
+          line: lineNumber,
+          message: `Translation locale "${locale}" is not declared in !locales`,
+          severity: "warning",
+          suggestion: declaredLocales.length > 0
+            ? `Declared locales: ${declaredLocales.join(", ")}`
+            : "Declare locales at document level, for example: !locales en es fr",
+        });
+      }
+    }
+
+    index++;
+  }
+
+  finishCurrentKey();
+  return index;
+}
+
+function collectI18nKeyReferences(value: unknown, keys: Set<string>): void {
+  if (!value || typeof value !== "object") return;
+
+  const sceneLike = value as {
+    text?: { i18nKey?: string };
+    mockup?: { content?: { text?: { i18nKey?: string } } };
+    split?: { left?: unknown; right?: unknown };
+  };
+
+  if (sceneLike.text?.i18nKey) keys.add(sceneLike.text.i18nKey);
+  if (sceneLike.mockup?.content?.text?.i18nKey) {
+    keys.add(sceneLike.mockup.content.text.i18nKey);
+  }
+  if (sceneLike.split) {
+    collectI18nKeyReferences(sceneLike.split.left, keys);
+    collectI18nKeyReferences(sceneLike.split.right, keys);
+  }
+}
+
+/**
+ * Validate document/scene locale declarations, strings-block structure, and
+ * key references. Locale consistency issues are warnings because partial
+ * localization documents are valid works in progress; structurally malformed
+ * lines are errors because the parser cannot use them.
+ */
+function validateLocalization(
+  lines: readonly string[],
+  variables: VideoVariables,
+  declaredLocales: readonly string[],
+  localizationStrings: LocalizationStrings,
+  scenes: readonly Scene[],
+  errors: ValidationError[],
+  warnings: ValidationError[]
+): void {
+  let insideScene = false;
+  let inFence = false;
+
+  for (let index = 0; index < lines.length; index++) {
+    const rawLine = lines[index];
+    const line = substituteVariables(rawLine.trim(), variables);
+    const lineNumber = index + 1;
+
+    if (line.startsWith("```")) {
+      inFence = !inFence;
+      continue;
+    }
+    if (inFence) continue;
+
+    if (line === "---") {
+      insideScene = false;
+      continue;
+    }
+
+    const directive = parseDirective(line);
+    if (!directive) continue;
+
+    if (directive.canonicalName === "scene") {
+      insideScene = true;
+      continue;
+    }
+
+    if (directive.canonicalName === "locales") {
+      validateLocalesDirective(
+        directive.args,
+        lineNumber,
+        insideScene,
+        errors,
+        warnings
+      );
+      continue;
+    }
+
+    if (directive.canonicalName === "locale") {
+      validateLocaleDirective(
+        directive.args,
+        lineNumber,
+        insideScene,
+        declaredLocales,
+        errors,
+        warnings
+      );
+      continue;
+    }
+
+    if (directive.canonicalName === "strings") {
+      if (insideScene) {
+        warnings.push({
+          line: lineNumber,
+          message: "!strings is document-level metadata and is ignored inside a scene",
+          severity: "warning",
+          suggestion: "Move it before the first scene or after a scene separator",
+        });
+        continue;
+      }
+
+      const endIndex = validateStringsBlock(
+        lines,
+        index + 1,
+        declaredLocales,
+        errors,
+        warnings
+      );
+      // The loop increment moves us onto the terminating directive/separator
+      // (or one past EOF), so process that terminator normally.
+      index = endIndex - 1;
+    }
+  }
+
+  const referencedKeys = new Set<string>();
+  for (const scene of scenes) {
+    collectI18nKeyReferences(scene, referencedKeys);
+  }
+
+  for (const key of Array.from(referencedKeys).sort()) {
+    if (!Object.prototype.hasOwnProperty.call(localizationStrings, key)) {
+      warnings.push({
+        message: `Localization key "${key}" is referenced but no !strings entry defines it`,
+        severity: "warning",
+        suggestion: "Define the key in a document-level !strings block or remove the i18n reference",
+      });
+    }
+  }
+}
+
 /**
  * Validates a single scene
  */
@@ -191,7 +568,7 @@ function validateScene(
 
   // Validate text scene
   if (scene.type === "text" && scene.text) {
-    if (!scene.text.content || scene.text.content.trim() === "") {
+    if ((!scene.text.content || scene.text.content.trim() === "") && !scene.text.i18nKey) {
       warnings.push({
       line: lineOf(/^!(text|heading|title|h1|h2|h3|paragraph|p)\b/i),
         message: `Scene ${index + 1}: Text content is empty`,
