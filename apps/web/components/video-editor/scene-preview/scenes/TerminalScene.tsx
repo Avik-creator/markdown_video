@@ -3,7 +3,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useMemo, useEffect } from "react";
 import type { Scene, TerminalCommand } from "@markdown-video/core";
-import { computeTerminalCommandStates } from "../utils/animation-math";
+import { computeTerminalCommandStates } from "@markdown-video/scenes";
 import { TypingCursor } from "../components/TypingCursor";
 
 const EMPTY_TERMINAL_COMMANDS: TerminalCommand[] = [];

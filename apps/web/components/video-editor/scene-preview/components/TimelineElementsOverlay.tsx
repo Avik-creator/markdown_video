@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import type { TimelineElement } from "@markdown-video/core";
-import { timelineElementVisualState } from "../utils/timeline-animation";
+import { timelineElementVisualState } from "@markdown-video/scenes";
 
 function TimelineElementRenderer({
   element,

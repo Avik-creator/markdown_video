@@ -7,8 +7,8 @@ import {
   IDENTITY_CAMERA_TRANSFORM,
   cameraTransformToCss,
   getCameraTransform,
-} from "../camera-transform";
-import { CameraWrapper } from "../../components/CameraWrapper";
+} from "../camera-transform.js";
+import { CameraWrapper } from "../../components/CameraWrapper.js";
 import type { SceneCamera } from "@markdown-video/core";
 
 describe("getCameraTransform", () => {

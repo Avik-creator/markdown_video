@@ -9,12 +9,12 @@ import {
 import { useVideoStore } from "@/lib/use-video-store";
 import type { Scene } from "@markdown-video/core";
 import { motion, useAnimation } from "framer-motion";
-import { transitionVariants } from "./scene-preview/utils/constants";
-import { interpolateVariantState } from "./scene-preview/utils/interpolate";
+import { transitionVariants } from "@markdown-video/scenes";
+import { interpolateVariantState } from "@markdown-video/scenes";
 import {
   normalizeTransitionDuration,
   transitionProgress,
-} from "./scene-preview/utils/transition";
+} from "@markdown-video/scenes";
 import {
   LOGICAL_ROOT_FONT_SIZE_PX,
   getRenderLayoutDimensions,
@@ -29,9 +29,9 @@ import { cn } from "@/lib/utils";
 
 // Import extracted scene components
 import { EmojiScene, SceneRenderer } from "./scene-preview/scenes";
+import { CameraWrapper } from "@markdown-video/scenes";
 import {
   ParticleEffect,
-  CameraWrapper,
   CalloutOverlay,
   PresenterOverlay,
   TimelineElementsOverlay,

@@ -4,10 +4,10 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { Scene } from "@markdown-video/core";
 import { useTypingEffect } from "../hooks/useTypingEffect";
-import { animationVariants, textSizeClasses } from "../utils/constants";
-import { interpolateVariantState } from "../utils/interpolate";
-import { staggeredLineProgress } from "../utils/animation-math";
-import { textFontFamilyStyles } from "../utils/fonts";
+import { animationVariants, textSizeClasses } from "@markdown-video/scenes";
+import { interpolateVariantState } from "@markdown-video/scenes";
+import { staggeredLineProgress } from "@markdown-video/scenes";
+import { textFontFamilyStyles } from "@markdown-video/scenes";
 import { TypingCursor } from "../components/TypingCursor";
 
 import { useAnimation } from "framer-motion";

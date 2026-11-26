@@ -4,7 +4,7 @@ import {
   TIMELINE_ELEMENT_ENTER_DURATION,
   TIMELINE_ELEMENT_EXIT_DURATION,
   timelineElementVisualState,
-} from "../timeline-animation";
+} from "../timeline-animation.js";
 
 function element(overrides: Partial<TimelineElement>): TimelineElement {
   return {

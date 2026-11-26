@@ -5,7 +5,7 @@ import {
   computeTerminalCommandStates,
   staggeredLineProgress,
   pulseOpacityAtTime,
-} from "../animation-math";
+} from "../animation-math.js";
 
 describe("springProgress", () => {
   const bounce = { stiffness: 300, damping: 20 }; // zeta ~0.58, underdamped

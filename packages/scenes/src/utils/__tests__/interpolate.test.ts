@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   interpolateValue,
   interpolateVariantState,
-} from "../interpolate";
-import { transitionVariants, animationVariants } from "../constants";
+} from "../interpolate.js";
+import { transitionVariants, animationVariants } from "../constants.js";
 
 describe("interpolateValue", () => {
   describe("numbers", () => {

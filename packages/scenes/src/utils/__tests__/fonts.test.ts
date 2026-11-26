@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   codeFontFamilyStyles,
   textFontFamilyStyles,
-} from "../fonts";
+} from "../fonts.js";
 
 describe("scene font family styles", () => {
   it("maps text fonts to the next/font CSS variables exposed by the root layout", () => {

@@ -6,7 +6,7 @@ import {
   splitGridStyle,
   type SplitPanel as SplitPanelData,
   type SplitSide,
-} from "../utils/split-layout";
+} from "@markdown-video/scenes";
 import { ChartScene } from "./ChartScene";
 import { CodeScene } from "./CodeScene";
 import { CountdownScene } from "./CountdownScene";

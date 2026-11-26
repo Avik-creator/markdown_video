@@ -4,7 +4,7 @@ import {
   materializeSplitPanel,
   normalizeSplitRatio,
   splitGridStyle,
-} from "../split-layout";
+} from "../split-layout.js";
 
 describe("normalizeSplitRatio", () => {
   it("uses 0.5 when the ratio is absent or non-numeric", () => {

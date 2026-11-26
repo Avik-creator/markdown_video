@@ -3,7 +3,7 @@ import {
   DEFAULT_TRANSITION_DURATION,
   normalizeTransitionDuration,
   transitionProgress,
-} from "../transition";
+} from "../transition.js";
 
 describe("normalizeTransitionDuration", () => {
   it("uses the schema default when the duration is absent", () => {

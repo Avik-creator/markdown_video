@@ -4,7 +4,7 @@ import type { Scene } from "@markdown-video/core";
 import {
   cameraTransformToCss,
   getCameraTransform,
-} from "../utils/camera-transform";
+} from "../utils/camera-transform.js";
 
 export function CameraWrapper({
   children,

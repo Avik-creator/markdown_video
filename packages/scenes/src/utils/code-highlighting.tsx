@@ -1,6 +1,10 @@
 import React from "react"
 
-export function highlightSyntax(line: string, language: string): React.ReactNode {
+// The language argument is currently unused: highlighting is a heuristic
+// keyword/string pass shared by all languages. The parameter stays in the
+// signature so call sites (and a future language-aware implementation) keep
+// a stable contract.
+export function highlightSyntax(line: string, _language: string): React.ReactNode {
   const keywords = [
     "import",
     "export",

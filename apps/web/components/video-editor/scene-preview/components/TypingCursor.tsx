@@ -2,7 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { cn } from "@/lib/utils";
-import { pulseOpacityAtTime } from "../utils/animation-math";
+import { pulseOpacityAtTime } from "@markdown-video/scenes";
 
 /**
  * Shared typing cursor. In deterministic rendering (a sceneTime is present),
