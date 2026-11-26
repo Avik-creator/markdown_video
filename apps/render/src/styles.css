@@ -7,21 +7,25 @@
 @source "../../../packages/scenes/src";
 
 @theme inline {
-  --font-sans: var(--font-inter), system-ui, sans-serif;
-  --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-serif: var(--font-playfair), Georgia, serif;
-  --font-display: var(--font-merriweather-family), Georgia, serif;
-  --font-jetbrains: var(--font-jetbrains-family), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-fira: var(--font-fira-family), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-source-code: var(--font-source-code-family), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-inconsolata: var(--font-inconsolata-family), ui-monospace, SFMono-Regular, Menlo, monospace;
-  --font-ibm-plex-mono: var(--font-ibm-plex-family), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: var(--font-inter), var(--font-emoji), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), var(--font-emoji), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-serif: var(--font-playfair), var(--font-emoji), Georgia, serif;
+  --font-display: var(--font-merriweather-family), var(--font-emoji), Georgia, serif;
+  --font-jetbrains: var(--font-jetbrains-family), var(--font-emoji), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-fira: var(--font-fira-family), var(--font-emoji), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-source-code: var(--font-source-code-family), var(--font-emoji), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-inconsolata: var(--font-inconsolata-family), var(--font-emoji), ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-ibm-plex-mono: var(--font-ibm-plex-family), var(--font-emoji), ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-/* The scene font package contract: these exact nine custom properties are
-   consumed through var(--font-*, fallback) inside scene components. Values
-   mirror the family/fallback chains exposed by next/font in the editor. */
+/* The scene font package contract: these custom properties are consumed
+   through var(--font-*, fallback) inside scene components. The nine text-family
+   values mirror the family/fallback chains exposed by next/font in the editor;
+   --font-emoji names the bundled COLRv1 face and is deliberately separate so
+   scene code can place it after the primary family without disturbing Latin
+   text shaping. */
 :root {
+  --font-emoji: "Noto Color Emoji";
   --font-inter: "Inter", system-ui, sans-serif;
   --font-playfair: "Playfair Display", Georgia, serif;
   --font-merriweather-family: "Merriweather", Georgia, serif;

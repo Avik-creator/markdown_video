@@ -608,6 +608,100 @@
           "bytes": 97608
         }
       ]
+    },
+    {
+      "family": "Noto Color Emoji",
+      "cssUrl": "https://fonts.googleapis.com/css2?family=Noto+Color+Emoji&display=swap",
+      "files": [
+        {
+          "file": "./noto-color-emoji-400-range-00.woff2",
+          "subset": "range-00",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.0.woff2",
+          "sha256": "cefc94c2f60f784c50b48bab499b4e9b1e7c3870f92091627555a35967b30552",
+          "bytes": 708608
+        },
+        {
+          "file": "./noto-color-emoji-400-range-01.woff2",
+          "subset": "range-01",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.1.woff2",
+          "sha256": "493da8ddfce809a87ddff367d90ee3cc261d04ac661d42fc112a58b4564f6231",
+          "bytes": 14804
+        },
+        {
+          "file": "./noto-color-emoji-400-range-02.woff2",
+          "subset": "range-02",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.2.woff2",
+          "sha256": "93770e84e6445000a5f3d90cebe6a984bed388fe1a04ca36317591086a353030",
+          "bytes": 64932
+        },
+        {
+          "file": "./noto-color-emoji-400-range-03.woff2",
+          "subset": "range-03",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.3.woff2",
+          "sha256": "a77e72ab68384883bbc9cf6c0ad6c8f5b74a9e4e771d6509f4759f22b2d43a52",
+          "bytes": 163148
+        },
+        {
+          "file": "./noto-color-emoji-400-range-04.woff2",
+          "subset": "range-04",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.4.woff2",
+          "sha256": "dce8680d145b4648107691b584d79d3ee7ba9c5a1971071c1a27383dbdc5c211",
+          "bytes": 100760
+        },
+        {
+          "file": "./noto-color-emoji-400-range-05.woff2",
+          "subset": "range-05",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.5.woff2",
+          "sha256": "423e5f7a09beb7f8f07f0c3562995ea4d599d08dc9d74927ccdc4aac54930a94",
+          "bytes": 121144
+        },
+        {
+          "file": "./noto-color-emoji-400-range-06.woff2",
+          "subset": "range-06",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.6.woff2",
+          "sha256": "bfd2a6fb3a14b3cc7078e6601b7ce8994edc439a3f2b71b01acd29def51e0140",
+          "bytes": 124640
+        },
+        {
+          "file": "./noto-color-emoji-400-range-07.woff2",
+          "subset": "range-07",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.7.woff2",
+          "sha256": "b5cee5fd7d4827d1c2edbd3e1033266465dc3361207ce7e150a9c7c33501de5a",
+          "bytes": 211652
+        },
+        {
+          "file": "./noto-color-emoji-400-range-08.woff2",
+          "subset": "range-08",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.8.woff2",
+          "sha256": "26c5b4221e4a6d7836d7c37b5f966306170deaad4483ac256260e24560746764",
+          "bytes": 423936
+        },
+        {
+          "file": "./noto-color-emoji-400-range-09.woff2",
+          "subset": "range-09",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.9.woff2",
+          "sha256": "22f4056a092170716a6e49afce7b2ef97eab80033b37137c45c0ca1ca31b1c54",
+          "bytes": 140992
+        },
+        {
+          "file": "./noto-color-emoji-400-range-10.woff2",
+          "subset": "range-10",
+          "weight": "400",
+          "sourceUrl": "https://fonts.gstatic.com/s/notocoloremoji/v50/Yq6P-KqIXTD0t4D9z1ESnKM3-HpFabts6diysYTngZPnMC1MfLd4gw.10.woff2",
+          "sha256": "b1455b846ff433ea9227bb8bdba1c7f52220a2625a4a38c9a3bbe03e861bbdc5",
+          "bytes": 10124
+        }
+      ]
     }
   ]
 }
