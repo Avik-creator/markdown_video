@@ -467,6 +467,7 @@ export const useVideoStore = create<VideoStore>()(
           merged.locales = parsed.locales;
           merged.localizationStrings = parsed.localizationStrings;
           merged.defaultLocale = parsed.defaultLocale;
+          merged.music = parsed.music;
           merged.currentTime = Math.min(
             merged.currentTime,
             parsed.totalDuration,

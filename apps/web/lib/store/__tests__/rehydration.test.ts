@@ -140,6 +140,24 @@ welcome:
     expect(state.scenes[0].text?.i18nKey).toBe("welcome");
   });
 
+  it("recomputes document music during rehydration", async () => {
+    seedStorage({
+      markdown: `!music theme.mp3 volume:0.25 fade:0.5s loop:false
+${STORED_MARKDOWN}`,
+      markers: [],
+    });
+
+    const { useVideoStore } = await import("../../use-video-store");
+    const state = useVideoStore.getState();
+
+    expect(state.music).toEqual({
+      src: "theme.mp3",
+      volume: 0.25,
+      fade: 0.5,
+      loop: false,
+    });
+  });
+
   it("falls back to the default document when storage is empty", async () => {
     const { useVideoStore } = await import("../../use-video-store");
     const { DEFAULT_MARKDOWN } = await import("../../default-markdown");
