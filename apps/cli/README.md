@@ -202,7 +202,29 @@ and compares the generated SRT/VTT sidecars byte-for-byte. Goldens are compared 
 rather than byte equality because anti-aliasing and compression details may
 vary slightly across platforms.
 
-Regenerate the two small committed 854×480 golden PNGs after an intentional
+The caption burn-in integration test (`render-captions-burnin.test.ts`) renders
+a five-scene Unicode fixture twice — once with `burnCaptions`, once without as a
+pixel-identical control — and asserts caption presence in the bottom band at cue
+times, caption stability within a cue, and exact half-open boundary behavior
+(the frame at t=1.0 already shows the next cue). Unicode glyph correctness is
+verified with three layered mechanisms, because tofu boxes are themselves pixels
+and a naive non-blank assertion cannot detect missing glyphs: a perceptual
+golden comparison of the Cyrillic caption frame (the primary mechanism — any
+tofu form diffs massively against the visually verified golden), a same-length
+comparison against a plane-15 private-use caption that is guaranteed tofu (real
+Cyrillic glyphs must differ from it; Chromium renders missing glyphs as repeated
+identical `.notdef` boxes, so tofu Cyrillic would be pixel-identical to the tofu
+baseline), and a saturated-yellow pixel count for the emoji caption (color emoji
+render yellow faces; tofu or monochrome fallback never can). The asserted
+scripts (Cyrillic, Greek, Vietnamese) are covered by the render page's bundled
+Inter subsets, so they render deterministically in every environment; the emoji
+assertion relies on a color emoji font, which is present on macOS, preinstalled
+on GitHub's ubuntu runners, and installed in the render-worker image. CJK and
+other system-font-dependent scripts are deliberately not asserted: they fall
+back to system fonts exactly like scene text always has, and CI runners do not
+ship CJK fonts.
+
+Regenerate the small committed 854×480 golden PNGs after an intentional
 scene-rendering change:
 
 ```sh
