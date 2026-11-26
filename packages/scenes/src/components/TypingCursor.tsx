@@ -1,8 +1,8 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { cn } from "@/lib/utils";
-import { pulseOpacityAtTime } from "@markdown-video/scenes";
+import { cn } from "../cn.js";
+import { pulseOpacityAtTime } from "../utils/animation-math.js";
 
 /**
  * Shared typing cursor. In deterministic rendering (a sceneTime is present),

@@ -18,7 +18,7 @@ import { ProgressScene } from "./ProgressScene";
 import { QRScene } from "./QRScene";
 import { TerminalScene } from "./TerminalScene";
 import { TextScene } from "./TextScene";
-import { TimelineElementsOverlay } from "../components/TimelineElementsOverlay";
+import { TimelineElementsOverlay } from "@markdown-video/scenes";
 
 /**
  * Routes a scene to the same renderer used for top-level scenes. Split panels

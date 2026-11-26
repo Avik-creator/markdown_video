@@ -3,12 +3,12 @@
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import type { Scene } from "@markdown-video/core";
-import { useTypingEffect } from "../hooks/useTypingEffect";
+import { useTypingEffect } from "@markdown-video/scenes";
 import { animationVariants, textSizeClasses } from "@markdown-video/scenes";
 import { interpolateVariantState } from "@markdown-video/scenes";
 import { staggeredLineProgress } from "@markdown-video/scenes";
 import { textFontFamilyStyles } from "@markdown-video/scenes";
-import { TypingCursor } from "../components/TypingCursor";
+import { TypingCursor } from "@markdown-video/scenes";
 
 import { useAnimation } from "framer-motion";
 import { useEffect, useMemo } from "react";

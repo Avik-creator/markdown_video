@@ -44,6 +44,17 @@ export type { CameraTransform } from "./utils/camera-transform.js";
 // Camera wrapper component applying the deterministic camera transform.
 export { CameraWrapper } from "./components/CameraWrapper.js";
 
+// Frame overlays: particles, callout, presenter, timeline elements and the
+// shared typing cursor. All are pure functions of their props plus sceneTime.
+export { ParticleEffect } from "./components/ParticleEffect.js";
+export { CalloutOverlay } from "./components/CalloutOverlay.js";
+export { PresenterOverlay } from "./components/PresenterOverlay.js";
+export { TimelineElementsOverlay } from "./components/TimelineElementsOverlay.js";
+export { TypingCursor } from "./components/TypingCursor.js";
+
+// Deterministic typing-effect hook shared by typewriter scenes.
+export { useTypingEffect } from "./hooks/useTypingEffect.js";
+
 // Text/code animation and scene transition variant tables.
 export {
   textSizeClasses,

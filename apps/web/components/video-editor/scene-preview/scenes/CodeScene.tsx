@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 import type { Scene } from "@markdown-video/core";
 import { highlightSyntax } from "@markdown-video/scenes";
 import { codeFontFamilyStyles } from "@markdown-video/scenes";
-import { TypingCursor } from "../components/TypingCursor";
+import { TypingCursor } from "@markdown-video/scenes";
 
 function CodeBlock({
   code,

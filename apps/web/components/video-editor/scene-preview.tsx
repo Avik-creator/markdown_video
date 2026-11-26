@@ -29,13 +29,13 @@ import { cn } from "@/lib/utils";
 
 // Import extracted scene components
 import { EmojiScene, SceneRenderer } from "./scene-preview/scenes";
-import { CameraWrapper } from "@markdown-video/scenes";
 import {
+  CameraWrapper,
   ParticleEffect,
   CalloutOverlay,
   PresenterOverlay,
   TimelineElementsOverlay,
-} from "./scene-preview/components";
+} from "@markdown-video/scenes";
 
 // Scene router - routes to appropriate scene component based on scene type
 
