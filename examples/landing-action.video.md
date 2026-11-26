@@ -3,7 +3,7 @@
 !background #f4f0e6
 !code
 typing: false
-fontSize: md
+fontSize: lg
 fontFamily: jetbrains
 width: 1180
 ```yaml
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Avik-creator/markdown_video/action@<pin-me>
+      - uses: Avik-creator/markdown_video/action@<sha>
         with:
           markdown-path: release.md
           output-name: release-demo.mp4

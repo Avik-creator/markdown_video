@@ -37,8 +37,8 @@ animation: slideUp
 !background #171511
 !transition fade
 !text
-$ markdown-video render launch.md -o launch.mp4
-✓ 1280×720 · 24fps · captions written
+$ markdown-video render hero.md -o hero.mp4
+✓ 960×720 · 18fps · captions written
 size: xl
 color: #f4f0e6
 fontFamily: mono
