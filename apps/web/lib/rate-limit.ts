@@ -81,6 +81,45 @@ export const MCP_RATE_LIMIT: RateLimitPolicy = {
   },
 };
 
+/**
+ * Preview rendering is real Chromium CPU work but only captures 3–6 frames.
+ * Ten requests per IP per hour is enough for iterative agent use while making
+ * scripted abuse expensive. Unlike the read-only MCP policy this is fail-closed:
+ * if distributed limiting is unavailable, expensive rendering must stop rather
+ * than silently degrade to process-local or unthrottled behavior.
+ */
+export const MCP_RENDER_PREVIEW_RATE_LIMIT: RateLimitPolicy = {
+  prefix: "markdown-video:mcp:render-preview",
+  limit: 10,
+  window: "1 h",
+  failureMode: "fail-closed",
+};
+
+/**
+ * Video rendering can mean hundreds of screenshots plus x264 encoding (often
+ * 5–30 seconds of CPU), so it receives half the preview allowance. The prefix
+ * is deliberately distinct from preview and general MCP counters.
+ */
+export const MCP_RENDER_VIDEO_RATE_LIMIT: RateLimitPolicy = {
+  prefix: "markdown-video:mcp:render-video",
+  limit: 5,
+  window: "1 h",
+  failureMode: "fail-closed",
+};
+
+/**
+ * Video players commonly issue several range requests for one playback. 120
+ * requests/minute is generous for legitimate playback while still bounding
+ * repeated Redis reads; failures are closed because the object store is the
+ * same Redis dependency and oversized artifacts cost bandwidth.
+ */
+export const RENDERS_READ_RATE_LIMIT: RateLimitPolicy = {
+  prefix: "markdown-video:renders:read",
+  limit: 120,
+  window: "1 m",
+  failureMode: "fail-closed",
+};
+
 const RATE_LIMIT_TIMEOUT_MS = 1_000;
 const RETRY_AFTER_UNAVAILABLE_SECONDS = "30";
 const MAX_IP_HEADER_LENGTH = 128;
@@ -396,4 +435,16 @@ export function enforceProjectWriteRateLimit(request: RateLimitRequestLike) {
 
 export function enforceMcpRateLimit(request: RateLimitRequestLike) {
   return enforceRateLimit(request, MCP_RATE_LIMIT);
+}
+
+export function enforceMcpRenderPreviewRateLimit(request: RateLimitRequestLike) {
+  return enforceRateLimit(request, MCP_RENDER_PREVIEW_RATE_LIMIT);
+}
+
+export function enforceMcpRenderVideoRateLimit(request: RateLimitRequestLike) {
+  return enforceRateLimit(request, MCP_RENDER_VIDEO_RATE_LIMIT);
+}
+
+export function enforceRenderReadRateLimit(request: RateLimitRequestLike) {
+  return enforceRateLimit(request, RENDERS_READ_RATE_LIMIT);
 }

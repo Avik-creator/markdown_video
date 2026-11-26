@@ -33,11 +33,17 @@ vi.mock("@/lib/redis", () => ({
 
 import {
   MCP_RATE_LIMIT,
+  MCP_RENDER_PREVIEW_RATE_LIMIT,
+  MCP_RENDER_VIDEO_RATE_LIMIT,
   PROJECTS_READ_RATE_LIMIT,
   PROJECTS_WRITE_RATE_LIMIT,
+  RENDERS_READ_RATE_LIMIT,
   enforceMcpRateLimit,
+  enforceMcpRenderPreviewRateLimit,
+  enforceMcpRenderVideoRateLimit,
   enforceProjectReadRateLimit,
   enforceProjectWriteRateLimit,
+  enforceRenderReadRateLimit,
   getClientIp,
 } from "../rate-limit";
 
@@ -167,6 +173,37 @@ describe("rate-limit enforcement", () => {
     // The policies must not share a Redis key prefix, or their counters would
     // interfere with each other.
     expect(PROJECTS_READ_RATE_LIMIT.prefix).not.toBe(PROJECTS_WRITE_RATE_LIMIT.prefix);
+  });
+
+  it("documents the expensive render policies as tight, distinct, and fail-closed", async () => {
+    await enforceMcpRenderPreviewRateLimit(request());
+    await enforceMcpRenderVideoRateLimit(request());
+    await enforceRenderReadRateLimit(request());
+
+    expect(MCP_RENDER_PREVIEW_RATE_LIMIT).toMatchObject({
+      limit: 10,
+      window: "1 h",
+      failureMode: "fail-closed",
+    });
+    expect(MCP_RENDER_VIDEO_RATE_LIMIT).toMatchObject({
+      limit: 5,
+      window: "1 h",
+      failureMode: "fail-closed",
+    });
+    expect(RENDERS_READ_RATE_LIMIT).toMatchObject({
+      limit: 120,
+      window: "1 m",
+      failureMode: "fail-closed",
+    });
+    expect(new Set([
+      MCP_RENDER_PREVIEW_RATE_LIMIT.prefix,
+      MCP_RENDER_VIDEO_RATE_LIMIT.prefix,
+      RENDERS_READ_RATE_LIMIT.prefix,
+      MCP_RATE_LIMIT.prefix,
+    ]).size).toBe(4);
+    expect(slidingWindow).toHaveBeenCalledWith(10, "1 h");
+    expect(slidingWindow).toHaveBeenCalledWith(5, "1 h");
+    expect(slidingWindow).toHaveBeenCalledWith(120, "1 m");
   });
 
   it("enforces the write policy for project writes with the client IP", async () => {
