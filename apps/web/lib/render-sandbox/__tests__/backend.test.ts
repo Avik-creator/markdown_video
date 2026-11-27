@@ -26,6 +26,7 @@ const envKeys = [
   "VERCEL_TOKEN",
   "VERCEL_TEAM_ID",
   "VERCEL_PROJECT_ID",
+  "VERCEL",
   "MDV_RENDER_SANDBOX_TEMPLATE",
 ] as const;
 let savedEnv: Record<string, string | undefined> = {};
