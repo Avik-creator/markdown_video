@@ -112,7 +112,7 @@ const initialState = {
   resolutionRevision: 0,
 };
 
-export const useAssetLibrary = create<AssetLibraryState>()((set, get) => ({
+export const useAssetLibrary = create<AssetLibraryState>()((set) => ({
   ...initialState,
 
   refreshAssets: async () => {
