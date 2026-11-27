@@ -13,6 +13,15 @@ export interface Diagnostic {
  * Problems to show in the editor: the same validation the MCP server runs,
  * sorted by line, with document-level problems last.
  */
+export function sortDiagnostics(diagnostics: Diagnostic[]): Diagnostic[] {
+  return [...diagnostics].sort((a, b) => {
+    const la = a.line ?? Number.MAX_SAFE_INTEGER;
+    const lb = b.line ?? Number.MAX_SAFE_INTEGER;
+    if (la !== lb) return la - lb;
+    return a.severity === b.severity ? 0 : a.severity === "error" ? -1 : 1;
+  });
+}
+
 export function getDiagnostics(markdown: string): Diagnostic[] {
   if (markdown.trim() === "") return [];
 
@@ -25,12 +34,7 @@ export function getDiagnostics(markdown: string): Diagnostic[] {
     fix: d.fix,
   }));
 
-  return all.sort((a, b) => {
-    const la = a.line ?? Number.MAX_SAFE_INTEGER;
-    const lb = b.line ?? Number.MAX_SAFE_INTEGER;
-    if (la !== lb) return la - lb;
-    return a.severity === b.severity ? 0 : a.severity === "error" ? -1 : 1;
-  });
+  return sortDiagnostics(all);
 }
 
 /** Problems grouped by line, for the gutter and line tints. */
