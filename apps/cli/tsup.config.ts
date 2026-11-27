@@ -21,5 +21,5 @@ export default defineConfig({
     resolve: true,
   },
   noExternal: ["@markdown-video/core"],
-  external: ["playwright"],
+  external: ["playwright-core"],
 })
