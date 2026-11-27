@@ -81,7 +81,7 @@ function CustomDropdown({
 
       {isOpen && (
         <div className="absolute left-0 right-0 mt-2 z-50 animate-[slideFadeUp_0.2s_ease-out]">
-          <div className="relative group bg-black">
+          <div className="relative group bg-preview-canvas">
             {/* Dot grid background pattern */}
             <div
               className="absolute inset-0 opacity-20"
@@ -104,7 +104,7 @@ function CustomDropdown({
                     "group flex items-center gap-2 w-full",
                     "relative transition-all duration-300 ease-out px-3 py-2",
                     "hover:translate-x-[-2px]",
-                    option.value === value && "bg-zinc-800/50"
+                    option.value === value && "bg-accent-soft"
                   )}
                 >
                   <span className="text-sm font-medium text-white underline decoration-white/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-white relative z-10">

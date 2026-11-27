@@ -86,7 +86,7 @@ export function SyntaxDemo() {
               <pre className="overflow-x-auto font-mono text-[12px] leading-[1.75] text-white/84 sm:text-[12.5px]">
                 {documentExample}
               </pre>
-              <div className="mt-5 grid gap-px overflow-hidden rounded-md border border-white/10 bg-white/10 font-mono text-[10.5px] text-white/62 sm:grid-cols-3">
+              <div className="mt-5 grid gap-px overflow-hidden rounded-md border border-[color:var(--landing-dark-card-border)] bg-[color:var(--landing-dark-card-border)] font-mono text-[10.5px] text-white/62 sm:grid-cols-3">
                 <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">01 parse directives</span>
                 <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">02 rasterize scenes</span>
                 <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">03 encode mp4 + sidecars</span>

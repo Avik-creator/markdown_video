@@ -26,7 +26,7 @@ const categoryColors = {
   tutorial: "text-emerald-400 bg-info-soft",
   demo: "text-info bg-info-soft",
   outro: "text-warning bg-warning-soft",
-  custom: "text-purple-400 bg-purple-500/10",
+  custom: "text-accent-deep bg-accent-soft",
 }
 
 function TemplateCard({ template, onSelect }: { template: Template; onSelect: () => void }) {
@@ -34,9 +34,9 @@ function TemplateCard({ template, onSelect }: { template: Template; onSelect: ()
   const colorClass = categoryColors[template.category]
 
   return (
-    <div className="bg-[#1a1a24] rounded-lg border border-border overflow-hidden hover:border-white/20 transition-colors group">
+    <div className="bg-panel-raised rounded-lg border border-border overflow-hidden hover:border-line-strong transition-colors group">
       {/* Preview gradient */}
-      <div className="h-20 bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden">
+      <div className="h-20 bg-preview-canvas relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
           <Icon className={cn("w-8 h-8 opacity-30", colorClass.split(" ")[0])} />
         </div>
@@ -52,7 +52,7 @@ function TemplateCard({ template, onSelect }: { template: Template; onSelect: ()
         <Button
           size="sm"
           onClick={onSelect}
-          className="w-full gap-2 bg-white/5 hover:bg-surface text-foreground border border-border"
+          className="w-full gap-2 bg-transparent hover:bg-surface text-foreground border border-border"
         >
           <Play className="w-3 h-3" />
           Use Template
@@ -76,7 +76,7 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
   }
 
   return (
-    <div className="w-96 bg-[#0f0f14] border-l border-border flex flex-col h-full">
+    <div className="w-96 bg-panel border-l border-border flex flex-col h-full">
       <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-accent" />

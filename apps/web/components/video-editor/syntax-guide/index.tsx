@@ -31,13 +31,13 @@ export function SyntaxGuide({ onClose }: SyntaxGuideProps) {
 
       <Tabs defaultValue="basics" className="flex-1 flex flex-col min-h-0">
         <TabsList className="mx-4 mt-3 bg-surface dark:bg-surface p-1 shrink-0 border border-border dark:border-border">
-          <TabsTrigger value="basics" className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:dark:bg-neutral-800 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white">
+          <TabsTrigger value="basics" className="text-xs gap-1.5 data-[state=active]:bg-panel-raised data-[state=active]:dark:bg-panel-raised data-[state=active]:text-foreground data-[state=active]:dark:text-foreground">
             <Type className="w-3.5 h-3.5" /> Basics
           </TabsTrigger>
-          <TabsTrigger value="advanced" className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:dark:bg-neutral-800 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white">
+          <TabsTrigger value="advanced" className="text-xs gap-1.5 data-[state=active]:bg-panel-raised data-[state=active]:dark:bg-panel-raised data-[state=active]:text-foreground data-[state=active]:dark:text-foreground">
             <Code className="w-3.5 h-3.5" /> Advanced
           </TabsTrigger>
-          <TabsTrigger value="effects" className="text-xs gap-1.5 data-[state=active]:bg-white data-[state=active]:dark:bg-neutral-800 data-[state=active]:text-gray-900 data-[state=active]:dark:text-white">
+          <TabsTrigger value="effects" className="text-xs gap-1.5 data-[state=active]:bg-panel-raised data-[state=active]:dark:bg-panel-raised data-[state=active]:text-foreground data-[state=active]:dark:text-foreground">
             <Wand2 className="w-3.5 h-3.5" /> Effects
           </TabsTrigger>
         </TabsList>

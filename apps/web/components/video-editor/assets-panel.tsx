@@ -309,7 +309,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
   return (
     <div
       className={cn(
-        "relative flex h-full w-96 flex-col border-l border-border bg-panel dark:border-border dark:bg-[#0f0f14]",
+        "relative flex h-full w-96 flex-col border-l border-border bg-panel dark:border-border dark:bg-panel",
         isDragging && "ring-2 ring-inset ring-info"
       )}
       onDragEnter={(event) => {

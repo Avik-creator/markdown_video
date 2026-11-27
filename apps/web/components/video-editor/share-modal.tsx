@@ -248,11 +248,11 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
         <Tabs defaultValue="link" className="mt-4">
           <TabsList className="bg-surface dark:bg-surface w-full">
-            <TabsTrigger value="link" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-neutral-100">
+            <TabsTrigger value="link" className="flex-1 data-[state=active]:bg-panel-raised dark:data-[state=active]:bg-panel-raised data-[state=active]:text-foreground dark:data-[state=active]:text-foreground">
               <Link className="w-4 h-4 mr-2" aria-hidden="true" />
               Share Link
             </TabsTrigger>
-            <TabsTrigger value="embed" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-neutral-100">
+            <TabsTrigger value="embed" className="flex-1 data-[state=active]:bg-panel-raised dark:data-[state=active]:bg-panel-raised data-[state=active]:text-foreground dark:data-[state=active]:text-foreground">
               <Code className="w-4 h-4 mr-2" aria-hidden="true" />
               Embed Code
             </TabsTrigger>
