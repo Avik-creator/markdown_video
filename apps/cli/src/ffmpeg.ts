@@ -11,6 +11,7 @@ import {
 } from "@markdown-video/core"
 
 import { RenderError } from "./errors.js"
+import { ffmpegInstallInstructions } from "./ffmpeg-check.js"
 
 const MAX_FFMPEG_STDERR_CHARS = 64 * 1024
 
@@ -165,7 +166,7 @@ export function startFfmpeg(
     }
     if (spawnError) {
       throw new RenderError(
-        `Failed to start ffmpeg executable "${executable}": ${spawnError.message}`,
+        `Failed to start ffmpeg executable "${executable}": ${spawnError.message}\n\n${ffmpegInstallInstructions()}`,
         { cause: spawnError },
       )
     }
@@ -196,7 +197,7 @@ export function startFfmpeg(
       const result = await completion
       if (result.spawnError) {
         throw new RenderError(
-          `Failed to start ffmpeg executable "${executable}": ${result.spawnError.message}`,
+          `Failed to start ffmpeg executable "${executable}": ${result.spawnError.message}\n\n${ffmpegInstallInstructions()}`,
           { cause: result.spawnError },
         )
       }

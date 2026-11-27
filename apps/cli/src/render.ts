@@ -15,6 +15,7 @@ import {
 } from "@markdown-video/core"
 
 import { RenderError, throwIfAborted, UsageError } from "./errors.js"
+import { assertFfmpegReady } from "./ffmpeg-check.js"
 import { buildFfmpegArgs, startFfmpeg, type FFmpegProcess } from "./ffmpeg.js"
 import { prepareMusicInput } from "./music.js"
 import { resolveOutputPath } from "./paths.js"
@@ -437,6 +438,7 @@ export async function renderVideo(
       overwrite: settings.overwrite,
       ...(preparedMusic ? { music: { ...music!, inputPath: preparedMusic.inputPath } } : {}),
     })
+    await assertFfmpegReady(executable)
   } catch (error) {
     if (mediaTempDir) await rm(mediaTempDir, { recursive: true, force: true })
     throw error
