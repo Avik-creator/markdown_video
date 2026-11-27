@@ -100,7 +100,7 @@ Supported runner: Linux (`ubuntu-latest` recommended). The action:
 4. caches Playwright Chromium by OS/architecture/Playwright version;
 5. caches compiled `dist/` output by a hash of the renderer source;
 6. installs only the `markdown-video...` filtered workspace dependency closure (core, scenes, render page, and CLI), not the web app or worker;
-7. verifies that Chromium actually launches, falling back to `playwright install-deps chromium` only when necessary;
+7. verifies that Chromium actually launches, falling back to `playwright-core install-deps chromium` only when necessary;
 8. uses system ffmpeg/ffprobe, installing Debian/Ubuntu `ffmpeg` with apt only when either binary is missing.
 
 The CLI intentionally does not vendor ffmpeg. `ffmpeg-static` can be GPL build
@@ -195,27 +195,27 @@ issue/PR comments.
 
 The action scripts already treat the renderer workspace as a discovered
 `renderer-root` instead of hard-coding this repository checkout, so extraction
-is intended to be mechanical once the CLI is publishable:
+is intended to be mechanical now that the CLI packaging work exists:
 
-1. Make the CLI publishable. Today `markdown-video` is private and depends on
-   private workspace packages. Either publish `@markdown-video/core`,
-   `@markdown-video/scenes`, and `@markdown-video/render-page` with their
-   `dist/` artifacts, or change the CLI build to bundle/vendor that runtime and
-   render-page payload into the `markdown-video` package.
-2. Publish `markdown-video` to npm with a provenance-enabled release workflow.
-3. Create `markdown-video/render-action`; copy this `action/` directory to the
+The CLI packaging prerequisite is now solved in this repository: the npm
+artifact bundles the core runtime and the complete render-page/font payload,
+and `.github/workflows/publish-cli.yml` is prepared for provenance-enabled npm
+trusted publishing after the owner's first manual publish and one-time npmjs
+setup (see `apps/cli/PUBLISHING.md`). Extraction can therefore proceed as:
+
+1. Create `markdown-video/render-action`; copy this `action/` directory to the
    repository root as `action.yml`, `README.md`, and `scripts/`.
-4. Replace the source-build prepare/install/build steps with a small npm CLI
+2. Replace the source-build prepare/install/build steps with a small npm CLI
    installation step (or keep a source-build fallback input while iterating).
    Keep `render.sh`, `upload-release-asset.sh`, the ffmpeg/Chromium checks, and
    the input/output contract unchanged.
-5. Alternatively or additionally, publish a purpose-built CLI image to GHCR and
+3. Alternatively or additionally, publish a purpose-built CLI image to GHCR and
    change the extracted action to `runs.using: docker` with
    `image: docker://ghcr.io/<owner>/markdown-video-render:<immutable-tag>`. Do
    not reuse the 2.14 GB render-worker image for this; build a smaller CLI-only
    image. Public image availability is required for normal Docker actions.
-6. Tag `v1` and document full-SHA pinning for consumers.
+4. Tag `v1` and document full-SHA pinning for consumers.
 
-Until those publishing credentials/package decisions exist, the in-repo
-composite action is the canonical implementation and this repository's own
-release/preview workflows are the dogfood harness.
+Until extraction happens, the in-repo composite action is the canonical
+implementation and this repository's own release/preview workflows are the
+dogfood harness.

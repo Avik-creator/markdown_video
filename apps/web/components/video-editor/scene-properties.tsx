@@ -1,537 +1,823 @@
 "use client";
 
-import { useVideoStore } from "@/lib/use-video-store";
-import { useMemo, useCallback } from "react";
-import { Label } from "@components/ui/label";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  Layers,
-  Type,
-  Code,
-  ImageIcon,
+  BarChart3,
   Clock,
+  Code,
+  Copy,
+  ImageIcon,
+  Layers,
+  MousePointerClick,
   Palette,
+  RotateCcw,
+  Smartphone,
   Sparkles,
   Terminal,
-  BarChart3,
-  Smartphone,
-  MousePointerClick,
+  Trash2,
+  Type,
 } from "lucide-react";
+import {
+  inspectSceneDirective,
+  type DirectiveEditableScalar,
+  type DirectiveValueSchema,
+  type InspectedDirectiveValue,
+  type Scene,
+  type SceneDirectiveInspection,
+  type SceneType,
+} from "@markdown-video/core";
+import { useVideoStore } from "@/lib/use-video-store";
+import { applyDirectiveEditInEditor } from "@/lib/editor/apply-directive-edit";
+import { rewriteSceneOperation, type SceneOperation } from "@/lib/editor/scene-operations";
+import { flushPendingEditorText } from "@/lib/editor/codemirror/store-sync";
+import { Label } from "@components/ui/label";
 import { cn } from "@/lib/utils";
-import type { SourceRange } from "@markdown-video/core";
 
-interface ClickablePropertyProps {
-  children: React.ReactNode;
-  sourceRange?: SourceRange;
-  className?: string;
-  /** Property name used in the accessible label, e.g. "Duration". */
-  label?: string;
+const SCENE_TYPE_TO_DIRECTIVE: Partial<Record<SceneType, string>> = {
+  text: "text",
+  code: "code",
+  image: "image",
+  split: "layout",
+  terminal: "terminal",
+  diff: "diff",
+  chart: "chart",
+  mockup: "mockup",
+  qr: "qr",
+  countdown: "countdown",
+  progress: "progress",
+  emoji: "emoji",
+};
+
+
+// Positional scene metadata directives use their required first token to mean
+// "this directive exists". The core rewrite engine therefore treats clearing
+// that token as removing the whole metadata directive, unlike content-bearing
+// positional directives where removal would eat user content.
+const REMOVABLE_REQUIRED_POSITIONAL_DIRECTIVES = new Set([
+  "duration",
+  "background",
+  "transition",
+  "chapter",
+  "locale",
+]);
+
+
+// Schema names are intentionally terse positional tokens ("seconds", "code").
+// These are presentation labels only; the control types, options, defaults and
+// validation still come entirely from the core directive schema.
+const SCENE_VALUE_DISPLAY_LABELS: Record<string, string> = {
+  "duration.seconds": "Scene duration",
+  "background.color": "Background",
+  "transition.type": "Transition",
+  "transition.duration": "Transition duration",
+  "chapter.title": "Chapter title",
+  "locale.code": "Locale",
+};
+
+const TYPE_ICONS: Record<string, typeof Layers> = {
+  text: Type,
+  code: Code,
+  image: ImageIcon,
+  video: Layers,
+  split: Layers,
+  terminal: Terminal,
+  chart: BarChart3,
+  mockup: Smartphone,
+  diff: Code,
+};
+
+function titleCase(name: string): string {
+  return name
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .replace(/^./, (char) => char.toUpperCase());
 }
 
-function ClickableProperty({ children, sourceRange, className, label }: ClickablePropertyProps) {
-  const setHighlightRange = useVideoStore((state) => state.setHighlightRange);
-  const highlightRange = useVideoStore((state) => state.highlightRange);
+function numericDraft(rawValue: string | undefined): string {
+  if (!rawValue) return "";
+  return rawValue.replace(/s$/i, "");
+}
 
-  const isHighlighted = highlightRange && sourceRange &&
-    highlightRange.startLine === sourceRange.startLine &&
-    highlightRange.endLine === sourceRange.endLine;
+function hexForColorInput(value: string | undefined): string | null {
+  if (!value) return null;
+  const hex = value.trim();
+  if (/^#[0-9a-f]{6}$/i.test(hex)) return hex;
+  if (/^#[0-9a-f]{3}$/i.test(hex)) {
+    return `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}`;
+  }
+  return null;
+}
 
-  const handleActivate = useCallback(() => {
-    if (sourceRange) {
-      setHighlightRange(sourceRange);
+function validateNumberDraft(
+  draft: string,
+  schema: DirectiveValueSchema
+): { value?: number; error?: string } {
+  if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(draft.trim())) {
+    return { error: "Enter a number" };
+  }
+  const value = Number.parseFloat(draft);
+  if (!Number.isFinite(value)) return { error: "Enter a finite number" };
+  if (schema.min !== undefined) {
+    const invalid = schema.exclusiveMin ? value <= schema.min : value < schema.min;
+    if (invalid) {
+      return {
+        error: `Must be ${schema.exclusiveMin ? "greater than" : "at least"} ${schema.min}`,
+      };
     }
-  }, [sourceRange, setHighlightRange]);
+  }
+  if (schema.max !== undefined && value > schema.max) {
+    return { error: `Must be at most ${schema.max}` };
+  }
+  // The editor UI additionally keeps scene durations in a sane authoring
+  // range. The document schema intentionally remains permissive for CLI users.
+  if (schema.name === "seconds" && schema.unit === "seconds" && value > 600) {
+    return { error: "Scene duration must be at most 600 seconds" };
+  }
+  return { value };
+}
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        // Keep the global shortcut handler (Space toggles playback) quiet
-        // while a property control has focus.
-        e.stopPropagation();
-        handleActivate();
-      }
-    },
-    [handleActivate]
+function controlValueText(inspection: InspectedDirectiveValue): string {
+  if (!inspection.present || inspection.rawValue === undefined) return "";
+  return inspection.schema.type === "number"
+    ? numericDraft(inspection.rawValue)
+    : inspection.rawValue;
+}
+
+interface ControlShellProps {
+  label: string;
+  accessibilityLabel: string;
+  inspection: InspectedDirectiveValue;
+  onJump: (line?: number) => void;
+  onClear?: () => void;
+  children: ReactNode;
+  error?: string;
+  hint?: string;
+}
+
+function ControlShell({
+  label,
+  accessibilityLabel,
+  inspection,
+  onJump,
+  onClear,
+  children,
+  error,
+  hint,
+}: ControlShellProps) {
+  return (
+    <div className="space-y-1.5" data-property-control={label}>
+      <div className="flex items-center gap-1.5">
+        <Label className="flex-1 text-xs font-medium text-gray-600 dark:text-neutral-400">
+          {label}
+        </Label>
+        {inspection.line && (
+          <button
+            type="button"
+            aria-label={`Jump to ${accessibilityLabel} in markdown source`}
+            title={`Jump to line ${inspection.line}`}
+            onClick={() => onJump(inspection.line)}
+            className="rounded p-1 text-gray-400 transition-colors hover:bg-pink-50 hover:text-pink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-pink-950/40 dark:hover:text-pink-400"
+          >
+            <MousePointerClick className="h-3.5 w-3.5" />
+          </button>
+        )}
+        {inspection.present && onClear && (
+          <button
+            type="button"
+            aria-label={`Reset ${accessibilityLabel} to default`}
+            title="Remove the explicit value"
+            onClick={onClear}
+            className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        )}
+      </div>
+      {children}
+      {error ? (
+        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+      ) : hint ? (
+        <p className="text-xs text-gray-400 dark:text-neutral-500">{hint}</p>
+      ) : null}
+    </div>
+  );
+}
+
+interface ValueControlProps {
+  directive: string;
+  inspection: InspectedDirectiveValue;
+  onCommit: (
+    directive: string,
+    valueName: string,
+    value: DirectiveEditableScalar | null,
+    kind: "property" | "positional"
+  ) => boolean;
+  onJump: (line?: number) => void;
+  disabledReason?: string;
+}
+
+function ValueControl({
+  directive,
+  inspection,
+  onCommit,
+  onJump,
+  disabledReason,
+}: ValueControlProps) {
+  const schema = inspection.schema;
+  const schemaLabel = titleCase(schema.name);
+  const label = SCENE_VALUE_DISPLAY_LABELS[`${directive}.${schema.name}`] ?? schemaLabel;
+  const accessibilityLabel = `${titleCase(directive)} ${schemaLabel}`;
+  const [draft, setDraft] = useState(() => controlValueText(inspection));
+  const [focused, setFocused] = useState(false);
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  const commit = useCallback(
+    (value: DirectiveEditableScalar | null) =>
+      onCommit(directive, inspection.name, value, inspection.kind),
+    [directive, inspection.kind, inspection.name, onCommit]
   );
 
-  if (!sourceRange) {
-    return <div className={className}>{children}</div>;
+  // Text and number fields feel live, but they must not create one undo entry
+  // per keystroke. Coalesce in-progress scalar typing briefly; blur/reset are
+  // discrete action boundaries and flush the latest value synchronously.
+  const commitTimerRef = useRef<number | null>(null);
+  const cancelScheduledCommit = useCallback(() => {
+    if (commitTimerRef.current !== null) {
+      window.clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => cancelScheduledCommit, [cancelScheduledCommit]);
+  const scheduleCommit = useCallback(
+    (value: DirectiveEditableScalar | null) => {
+      cancelScheduledCommit();
+      commitTimerRef.current = window.setTimeout(() => {
+        commitTimerRef.current = null;
+        commit(value);
+      }, 350);
+    },
+    [cancelScheduledCommit, commit]
+  );
+  const flushCommit = useCallback(
+    (value: DirectiveEditableScalar | null) => {
+      cancelScheduledCommit();
+      commit(value);
+    },
+    [cancelScheduledCommit, commit]
+  );
+
+  const clear = useCallback(() => {
+    setDraft("");
+    setDraftError(null);
+    flushCommit(null);
+  }, [flushCommit]);
+
+  const canClear =
+    !schema.required ||
+    (inspection.kind === "positional" && REMOVABLE_REQUIRED_POSITIONAL_DIRECTIVES.has(directive));
+  const disabled = Boolean(disabledReason);
+  const inputClass = cn(
+    "w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-sm outline-none transition-colors",
+    "placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-100",
+    "dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-pink-700 dark:focus:ring-pink-950/60",
+    disabled && "cursor-not-allowed opacity-55"
+  );
+
+  if (schema.type === "array" || schema.type === "object") {
+    return (
+      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump}>
+        <div className="rounded-md border border-dashed border-gray-200 px-2.5 py-2 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+          Structured value — edit in markdown
+        </div>
+      </ControlShell>
+    );
   }
 
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={
-        label
-          ? `Jump to ${label} in markdown source`
-          : "Jump to property in markdown source"
-      }
-      onClick={handleActivate}
-      onKeyDown={handleKeyDown}
-      className={cn(
-        "cursor-pointer transition-all duration-200 rounded-lg relative group",
-        "hover:ring-2 hover:ring-pink-500/50 hover:bg-pink-500/5",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500/70 focus-visible:bg-pink-500/5",
-        isHighlighted && "ring-2 ring-pink-500 bg-pink-500/10",
-        className
-      )}
-    >
-      {children}
-      <div className={cn(
-        "absolute -right-1 -top-1 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200",
-        isHighlighted && "opacity-100"
-      )}>
-        <div className="bg-pink-500 rounded-full p-0.5">
-          <MousePointerClick className="w-2.5 h-2.5 text-white" />
+  if (schema.type === "enum") {
+    const options = schema.values ?? [];
+    const raw = inspection.present ? String(inspection.value ?? inspection.rawValue ?? "") : "";
+    const selectValue = inspection.present && raw ? raw : "__default";
+    return (
+      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={canClear ? clear : undefined}>
+        <select
+          aria-label={accessibilityLabel}
+          value={selectValue}
+          disabled={disabled}
+          onChange={(event) => {
+            const next = event.target.value;
+            commit(next === "__default" ? null : next);
+          }}
+          className={inputClass}
+        >
+          <option value="__default">
+            {schema.default !== undefined ? `Default (${String(schema.default)})` : "Not set"}
+          </option>
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+          {inspection.present && !options.includes(raw) && raw && (
+            <option value={raw}>{raw} (invalid)</option>
+          )}
+        </select>
+        {disabledReason && <p className="mt-1 text-xs text-gray-400 dark:text-neutral-500">{disabledReason}</p>}
+      </ControlShell>
+    );
+  }
+
+  if (schema.type === "boolean") {
+    const effective =
+      typeof inspection.value === "boolean"
+        ? inspection.value
+        : typeof schema.default === "boolean"
+          ? schema.default
+          : false;
+    return (
+      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={canClear ? clear : undefined}>
+        <label className="flex min-h-9 cursor-pointer items-center justify-between rounded-md border border-gray-200 bg-white px-2.5 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
+          <span className="text-sm text-gray-700 dark:text-neutral-300">
+            {effective ? "Enabled" : "Disabled"}
+            {!inspection.present && (
+              <span className="ml-2 text-xs text-gray-400 dark:text-neutral-500">default</span>
+            )}
+          </span>
+          <input
+            type="checkbox"
+            aria-label={accessibilityLabel}
+            checked={effective}
+            disabled={disabled}
+            onChange={(event) => commit(event.target.checked)}
+            className="h-4 w-4 accent-pink-500"
+          />
+        </label>
+      </ControlShell>
+    );
+  }
+
+  if (schema.type === "number") {
+    const external = controlValueText(inspection);
+    const shown = focused ? draft : external;
+    return (
+      <ControlShell
+        label={label}
+        accessibilityLabel={accessibilityLabel}
+        inspection={inspection}
+        onJump={onJump}
+        onClear={canClear ? clear : undefined}
+        error={focused ? draftError ?? undefined : undefined}
+        hint={!focused && !inspection.present && schema.default !== undefined ? `Default: ${schema.default}` : undefined}
+      >
+        <div className="relative">
+          <input
+            type="number"
+            inputMode="decimal"
+            aria-label={accessibilityLabel}
+            value={shown}
+            disabled={disabled}
+            min={schema.min}
+            max={schema.max}
+            step={schema.unit === "seconds" ? 0.1 : 1}
+            placeholder={schema.default !== undefined ? String(schema.default) : ""}
+            onFocus={() => {
+              setFocused(true);
+              setDraft(external);
+              setDraftError(null);
+            }}
+            onBlur={() => {
+              if (!disabled) {
+                if (draft.trim() === "" && !schema.required) {
+                  flushCommit(null);
+                } else {
+                  const parsed = validateNumberDraft(draft, schema);
+                  if (!parsed.error && parsed.value !== undefined) {
+                    flushCommit(parsed.value);
+                  }
+                }
+              }
+              setFocused(false);
+              setDraftError(null);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
+            onChange={(event) => {
+              const next = event.target.value;
+              setDraft(next);
+              cancelScheduledCommit();
+              if (disabled || next.trim() === "") {
+                setDraftError(null);
+                return;
+              }
+              const parsed = validateNumberDraft(next, schema);
+              if (parsed.error || parsed.value === undefined) {
+                setDraftError(parsed.error ?? "Invalid number");
+                return;
+              }
+              setDraftError(null);
+              scheduleCommit(parsed.value);
+            }}
+            className={cn(inputClass, schema.unit === "seconds" && "pr-8")}
+          />
+          {schema.unit === "seconds" && (
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-neutral-500">
+              s
+            </span>
+          )}
         </div>
+        {disabledReason && <p className="mt-1 text-xs text-gray-400 dark:text-neutral-500">{disabledReason}</p>}
+      </ControlShell>
+    );
+  }
+
+  // string/color/url share the same validated single-line text control; color
+  // additionally gets a native swatch when the authored value is hex.
+  const external = controlValueText(inspection);
+  const shown = focused ? draft : external;
+  const hex = schema.type === "color" ? hexForColorInput(shown) : null;
+  return (
+    <ControlShell
+      label={label}
+      accessibilityLabel={accessibilityLabel}
+      inspection={inspection}
+      onJump={onJump}
+      onClear={canClear ? clear : undefined}
+      error={focused ? draftError ?? undefined : undefined}
+      hint={!focused && !inspection.present && schema.default !== undefined ? `Default: ${schema.default}` : undefined}
+    >
+      <div className="flex items-center gap-2">
+        {schema.type === "color" && (
+          <input
+            type="color"
+            aria-label={`${accessibilityLabel} picker`}
+            value={hex ?? "#000000"}
+            disabled={disabled || (!hex && shown.trim() !== "")}
+            onChange={(event) => {
+              setDraft(event.target.value);
+              commit(event.target.value);
+            }}
+            className="h-9 w-10 shrink-0 cursor-pointer rounded-md border border-gray-200 bg-white p-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-800 dark:bg-neutral-900"
+          />
+        )}
+        <input
+          type="text"
+          aria-label={accessibilityLabel}
+          value={shown}
+          disabled={disabled}
+          placeholder={schema.default !== undefined ? String(schema.default) : schema.description}
+          onFocus={() => {
+            setFocused(true);
+            setDraft(external);
+            setDraftError(null);
+          }}
+          onBlur={() => {
+            if (!disabled) {
+              if (draft.trim() === "" && !schema.required) {
+                flushCommit(null);
+              } else if (!/[\r\n]/.test(draft) && draft.trim() !== "") {
+                flushCommit(draft);
+              }
+            }
+            setFocused(false);
+            setDraftError(null);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
+          onChange={(event) => {
+            const next = event.target.value;
+            setDraft(next);
+            cancelScheduledCommit();
+            if (disabled) return;
+            if (next.trim() === "") {
+              setDraftError(null);
+              return;
+            }
+            if (/[\r\n]/.test(next)) {
+              setDraftError("Value must stay on one line");
+              return;
+            }
+            setDraftError(null);
+            scheduleCommit(next);
+          }}
+          className={inputClass}
+        />
       </div>
-    </div>
+      {disabledReason && <p className="mt-1 text-xs text-gray-400 dark:text-neutral-500">{disabledReason}</p>}
+    </ControlShell>
+  );
+}
+
+function inspectionValue(
+  inspection: SceneDirectiveInspection | null,
+  kind: "property" | "positional",
+  name: string
+): InspectedDirectiveValue | undefined {
+  return (kind === "property" ? inspection?.properties : inspection?.positional)?.find(
+    (value) => value.name === name
+  );
+}
+
+function useCurrentSceneSelection() {
+  const scenes = useVideoStore((state) => state.scenes);
+  const currentTime = useVideoStore((state) => state.currentTime);
+  // This scan is tiny (one number per scene), and keeping it unmemoized lets
+  // the React Compiler own render optimization instead of fighting a manual
+  // object-shaped useMemo.
+  let accumulated = 0;
+  for (let index = 0; index < scenes.length; index++) {
+    if (currentTime >= accumulated && currentTime < accumulated + scenes[index].duration) {
+      return { scene: scenes[index], sceneIndex: index };
+    }
+    accumulated += scenes[index].duration;
+  }
+  const fallbackIndex = Math.max(0, scenes.length - 1);
+  return scenes.length > 0
+    ? { scene: scenes[fallbackIndex], sceneIndex: fallbackIndex }
+    : { scene: null, sceneIndex: -1 };
+}
+
+function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneIndex: number }) {
+  const markdown = useVideoStore((state) => state.markdown);
+  const scenes = useVideoStore((state) => state.scenes);
+  const setHighlightRange = useVideoStore((state) => state.setHighlightRange);
+
+  const contentDirective = SCENE_TYPE_TO_DIRECTIVE[scene.type];
+  const inspections = useMemo(
+    () => ({
+      duration: inspectSceneDirective(markdown, sceneIndex, "duration"),
+      background: inspectSceneDirective(markdown, sceneIndex, "background"),
+      transition: inspectSceneDirective(markdown, sceneIndex, "transition"),
+      chapter: inspectSceneDirective(markdown, sceneIndex, "chapter"),
+      locale: inspectSceneDirective(markdown, sceneIndex, "locale"),
+      content: contentDirective
+        ? inspectSceneDirective(markdown, sceneIndex, contentDirective)
+        : null,
+      particles: inspectSceneDirective(markdown, sceneIndex, "particles"),
+      presenter: inspectSceneDirective(markdown, sceneIndex, "presenter"),
+      callout: inspectSceneDirective(markdown, sceneIndex, "callout"),
+    }),
+    [markdown, sceneIndex, contentDirective]
+  );
+
+  const commit = useCallback(
+    (
+      directive: string,
+      valueName: string,
+      value: DirectiveEditableScalar | null,
+      kind: "property" | "positional"
+    ) => {
+      return applyDirectiveEditInEditor({
+        sceneIndex,
+        directive,
+        valueName,
+        value,
+        kind,
+      }).ok;
+    },
+    [sceneIndex]
+  );
+
+  const jump = useCallback(
+    (line?: number) => {
+      if (!line) return;
+      setHighlightRange({ startLine: line, endLine: line });
+    },
+    [setHighlightRange]
+  );
+
+  const applySceneOperation = useCallback(
+    (operation: SceneOperation) => {
+      flushPendingEditorText();
+      const before = useVideoStore.getState();
+      const ranges = before.scenes.map((item) => item.sourceMap?.scene);
+      const rewritten = rewriteSceneOperation(before.markdown, ranges, sceneIndex, operation);
+      if (rewritten === null) {
+        console.warn(`[markdown-video] Scene ${operation} skipped: inconsistent scene source ranges`);
+        return false;
+      }
+
+      const sceneStart = before.scenes
+        .slice(0, sceneIndex)
+        .reduce((total, item) => total + item.duration, 0);
+      const duplicatedSceneEnd = sceneStart + (before.scenes[sceneIndex]?.duration ?? 0);
+      before.setMarkdown(rewritten);
+
+      const after = useVideoStore.getState();
+      if (operation === "duplicate") {
+        // Put playback and the properties panel on the new copy so the action
+        // is visible immediately rather than only as a markdown diff.
+        after.seekTo(Math.min(duplicatedSceneEnd, after.totalDuration));
+      } else {
+        after.seekTo(Math.min(sceneStart, after.totalDuration));
+      }
+      return true;
+    },
+    [sceneIndex]
+  );
+
+  const TypeIcon = TYPE_ICONS[scene.type] || Layers;
+  const contentSchema = inspections.content;
+  const transitionPresent = inspections.transition?.present === true;
+  const effectInspections = [inspections.particles, inspections.presenter, inspections.callout].filter(
+    (inspection): inspection is SceneDirectiveInspection => Boolean(inspection?.present)
+  );
+
+  return (
+    <aside className="flex h-full w-80 flex-col border-l border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="shrink-0 border-b border-gray-200 p-4 dark:border-neutral-800">
+        <h3 className="text-sm font-medium text-gray-900 dark:text-neutral-100">Scene Properties</h3>
+        <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400">
+          <MousePointerClick className="h-3 w-3 text-pink-500 dark:text-pink-400" />
+          Edits write markdown directly
+        </p>
+      </div>
+
+      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
+        <section className="space-y-4">
+          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-900/70">
+            <TypeIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium capitalize text-gray-900 dark:text-neutral-100">
+                {scene.type} scene
+              </div>
+              <div className="text-xs text-gray-500 dark:text-neutral-400">
+                Scene {sceneIndex + 1} of {scenes.length}
+              </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Duplicate scene"
+                title="Duplicate scene (undoable)"
+                onClick={() => applySceneOperation("duplicate")}
+                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Delete scene"
+                title="Delete scene (undoable)"
+                onClick={() => applySceneOperation("delete")}
+                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-400">
+              <Clock className="h-3.5 w-3.5" /> Scene
+            </div>
+            {inspectionValue(inspections.duration, "positional", "seconds") && (
+              <ValueControl
+                directive="duration"
+                inspection={inspectionValue(inspections.duration, "positional", "seconds")!}
+                onCommit={commit}
+                onJump={jump}
+              />
+            )}
+            {inspectionValue(inspections.background, "positional", "color") && (
+              <ValueControl
+                directive="background"
+                inspection={inspectionValue(inspections.background, "positional", "color")!}
+                onCommit={commit}
+                onJump={jump}
+              />
+            )}
+            {inspectionValue(inspections.transition, "positional", "type") && (
+              <ValueControl
+                directive="transition"
+                inspection={inspectionValue(inspections.transition, "positional", "type")!}
+                onCommit={commit}
+                onJump={jump}
+              />
+            )}
+            {inspectionValue(inspections.transition, "positional", "duration") && (
+              <ValueControl
+                directive="transition"
+                inspection={inspectionValue(inspections.transition, "positional", "duration")!}
+                onCommit={commit}
+                onJump={jump}
+                disabledReason={transitionPresent ? undefined : "Set a transition type first"}
+              />
+            )}
+            {inspectionValue(inspections.chapter, "positional", "title") && (
+              <ValueControl
+                directive="chapter"
+                inspection={inspectionValue(inspections.chapter, "positional", "title")!}
+                onCommit={commit}
+                onJump={jump}
+              />
+            )}
+            {inspectionValue(inspections.locale, "positional", "code") && (
+              <ValueControl
+                directive="locale"
+                inspection={inspectionValue(inspections.locale, "positional", "code")!}
+                onCommit={commit}
+                onJump={jump}
+              />
+            )}
+          </div>
+        </section>
+
+        {contentSchema && (
+          <section className="space-y-4 border-t border-gray-200 pt-4 dark:border-neutral-800">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-400">
+              <Palette className="h-3.5 w-3.5" /> {titleCase(contentSchema.directiveName)} settings
+            </div>
+            {contentSchema.positional.map((inspection) => (
+              <ValueControl
+                key={`positional-${inspection.name}`}
+                directive={contentSchema.directiveName}
+                inspection={inspection}
+                onCommit={commit}
+                onJump={jump}
+              />
+            ))}
+            {contentSchema.properties.map((inspection) => (
+              <ValueControl
+                key={`property-${inspection.name}`}
+                directive={contentSchema.directiveName}
+                inspection={inspection}
+                onCommit={commit}
+                onJump={jump}
+              />
+            ))}
+            {scene.type === "split" && (
+              <p className="rounded-md bg-blue-50 px-2.5 py-2 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
+                Nested split-panel content remains markdown-edited; scene-level layout properties are editable here.
+              </p>
+            )}
+          </section>
+        )}
+
+        {effectInspections.length > 0 && (
+          <section className="space-y-4 border-t border-gray-200 pt-4 dark:border-neutral-800">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-400">
+              <Sparkles className="h-3.5 w-3.5" /> Effects
+            </div>
+            {effectInspections.map((effect) => (
+              <div key={effect.directiveName} className="space-y-4 rounded-lg border border-gray-100 p-3 dark:border-neutral-900">
+                <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-500">
+                  {titleCase(effect.directiveName)}
+                </div>
+                {effect.positional.map((inspection) => (
+                  <ValueControl
+                    key={`${effect.directiveName}-positional-${inspection.name}`}
+                    directive={effect.directiveName}
+                    inspection={inspection}
+                    onCommit={commit}
+                    onJump={jump}
+                  />
+                ))}
+                {effect.properties.map((inspection) => (
+                  <ValueControl
+                    key={`${effect.directiveName}-property-${inspection.name}`}
+                    directive={effect.directiveName}
+                    inspection={inspection}
+                    onCommit={commit}
+                    onJump={jump}
+                  />
+                ))}
+              </div>
+            ))}
+            {scene.camera && (
+              <p className="rounded-md border border-dashed border-gray-200 px-2.5 py-2 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+                Camera keyframes are shown in markdown; simple camera editing is not enabled yet.
+              </p>
+            )}
+          </section>
+        )}
+      </div>
+
+      <div className="shrink-0 border-t border-gray-200 p-4 dark:border-neutral-800">
+        <p className="text-xs text-gray-500 dark:text-neutral-400">
+          {scenes.length} scene{scenes.length !== 1 ? "s" : ""} total · markdown remains the source of truth
+        </p>
+      </div>
+    </aside>
   );
 }
 
 export function SceneProperties() {
-  const scenes = useVideoStore((state) => state.scenes);
-  const currentTime = useVideoStore((state) => state.currentTime);
+  const { scene, sceneIndex } = useCurrentSceneSelection();
 
-  const currentScene = useMemo(() => {
-    let accTime = 0;
-    for (const scene of scenes) {
-      if (currentTime >= accTime && currentTime < accTime + scene.duration) {
-        return scene;
-      }
-      accTime += scene.duration;
-    }
-    return scenes[scenes.length - 1] || null;
-  }, [scenes, currentTime]);
-  
-  const sourceMap = currentScene?.sourceMap;
-
-  if (!currentScene) {
+  if (!scene) {
     return (
-      <div className="w-72 bg-[#0f0f14] border-l border-white/10 p-4">
-        <h3 className="text-sm font-medium mb-4 text-white">
+      <aside className="w-80 border-l border-gray-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
+        <h3 className="mb-4 text-sm font-medium text-gray-900 dark:text-neutral-100">
           Scene Properties
         </h3>
-        <p className="text-sm text-muted-foreground">No scene selected</p>
-      </div>
+        <p className="text-sm text-gray-500 dark:text-neutral-400">No scene selected</p>
+      </aside>
     );
   }
 
-  const typeIcons: Record<string, typeof Layers> = {
-    text: Type,
-    code: Code,
-    image: ImageIcon,
-    video: Layers,
-    split: Layers,
-    terminal: Terminal,
-    chart: BarChart3,
-    mockup: Smartphone,
-    diff: Code,
-  };
-  const TypeIcon = typeIcons[currentScene.type] || Layers;
-
-  return (
-    <div className="w-72 bg-[#0f0f14] border-l border-white/10 flex flex-col h-full">
-      <div className="p-4 border-b border-white/10 shrink-0">
-        <h3 className="text-sm font-medium text-white">Scene Properties</h3>
-        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-          <MousePointerClick className="w-3 h-3 text-pink-400" />
-          Click any property to jump to its code
-        </p>
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto p-4 space-y-6">
-        {/* Scene Type */}
-        <ClickableProperty sourceRange={sourceMap?.type} label="type">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground flex items-center gap-2">
-              <Layers className="w-3 h-3" />
-              Type
-            </Label>
-            <div className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-              <TypeIcon className="w-4 h-4 text-blue-400" />
-              <span className="text-sm text-white capitalize">
-                {currentScene.type}
-              </span>
-            </div>
-          </div>
-        </ClickableProperty>
-
-        {/* Duration */}
-        <ClickableProperty sourceRange={sourceMap?.duration} label="duration">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground flex items-center gap-2">
-              <Clock className="w-3 h-3" />
-              Duration
-            </Label>
-            <div className="p-2 bg-white/5 rounded-lg">
-              <span className="text-sm text-white">{currentScene.duration}s</span>
-            </div>
-          </div>
-        </ClickableProperty>
-
-        {/* Background */}
-        <ClickableProperty sourceRange={sourceMap?.background} label="background">
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground flex items-center gap-2">
-              <Palette className="w-3 h-3" />
-              Background
-            </Label>
-            <div className="flex items-center gap-2 p-2 bg-white/5 rounded-lg">
-              <div
-                className="w-6 h-6 rounded border border-white/20 shrink-0"
-                style={{ backgroundColor: currentScene.background || "#1e1e2e" }}
-              />
-              <span className="text-sm text-white font-mono truncate">
-                {currentScene.background || "#1e1e2e"}
-              </span>
-            </div>
-          </div>
-        </ClickableProperty>
-
-        {/* Transition */}
-        {currentScene.transition && (
-          <ClickableProperty sourceRange={sourceMap?.transition} label="transition">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground flex items-center gap-2">
-                <Sparkles className="w-3 h-3" />
-                Transition
-              </Label>
-              <div className="p-2 bg-white/5 rounded-lg">
-                <span className="text-sm text-white capitalize">
-                  {currentScene.transition}
-                </span>
-                {currentScene.transitionDuration && (
-                  <span className="text-xs text-muted-foreground ml-2">
-                    ({currentScene.transitionDuration}s)
-                  </span>
-                )}
-              </div>
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Chapter */}
-        {currentScene.chapter && (
-          <ClickableProperty sourceRange={sourceMap?.chapter} label="chapter">
-            <div className="space-y-2">
-              <Label className="text-xs text-muted-foreground">Chapter</Label>
-              <div className="p-2 bg-pink-500/10 rounded-lg border border-pink-500/20">
-                <span className="text-sm text-pink-400">
-                  {currentScene.chapter}
-                </span>
-              </div>
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Text Properties */}
-        {currentScene.type === "text" && currentScene.text && (
-          <ClickableProperty sourceRange={sourceMap?.text} label="text settings">
-            <div className="space-y-4 pt-4 border-t border-white/10">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Text Settings
-              </h4>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Content</Label>
-                <div className="p-2 bg-white/5 rounded-lg">
-                  <p className="text-sm text-white line-clamp-3">
-                    {currentScene.text.content}
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Animation
-                  </Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.text.animation || "fadeIn"}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Size</Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.text.size || "lg"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Font Family
-                </Label>
-                <div className="p-2 bg-white/5 rounded-lg">
-                  <span className="text-xs text-white capitalize">
-                    {currentScene.text.fontFamily || "serif"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Available Fonts
-                </Label>
-                <div className="p-2 bg-white/5 rounded-lg text-xs text-gray-300 space-y-1">
-                  <div>• serif (default)</div>
-                  <div>• sans</div>
-                  <div>• mono</div>
-                  <div>• display</div>
-                </div>
-              </div>
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Code Properties */}
-        {currentScene.type === "code" && currentScene.code && (
-          <ClickableProperty sourceRange={sourceMap?.code} label="code settings">
-            <div className="space-y-4 pt-4 border-t border-white/10">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Code Settings
-              </h4>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Language</Label>
-                <div className="p-2 bg-white/5 rounded-lg">
-                  <span className="text-sm text-white">
-                    {currentScene.code.language}
-                  </span>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Font Size
-                  </Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.code.fontSize || "sm"}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Font Family
-                  </Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.code.fontFamily || "mono"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Height</Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.code.height
-                        ? `${currentScene.code.height}px`
-                        : "auto"}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Width</Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.code.width
-                        ? `${currentScene.code.width}px`
-                        : "auto"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">
-                  Available Fonts
-                </Label>
-                <div className="p-2 bg-white/5 rounded-lg text-xs text-gray-300 space-y-1">
-                  <div>• mono (default)</div>
-                  <div>• jetbrains</div>
-                  <div>• fira</div>
-                  <div>• source</div>
-                  <div>• inconsolata</div>
-                  <div>• courier</div>
-                </div>
-              </div>
-
-              {currentScene.code.highlight && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Highlighted Lines
-                  </Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-sm text-yellow-400">
-                      {currentScene.code.highlight.lines.join(", ")}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {currentScene.code.typing && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Typing Effect
-                  </Label>
-                  <div className="p-2 bg-emerald-500/10 rounded-lg border border-emerald-500/20">
-                    <span className="text-sm text-emerald-400">
-                      Enabled @ {currentScene.code.typingSpeed || 40} chars/sec
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Terminal Properties */}
-        {currentScene.type === "terminal" && currentScene.terminal && (
-          <ClickableProperty sourceRange={sourceMap?.terminal} label="terminal settings">
-            <div className="space-y-4 pt-4 border-t border-white/10">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Terminal Settings
-              </h4>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Commands</Label>
-                <div className="p-2 bg-white/5 rounded-lg">
-                  <span className="text-sm text-white">
-                    {currentScene.terminal.commands?.length || 0} command(s)
-                  </span>
-                </div>
-              </div>
-
-              {currentScene.terminal.typing && (
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Typing Effect
-                  </Label>
-                  <div className="p-2 bg-cyan-500/10 rounded-lg border border-cyan-500/20">
-                    <span className="text-sm text-cyan-400">
-                      Speed: {currentScene.terminal.typingSpeed || 30}
-                    </span>
-                  </div>
-                </div>
-              )}
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Chart Properties */}
-        {currentScene.type === "chart" && currentScene.chart && (
-          <ClickableProperty sourceRange={sourceMap?.chart} label="chart settings">
-            <div className="space-y-4 pt-4 border-t border-white/10">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Chart Settings
-              </h4>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">Type</Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white capitalize">
-                      {currentScene.chart.type}
-                    </span>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Data Points
-                  </Label>
-                  <div className="p-2 bg-white/5 rounded-lg">
-                    <span className="text-xs text-white">
-                      {currentScene.chart.data.length}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Mockup Properties */}
-        {currentScene.type === "mockup" && currentScene.mockup && (
-          <ClickableProperty sourceRange={sourceMap?.mockup} label="mockup settings">
-            <div className="space-y-4 pt-4 border-t border-white/10">
-              <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Mockup Settings
-              </h4>
-
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Device</Label>
-                <div className="p-2 bg-white/5 rounded-lg">
-                  <span className="text-sm text-white capitalize">
-                    {currentScene.mockup.device}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </ClickableProperty>
-        )}
-
-        {/* Effects */}
-        {(currentScene.particles ||
-          currentScene.camera ||
-          currentScene.presenter) && (
-          <div className="space-y-4 pt-4 border-t border-white/10">
-            <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              Effects
-            </h4>
-
-            {currentScene.particles && (
-              <ClickableProperty sourceRange={sourceMap?.particles} label="particles effect">
-                <div className="p-2 bg-pink-500/10 rounded-lg border border-pink-500/20">
-                  <span className="text-sm text-pink-400 capitalize">
-                    {currentScene.particles.type} (
-                    {currentScene.particles.intensity || "medium"})
-                  </span>
-                </div>
-              </ClickableProperty>
-            )}
-
-            {currentScene.camera && (
-              <ClickableProperty sourceRange={sourceMap?.camera} label="camera effect">
-                <div className="p-2 bg-blue-500/10 rounded-lg border border-blue-500/20">
-                  <span className="text-sm text-blue-400 capitalize">
-                    Camera: {currentScene.camera.effect}{" "}
-                    {currentScene.camera.value &&
-                      `(${currentScene.camera.value})`}
-                  </span>
-                </div>
-              </ClickableProperty>
-            )}
-
-            {currentScene.presenter && (
-              <ClickableProperty sourceRange={sourceMap?.presenter} label="presenter">
-                <div className="p-2 bg-amber-500/10 rounded-lg border border-amber-500/20">
-                  <span className="text-sm text-amber-400 capitalize">
-                    Presenter: {currentScene.presenter.position}
-                  </span>
-                </div>
-              </ClickableProperty>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Scene Count Footer - Added shrink-0 */}
-      <div className="p-4 border-t border-white/10 shrink-0">
-        <p className="text-xs text-muted-foreground">
-          {scenes.length} scene{scenes.length !== 1 ? "s" : ""} total
-        </p>
-      </div>
-    </div>
-  );
+  return <EditableSceneProperties key={`${sceneIndex}-${scene.type}`} scene={scene} sceneIndex={sceneIndex} />;
 }

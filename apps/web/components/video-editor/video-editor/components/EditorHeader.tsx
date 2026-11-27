@@ -19,6 +19,8 @@ import { ThemeSelector } from "../../theme-selector"
 import { ASPECT_RATIOS, ZOOM_LEVELS } from "../utils/constants"
 import type { ZoomLevel } from "@/lib/types"
 import Image from "next/image"
+import { useVideoStore } from "@/lib/use-video-store"
+import { CloudOff } from "lucide-react"
 
 interface EditorHeaderProps {
   undo: () => void
@@ -29,8 +31,8 @@ interface EditorHeaderProps {
   setZoom: (zoom: ZoomLevel) => void
   aspectRatio: keyof typeof ASPECT_RATIOS
   setAspectRatio: (ratio: keyof typeof ASPECT_RATIOS) => void
-  rightPanel: "properties" | "guide" | "templates"
-  togglePanel: (panel: "properties" | "guide" | "templates") => void
+  rightPanel: "properties" | "guide" | "templates" | "assets"
+  togglePanel: (panel: "properties" | "guide" | "templates" | "assets") => void
   setShowFind: (show: boolean) => void
   setShowShortcuts: (show: boolean) => void
   setShowShareModal: (show: boolean) => void
@@ -54,6 +56,8 @@ export function EditorHeader({
   setShowShareModal,
   setShowExportModal,
 }: EditorHeaderProps) {
+  const persistenceFailed = useVideoStore((state) => state.persistenceFailed)
+
   return (
     <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800 shrink-0">
       <div className="flex items-center gap-3">
@@ -64,6 +68,17 @@ export function EditorHeader({
         <div className="w-px h-4 bg-zinc-700 mx-1" />
 
         <ProjectMenu />
+
+        {persistenceFailed && (
+          <span
+            role="alert"
+            title="Browser storage is full or unavailable. Your changes are not being saved locally — download a project file copy with Ctrl+S."
+            className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400"
+          >
+            <CloudOff className="w-3.5 h-3.5" />
+            not saving — download a copy
+          </span>
+        )}
       </div>
 
       <div className="flex items-center gap-1">
@@ -184,6 +199,20 @@ export function EditorHeader({
           <CornerMarkers />
           <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Templates
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => togglePanel("assets")}
+          aria-pressed={rightPanel === "assets"}
+          className={cn(
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-0.5"
+          )}
+        >
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            Assets
           </span>
         </button>
         <button

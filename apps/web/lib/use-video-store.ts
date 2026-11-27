@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { PersistStorage, StorageValue } from "zustand/middleware";
-import { parseMarkdownFull, getTimelineSegments } from "@markdown-video/core";
+import {
+  applyDirectiveValueEdit,
+  parseMarkdownFull,
+  getTimelineSegments,
+} from "@markdown-video/core";
 import { DEFAULT_MARKDOWN } from "./default-markdown";
 import type { AspectRatio, SourceRange } from "@markdown-video/core";
 import type { Marker, ThemePreset, VideoStore } from "./types";
@@ -20,6 +24,12 @@ declare module "./types" {
      * untagged external mutations. Runtime-only.
      */
     markdownOrigin: string | null;
+    /**
+     * True when the last localStorage persist write failed (quota exhausted
+     * or storage unavailable). Runtime-only; a visible "changes are not
+     * being saved" indicator is wired to this flag.
+     */
+    persistenceFailed: boolean;
   }
 }
 
@@ -153,7 +163,21 @@ function createDedupedJSONStorage():
       } else {
         lastWrittenState = null;
       }
-      return jsonStorage.setItem(name, value);
+      try {
+        return jsonStorage.setItem(name, value);
+      } catch {
+        // Quota exhaustion or storage denial must never throw out of a
+        // store update (it would surface as an uncaught exception in
+        // unrelated UI code). Flag the failure instead so the UI can warn
+        // that changes are not being saved. The lazy reference is safe:
+        // setItem can only fire after the store exists.
+        try {
+          useVideoStore.setState({ persistenceFailed: true });
+        } catch {
+          // Persistence failure reporting must never break the editor.
+        }
+        return undefined;
+      }
     },
   };
 }
@@ -169,6 +193,7 @@ export const useVideoStore = create<VideoStore>()(
         markdown: DEFAULT_MARKDOWN,
         markdownRevision: 0,
         markdownOrigin: null,
+        persistenceFailed: false,
         scenes: initial.scenes,
         segments: initial.segments,
         totalDuration: initial.totalDuration,
@@ -255,6 +280,18 @@ export const useVideoStore = create<VideoStore>()(
                 }
               : state.history,
           }));
+        },
+
+        applyDirectiveEdit: (edit) => {
+          const result = applyDirectiveValueEdit(get().markdown, edit);
+          // The pure engine owns all safety/validation decisions. The store's
+          // job is only to commit successful non-noop text synchronously so
+          // preview, timeline, and panel all observe the edit in the same
+          // state update (and so undo gets exactly one document entry).
+          if (result.ok && result.action !== "noop") {
+            get().setMarkdown(result.markdown);
+          }
+          return result;
         },
 
         undo: () => {

@@ -10,3 +10,6 @@ coverage
 *.log
 next-env.d.ts
 dist
+apps/web/public/ffmpeg/
+
+.npm-publish

@@ -1,0 +1,77 @@
+name: Publish CLI
+
+on:
+  release:
+    types: [published]
+
+# id-token is required for npm trusted publishing (GitHub Actions OIDC). There
+# is deliberately no NODE_AUTH_TOKEN or other long-lived npm secret in this
+# workflow. The package must exist once before npmjs.com exposes its trusted
+# publisher settings; see apps/cli/PUBLISHING.md for the owner's one-time setup.
+permissions:
+  id-token: write
+  contents: read
+
+concurrency:
+  group: publish-cli-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      # npm trusted publishing requires Node >=22.14 and npm >=11.5.1. Pin the
+      # npm CLI explicitly so registry authentication behavior is reproducible.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+
+      - name: Enable pinned pnpm
+        run: |
+          export COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+          corepack enable
+          package_manager="$(node -p "JSON.parse(require('node:fs').readFileSync('package.json', 'utf8')).packageManager")"
+          corepack prepare "$package_manager" --activate
+          pnpm --version
+
+      - name: Install npm CLI with trusted-publishing support
+        run: |
+          npm install --global npm@11.21.3
+          npm --version
+
+      - name: Install workspace dependencies
+        run: pnpm install --frozen-lockfile
+        timeout-minutes: 10
+
+      - name: Audit production dependencies
+        run: pnpm audit --prod --audit-level=critical
+        timeout-minutes: 5
+
+      - name: Build CLI and bundled render payload
+        run: pnpm --filter 'markdown-video...' build
+        timeout-minutes: 10
+
+      - name: Run CLI unit tests
+        run: pnpm --filter markdown-video test
+        timeout-minutes: 5
+
+      - name: Stage publish artifact
+        run: pnpm --filter markdown-video publish:prepare
+
+      - name: Inspect npm tarball
+        working-directory: apps/cli/.npm-publish
+        run: npm pack --dry-run
+
+      # Trusted publishing is configured on npmjs.com for exactly this
+      # repository and publish-cli.yml workflow filename. npm exchanges the
+      # GitHub OIDC token for a short-lived publish credential automatically;
+      # --provenance additionally links the artifact to this source/build.
+      - name: Publish markdown-video to npm
+        working-directory: apps/cli/.npm-publish
+        run: npm publish --provenance

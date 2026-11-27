@@ -105,8 +105,72 @@ export function parseKeyValue(
   return { key, value: match[2].trim() }
 }
 
-export function substituteVariables(text: string, variables: VideoVariables): string {
-  return text.replace(/\$(\w+)/g, (match, varName) => {
+/**
+ * Maximum cumulative positive expansion caused by variable substitution in
+ * one parse. Variables are substituted once per line rather than recursively,
+ * so the interesting memory-amplification measurement is how much larger than
+ * the source tokens their replacements make the parser's output. Four million
+ * UTF-16 code units is generous for authored documents while keeping a small
+ * hostile document from turning into tens of megabytes of scene text.
+ */
+export const MAX_VARIABLE_EXPANSION_CHARS = 4 * 1024 * 1024;
+
+export class VariableExpansionLimitError extends Error {
+  constructor(limitChars: number) {
+    super(
+      `Variable expansion exceeded the parser safety budget of ${limitChars} additional characters`
+    );
+    this.name = "VariableExpansionLimitError";
+  }
+}
+
+export interface VariableExpansionBudget {
+  readonly limitChars: number;
+  remainingChars: number;
+}
+
+export function createVariableExpansionBudget(
+  limitChars = MAX_VARIABLE_EXPANSION_CHARS
+): VariableExpansionBudget {
+  return { limitChars, remainingChars: limitChars };
+}
+
+const VARIABLE_REFERENCE_PATTERN = /\$(\w+)/g;
+
+function measurePositiveExpansion(
+  text: string,
+  variables: VideoVariables
+): number {
+  let expandedChars = 0;
+
+  for (const match of text.matchAll(VARIABLE_REFERENCE_PATTERN)) {
+    const token = match[0];
+    const value = variables[match[1]];
+    // Preserve the historical substitution semantics: empty values are not
+    // substituted. Positive deltas are counted individually (rather than
+    // netted against shrinking substitutions) because every expansion is a
+    // copy the parser would otherwise have to allocate.
+    if (!value) continue;
+    expandedChars += Math.max(0, value.length - token.length);
+  }
+
+  return expandedChars;
+}
+
+export function substituteVariables(
+  text: string,
+  variables: VideoVariables,
+  expansionBudget?: VariableExpansionBudget
+): string {
+  if (expansionBudget) {
+    const expandedChars = measurePositiveExpansion(text, variables);
+    if (expandedChars > expansionBudget.remainingChars) {
+      throw new VariableExpansionLimitError(expansionBudget.limitChars);
+    }
+    expansionBudget.remainingChars -= expandedChars;
+  }
+
+  return text.replace(VARIABLE_REFERENCE_PATTERN, (match, varName) => {
     return variables[varName] || match
   })
 }

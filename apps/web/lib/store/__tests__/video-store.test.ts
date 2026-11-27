@@ -273,6 +273,25 @@ describe("persistence", () => {
     expect(spy).not.toHaveBeenCalled();
   });
 
+  it("survives quota failure without throwing and flags persistenceFailed", () => {
+    const spy = vi.spyOn(memoryStorage, "setItem");
+    spy.mockImplementation(() => {
+      throw new DOMException("quota exceeded", "QuotaExceededError");
+    });
+
+    try {
+      expect(() => {
+        useVideoStore
+          .getState()
+          .setMarkdown(`${CONTROLLED_MARKDOWN}\n!scene\n!duration 1\n`, false);
+      }).not.toThrow();
+      expect(useVideoStore.getState().persistenceFailed).toBe(true);
+    } finally {
+      spy.mockRestore();
+      useVideoStore.setState({ persistenceFailed: false });
+    }
+  });
+
   it("writes to localStorage when persisted content changes", () => {
     const spy = vi.spyOn(memoryStorage, "setItem");
     spy.mockClear();

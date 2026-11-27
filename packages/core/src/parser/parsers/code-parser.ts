@@ -1,12 +1,16 @@
 // Code block parsing utilities
 
 import type { CodeHighlight, CodeAnnotation, VideoVariables } from "../../types.js"
-import { substituteVariables } from "../utils.js"
+import {
+  substituteVariables,
+  type VariableExpansionBudget,
+} from "../utils.js"
 
 export function parseCodeBlock(
   lines: string[],
   startIndex: number,
-  variables: VideoVariables = {}
+  variables: VideoVariables = {},
+  expansionBudget?: VariableExpansionBudget
 ): { code: string; language: string; endIndex: number } {
   // Fence lines are significant even when indented: the editor validator
   // trims lines before recognizing fences, so the parser does the same.
@@ -18,7 +22,7 @@ export function parseCodeBlock(
   const codeLines: string[] = []
 
   while (endIndex < lines.length && !lines[endIndex].trim().startsWith("```")) {
-    codeLines.push(substituteVariables(lines[endIndex], variables))
+    codeLines.push(substituteVariables(lines[endIndex], variables, expansionBudget))
     endIndex++
   }
 

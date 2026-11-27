@@ -216,6 +216,18 @@ export function getTotalFrameCount(
   return frameCountFor(totalDuration, normalizeOutputFps(fps))
 }
 
+export interface ExportValidationInput {
+  sceneCount: number
+  totalDuration: number
+  fps?: number
+  /**
+   * Optional consumer-specific frame ceiling. The CLI streams frames to an
+   * ffmpeg process, while the browser exporter stores every frame in
+   * ffmpeg.wasm MEMFS, so no single memory-derived cap fits both pipelines.
+   */
+  maxFrameCount?: number
+}
+
 export interface ExportValidationResult {
   valid: boolean
   reason: string | null
@@ -231,11 +243,8 @@ export function validateExportInput({
   sceneCount,
   totalDuration,
   fps,
-}: {
-  sceneCount: number
-  totalDuration: number
-  fps?: number
-}): ExportValidationResult {
+  maxFrameCount,
+}: ExportValidationInput): ExportValidationResult {
   const outputFps = normalizeOutputFps(fps)
   const totalFrameCount = frameCountFor(totalDuration, outputFps)
 
@@ -257,10 +266,19 @@ export function validateExportInput({
     }
   }
 
-  if (!Number.isFinite(totalFrameCount) || totalFrameCount <= 0) {
+  if (!Number.isSafeInteger(totalFrameCount) || totalFrameCount <= 0) {
     return {
       valid: false,
       reason: "Export would produce an invalid frame sequence.",
+      outputFps,
+      totalFrameCount,
+    }
+  }
+
+  if (maxFrameCount !== undefined && totalFrameCount > maxFrameCount) {
+    return {
+      valid: false,
+      reason: `Export would produce ${totalFrameCount} frames, exceeding this renderer's ${maxFrameCount}-frame limit.`,
       outputFps,
       totalFrameCount,
     }
@@ -272,4 +290,23 @@ export function validateExportInput({
     outputFps,
     totalFrameCount,
   }
+}
+
+/**
+ * Browser exports write every frame into ffmpeg.wasm MEMFS before encoding.
+ * High-quality 1080p JPEG frames are typically about 200-400 KiB. At 3,600
+ * frames the worst case is roughly 1.4 GiB of frame data, leaving several
+ * hundred MiB of the practical ~2 GiB wasm memory budget for the core,
+ * encoder lookahead, output file, and browser-side copies. CLI renders do not
+ * use this cap because they stream frames into a native ffmpeg process.
+ */
+export const BROWSER_EXPORT_MAX_FRAME_COUNT = 3_600
+
+export function validateBrowserExportInput(
+  input: Omit<ExportValidationInput, "maxFrameCount">
+): ExportValidationResult {
+  return validateExportInput({
+    ...input,
+    maxFrameCount: BROWSER_EXPORT_MAX_FRAME_COUNT,
+  })
 }

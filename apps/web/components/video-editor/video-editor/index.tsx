@@ -8,16 +8,20 @@ import { Controls } from "../controls"
 import { SyntaxGuide } from "../syntax-guide"
 import { SceneProperties } from "../scene-properties"
 import { TemplatesPanel } from "../templates-panel"
+import { AssetsPanel } from "../assets-panel"
 import { ExportModal } from "../export-modal"
 import { KeyboardShortcuts } from "../keyboard-shortcuts"
 import { FindReplace } from "../find-replace"
 import { ShareModal } from "../share-modal"
+import { InsertPalette } from "../insert-palette"
 import { useVideoStore } from "@/lib/use-video-store"
 import { NEW_PROJECT_MARKDOWN } from "@/lib/default-markdown"
+import type { InsertableSnippet } from "@/lib/editor/snippets"
 import { EditorHeader } from "./components/EditorHeader"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
+import { downloadMarkdownProject } from "@/lib/project-files"
 
-type RightPanel = "properties" | "guide" | "templates"
+type RightPanel = "properties" | "guide" | "templates" | "assets"
 
 export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkdown?: string; isEmbed?: boolean; }) {
   const [rightPanel, setRightPanel] = useState<RightPanel>("properties")
@@ -26,6 +30,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
   const [showFind, setShowFind] = useState(false)
   const [showFindReplace, setShowFindReplace] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showInsertPalette, setShowInsertPalette] = useState(false)
   const editorRef = useRef<MarkdownEditorHandle>(null)
 
   const isPlaying = useVideoStore((state) => state.isPlaying)
@@ -75,13 +80,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
 
   const saveProject = useCallback(() => {
     flushEditor()
-    const blob = new Blob([useVideoStore.getState().markdown], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "project.mdv"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadMarkdownProject(useVideoStore.getState().markdown)
   }, [flushEditor])
 
   const openProject = useCallback(() => {
@@ -99,6 +98,17 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
     }
     input.click()
   }, [flushEditor])
+
+  const openInsertPalette = useCallback(() => {
+    setShowInsertPalette(true)
+  }, [])
+
+  const insertSnippet = useCallback((snippet: InsertableSnippet) => {
+    if ("kind" in snippet && snippet.kind === "directive") {
+      return editorRef.current?.insertDirective(snippet.markdown) ?? false
+    }
+    return editorRef.current?.insertSceneTemplate(snippet.markdown) ?? false
+  }, [])
 
   const createNewProject = useCallback(() => {
     if (confirm("Create new project? Unsaved changes will be lost.")) {
@@ -145,6 +155,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
     saveProject,
     openProject,
     createNewProject,
+    openInsertPalette,
   })
 
   const togglePanel = (panel: RightPanel) => {
@@ -185,12 +196,13 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden min-h-0 relative">
-        <MarkdownEditor ref={editorRef} />
+        <MarkdownEditor ref={editorRef} onOpenInsertPalette={openInsertPalette} />
         <div className="flex-1 flex flex-col min-w-0 relative">
           <ScenePreview />
         </div>
         {rightPanel === "guide" && <SyntaxGuide onClose={() => setRightPanel("properties")} />}
         {rightPanel === "templates" && <TemplatesPanel onClose={() => setRightPanel("properties")} />}
+        {rightPanel === "assets" && <AssetsPanel editorRef={editorRef} onClose={() => setRightPanel("properties")} />}
         {rightPanel === "properties" && <SceneProperties />}
 
         <FindReplace
@@ -207,6 +219,11 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
       <ExportModal open={showExportModal} onOpenChange={setShowExportModal} />
       <KeyboardShortcuts open={showShortcuts} onOpenChange={setShowShortcuts} />
       <ShareModal open={showShareModal} onOpenChange={setShowShareModal} />
+      <InsertPalette
+        open={showInsertPalette}
+        onOpenChange={setShowInsertPalette}
+        onInsert={insertSnippet}
+      />
     </div>
   )
 }

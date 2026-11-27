@@ -76,10 +76,12 @@ import {
 } from "./constants.js";
 import {
   collectVariableDefinitions,
+  createVariableExpansionBudget,
   generateId,
   isSceneDirective,
   parseDirective,
   substituteVariables,
+  type VariableExpansionBudget,
 } from "./utils.js";
 import {
   isLocalizationToken,
@@ -120,6 +122,28 @@ export interface ParseResult {
 
 function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+// Browser and CLI renderers serialize ffmpeg's `-t` duration with millisecond
+// precision, so 1 ms is the smallest positive scene duration that survives the
+// export pipeline intact. Negative and zero values would otherwise make scene
+// ranges invert or vanish when the editor validator is not part of the parse
+// path (notably CLI and worker renders).
+const MIN_SCENE_DURATION_SECONDS = 0.001;
+
+// ffmpeg parses time offsets into signed 64-bit microsecond counters. Render
+// arguments are serialized with millisecond precision, and the largest whole
+// millisecond representable in that counter is floor((2^63 - 1) / 1000) ms.
+// This is a numeric-overflow ceiling, not a practical length recommendation;
+// frame-count validation remains responsible for rejecting unrenderably long
+// exports before capture starts.
+const MAX_SCENE_DURATION_SECONDS = 9_223_372_036_854.775;
+
+function coerceSceneDuration(duration: number): number {
+  if (!Number.isFinite(duration)) {
+    return duration < 0 ? MIN_SCENE_DURATION_SECONDS : MAX_SCENE_DURATION_SECONDS;
+  }
+  return clampNumber(duration, MIN_SCENE_DURATION_SECONDS, MAX_SCENE_DURATION_SECONDS);
 }
 
 function parseMusicTrack(directiveArgs: string): MusicTrack | null {
@@ -187,7 +211,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
 
 function parseMarkdownInternal(
   markdown: string,
-  inheritedVariables: VideoVariables = {}
+  inheritedVariables: VideoVariables = {},
+  expansionBudget: VariableExpansionBudget = createVariableExpansionBudget()
 ): ParseResult {
   const scenes: Scene[] = [];
   const chapters: Chapter[] = [];
@@ -206,7 +231,7 @@ function parseMarkdownInternal(
     let line = lines[i].trim();
 
     // Variable substitution
-    line = substituteVariables(line, variables);
+    line = substituteVariables(line, variables, expansionBudget);
 
     // Check for complete scene directive words (with aliases)
     const sceneDirective = isSceneDirective(line);
@@ -228,7 +253,7 @@ function parseMarkdownInternal(
 
       // Parse scene properties
       while (i < lines.length) {
-        const currentLine = substituteVariables(lines[i].trim(), variables);
+        const currentLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
 
         // End of scene or next scene (check for complete scene aliases)
         const isNextScene = isSceneDirective(currentLine);
@@ -295,7 +320,7 @@ function parseMarkdownInternal(
               const { positional } = parseInlineArguments(directiveArgs);
               const duration = parseDirectiveNumericValue("duration", "seconds", firstInlineValue(positional, 0));
               if (duration !== undefined) {
-                scene.duration = duration;
+                scene.duration = coerceSceneDuration(duration);
               }
               i++;
               i = consumeDirectiveTail(lines, i);
@@ -372,7 +397,8 @@ function parseMarkdownInternal(
               while (i < lines.length) {
                 const textLine = substituteVariables(
                   lines[i].trim(),
-                  variables
+                  variables,
+                  expansionBudget
                 );
                 if (
                   textLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
@@ -484,11 +510,12 @@ function parseMarkdownInternal(
               while (i < lines.length) {
                 const codeLine = substituteVariables(
                   lines[i].trim(),
-                  variables
+                  variables,
+                  expansionBudget
                 );
 
                 if (codeLine.startsWith(DELIMITERS.CODE_FENCE)) {
-                  const parsed = parseCodeBlock(lines, i, variables);
+                  const parsed = parseCodeBlock(lines, i, variables, expansionBudget);
                   scene.code = {
                     language: parsed.language,
                     content: parsed.code,
@@ -572,7 +599,7 @@ function parseMarkdownInternal(
               let typingSpeed = directivePropertyDefault<number>("terminal", "speed", 30);
 
               while (i < lines.length) {
-                const termLine = substituteVariables(lines[i].trim(), variables);
+                const termLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
                 const property = parseDirectivePropertyLine("terminal", termLine);
 
                 if (property?.name === "typing") {
@@ -589,7 +616,7 @@ function parseMarkdownInternal(
                   termLine.startsWith(DELIMITERS.TERMINAL_PROMPT_DOLLAR) ||
                   termLine.startsWith(DELIMITERS.TERMINAL_PROMPT_ARROW)
                 ) {
-                  const parsed = parseTerminalBlock(lines, i, variables);
+                  const parsed = parseTerminalBlock(lines, i, variables, expansionBudget);
                   scene.terminal = {
                     commands: parsed.commands,
                     typing,
@@ -648,7 +675,7 @@ function parseMarkdownInternal(
                 directivePropertyDefault<boolean>("chart", "animate", true);
               i++;
 
-              const parsed = parseChartData(lines, i, variables);
+              const parsed = parseChartData(lines, i, variables, expansionBudget);
               scene.chart = {
                 type: chartType,
                 data: parsed.data,
@@ -718,7 +745,8 @@ function parseMarkdownInternal(
               while (i < lines.length) {
                 const mockupLine = substituteVariables(
                   lines[i].trim(),
-                  variables
+                  variables,
+                  expansionBudget
                 );
                 if (
                   mockupLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
@@ -812,6 +840,7 @@ function parseMarkdownInternal(
             }
 
             case DIRECTIVE_CASES.CALLOUT: {
+              const calloutLine = i + 1;
               const { positional } = parseInlineArguments(directiveArgs);
               const arrow = parseDirectiveEnumOrDefault<CalloutArrow>(
                 "callout",
@@ -834,6 +863,7 @@ function parseMarkdownInternal(
                 target: getInlinePropertyValue("callout", directiveArgs, "target"),
                 style,
               };
+              sourceMap.callout = { startLine: calloutLine, endLine: calloutLine };
               i++;
               break;
             }
@@ -858,7 +888,7 @@ function parseMarkdownInternal(
               i++;
               // Consume separate property lines if any
               while (i < lines.length) {
-                const nextLine = substituteVariables(lines[i].trim(), variables);
+                const nextLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
                 if (
                   nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
                   nextLine === DELIMITERS.SCENE_SEPARATOR
@@ -1036,7 +1066,7 @@ function parseMarkdownInternal(
               i++;
               // Consume separate property lines if any
               while (i < lines.length) {
-                const nextLine = substituteVariables(lines[i].trim(), variables);
+                const nextLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
                 if (
                   nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
                   nextLine === DELIMITERS.SCENE_SEPARATOR
@@ -1083,6 +1113,7 @@ function parseMarkdownInternal(
             }
 
             case DIRECTIVE_CASES.LAYOUT: {
+              const layoutLine = i + 1;
               scene.type = "split";
               const direction = parseDirectiveEnumOrDefault<LayoutSplitDirection>(
                 "layout",
@@ -1102,7 +1133,8 @@ function parseMarkdownInternal(
                 i,
                 variables,
                 (childMarkdown, childVariables) =>
-                  parseMarkdownInternal(childMarkdown, childVariables).scenes[0]
+                  parseMarkdownInternal(childMarkdown, childVariables, expansionBudget).scenes[0],
+                expansionBudget
               );
               scene.split = {
                 left: parsedLayout.left,
@@ -1111,6 +1143,7 @@ function parseMarkdownInternal(
                 ratio: 0.5,
               };
               i = parsedLayout.endIndex;
+              sourceMap.layout = { startLine: layoutLine, endLine: i };
               break;
             }
 
@@ -1313,11 +1346,13 @@ function parseMarkdownInternal(
             }
 
             case DIRECTIVE_CASES.LOCALE: {
+              const localeLine = i + 1;
               const { positional } = parseInlineArguments(directiveArgs);
               const locale = firstInlineValue(positional, 0);
               if (locale) {
                 scene.locale = locale;
               }
+              sourceMap.locale = { startLine: localeLine, endLine: localeLine };
               i++;
               break;
             }
@@ -1387,7 +1422,7 @@ function parseMarkdownInternal(
         // grammar is parsed from the raw lines; malformed lines are ignored
         // here and reported by the validator. Multiple blocks merge.
         i++;
-        const parsedStrings = parseLocalizationStringsBlock(lines, i, variables);
+        const parsedStrings = parseLocalizationStringsBlock(lines, i, variables, expansionBudget);
         mergeLocalizationStrings(
           localizationStrings,
           parsedStrings.localizationStrings

@@ -2,6 +2,17 @@ import { parseArgs } from "node:util"
 
 import { UsageError } from "./errors.js"
 
+export interface DoctorCliArgs {
+  ffmpegPath?: string | undefined
+  chromiumExecutablePath?: string | undefined
+  help: boolean
+}
+
+export interface InstallBrowserCliArgs {
+  withDeps: boolean
+  help: boolean
+}
+
 export interface CliArgs {
   command: "render"
   inputPath: string | null
@@ -103,5 +114,59 @@ export function parseCliArgs(argv: string[]): CliArgs {
     chromiumExecutablePath: stringValue(parsed.values.chromium),
     help: parsed.values.help === true,
     version: parsed.values.version === true,
+  }
+}
+
+export function parseDoctorCliArgs(argv: string[]): DoctorCliArgs {
+  let parsed
+  try {
+    parsed = parseArgs({
+      args: argv,
+      allowPositionals: true,
+      strict: true,
+      options: {
+        ffmpeg: { type: "string" },
+        chromium: { type: "string" },
+        help: { type: "boolean", short: "h" },
+      },
+    })
+  } catch (error) {
+    throw new UsageError(error instanceof Error ? error.message : String(error))
+  }
+
+  if (parsed.positionals.length > 0) {
+    throw new UsageError(`Unexpected positional argument for doctor: ${parsed.positionals[0]}`)
+  }
+
+  return {
+    ffmpegPath: stringValue(parsed.values.ffmpeg),
+    chromiumExecutablePath: stringValue(parsed.values.chromium),
+    help: parsed.values.help === true,
+  }
+}
+
+export function parseInstallBrowserCliArgs(argv: string[]): InstallBrowserCliArgs {
+  let parsed
+  try {
+    parsed = parseArgs({
+      args: argv,
+      allowPositionals: true,
+      strict: true,
+      options: {
+        "with-deps": { type: "boolean" },
+        help: { type: "boolean", short: "h" },
+      },
+    })
+  } catch (error) {
+    throw new UsageError(error instanceof Error ? error.message : String(error))
+  }
+
+  if (parsed.positionals.length > 0) {
+    throw new UsageError(`Unexpected positional argument for install-browser: ${parsed.positionals[0]}`)
+  }
+
+  return {
+    withDeps: parsed.values["with-deps"] === true,
+    help: parsed.values.help === true,
   }
 }

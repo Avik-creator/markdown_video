@@ -10,6 +10,7 @@ import {
   isSceneDirective,
   parseDirective,
   substituteVariables,
+  type VariableExpansionBudget,
 } from "../utils.js"
 
 export type SplitPanel = Omit<Scene, "id" | "duration" | "transition">
@@ -84,7 +85,8 @@ export function parseLayoutChildren(
   lines: string[],
   startIndex: number,
   variables: VideoVariables,
-  parseChildScene: ParseLayoutChildScene
+  parseChildScene: ParseLayoutChildScene,
+  expansionBudget?: VariableExpansionBudget
 ): LayoutChildren {
   const panels: Record<LayoutSide, SplitPanel> = {
     left: createDefaultSplitPanel(),
@@ -105,7 +107,7 @@ export function parseLayoutChildren(
 
   while (i < lines.length) {
     const rawLine = lines[i]
-    const line = substituteVariables(rawLine.trim(), variables)
+    const line = substituteVariables(rawLine.trim(), variables, expansionBudget)
 
     if (
       !inFence &&

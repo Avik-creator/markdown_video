@@ -69,8 +69,9 @@ The synchronous request/response design is intentionally conservative:
 | fps | 1–30 (24 default) |
 | Resolution | up to 1080p |
 | mp4 output | 6 MiB |
-| Preview timeout | 20 seconds including queue wait |
-| Video timeout | 45 seconds including queue wait |
+| Preview execution timeout | 20 seconds after the job leaves the queue |
+| Video execution timeout | 45 seconds after the job leaves the queue |
+| Queue wait | Up to the matching endpoint timeout, then an honest 503 busy response |
 | Concurrency | 1 render by default, maximum 4 |
 | Waiting queue | 8 requests by default, maximum 64 |
 

@@ -61,6 +61,17 @@ export {
 } from "./parser/index.js";
 export type { ParseResult } from "./parser/index.js";
 
+// Schema-driven source inspection and round-trip-safe directive editing.
+export { applyDirectiveValueEdit, inspectSceneDirective } from "./markdown-edits.js";
+export type {
+  DirectiveEditableScalar,
+  DirectiveEditAction,
+  DirectiveEditResult,
+  DirectiveValueEdit,
+  InspectedDirectiveValue,
+  SceneDirectiveInspection,
+} from "./markdown-edits.js";
+
 // Pure caption extraction and SRT/WebVTT sidecar serialization. Cue timing is
 // derived from the same timeline segments used for preview/export.
 export {
@@ -139,13 +150,16 @@ export {
 
 // Source-level directive helpers used by editor completions and tooling.
 export {
+  MAX_VARIABLE_EXPANSION_CHARS,
+  VariableExpansionLimitError,
   normalizeDirective,
   parseDirective,
   collectVariableDefinitions,
+  createVariableExpansionBudget,
   isSceneDirective,
   substituteVariables,
 } from "./parser/utils.js";
-export type { ParsedDirective } from "./parser/utils.js";
+export type { ParsedDirective, VariableExpansionBudget } from "./parser/utils.js";
 
 // Localization parsing and resolution.
 export {
@@ -215,6 +229,7 @@ export {
 
 // Output render geometry and deterministic frame-count planning.
 export {
+  BROWSER_EXPORT_MAX_FRAME_COUNT,
   getExportDimensions,
   getExportAspectRatio,
   getFrameEncoding,
@@ -223,11 +238,13 @@ export {
   getFrameFileName,
   normalizeOutputFps,
   getTotalFrameCount,
+  validateBrowserExportInput,
   validateExportInput,
 } from "./render-plan.js";
 export type {
   FrameEncoding,
   VideoEncodingSettings,
   RenderPlan,
+  ExportValidationInput,
   ExportValidationResult,
 } from "./render-plan.js";

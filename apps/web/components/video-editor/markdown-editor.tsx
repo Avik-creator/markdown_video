@@ -15,17 +15,22 @@ import {
   CircleX,
   FileText,
   MousePointerClick,
+  Plus,
   Wand2,
 } from "lucide-react";
 import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { setDiagnostics } from "@codemirror/lint";
-import { cn } from "@/lib/utils";
-import CornerMarkers from "@components/CornerMarkers";
-import { EXAMPLE_TEMPLATES } from "@/lib/editor/snippets";
+import {
+  sceneDirectiveInsertion,
+  sceneIndexAtCursorLine,
+  sceneTemplateInsertion,
+} from "@/lib/editor/insert-scene-template";
+import type { Scene } from "@markdown-video/core";
 import {
   diagnosticsByLine,
   getDiagnostics,
+  sortDiagnostics,
   type Diagnostic,
 } from "@/lib/editor/diagnostics";
 import { createEditorExtensions } from "@/lib/editor/codemirror/extensions";
@@ -45,6 +50,16 @@ import {
   setEditorMarkersEffect,
   type EditorMarkers,
 } from "@/lib/editor/codemirror/line-marks";
+import { getMissingAssetDiagnostics } from "@/lib/assets/missing-assets";
+import {
+  ensureAssetLibraryLoaded,
+  useAssetLibrary,
+} from "@/lib/assets/asset-library";
+
+export interface MarkdownEditorProps {
+  /** Opens the searchable scene-snippet insertion palette. */
+  onOpenInsertPalette?: () => void;
+}
 
 export interface MarkdownEditorHandle {
   /** Select a character range and scroll it into view without stealing focus. */
@@ -57,10 +72,25 @@ export interface MarkdownEditorHandle {
   flushPending: () => void;
   /** Replace a range of the live document, committed like a user edit. */
   replaceRange: (from: number, to: number, text: string) => void;
+  /** Structurally insert a full scene snippet after the cursor/playback scene. */
+  insertSceneTemplate: (template: string) => boolean;
+  /** Insert a scene-scoped directive scaffold into the cursor/playback scene. */
+  insertDirective: (directive: string) => boolean;
+
 }
 
-export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function MarkdownEditor(
-  _,
+function sceneIndexAtTime(scenes: Scene[], currentTime: number): number {
+  let accumulated = 0;
+  for (let index = 0; index < scenes.length; index++) {
+    const end = accumulated + scenes[index].duration;
+    if (currentTime >= accumulated && currentTime < end) return index;
+    accumulated = end;
+  }
+  return scenes.length > 0 ? scenes.length - 1 : -1;
+}
+
+export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorProps>(function MarkdownEditor(
+  { onOpenInsertPalette },
   ref
 ) {
   const highlightRange = useVideoStore((state) => state.highlightRange);
@@ -75,6 +105,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     highlight: null,
     problemsByLine: new Map(),
   });
+  const validationRunRef = useRef(0);
 
   const [diagnostics, setDiagnosticsState] = useState<Diagnostic[]>([]);
   const [problemsOpen, setProblemsOpen] = useState(true);
@@ -102,6 +133,26 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
       yMargin: Math.max(0, view.dom.clientHeight / 3),
     });
   }, []);
+
+  const publishDiagnostics = useCallback(
+    (nextDiagnostics: Diagnostic[]) => {
+      setDiagnosticsState(nextDiagnostics);
+      const liveView = viewRef.current;
+      if (!liveView) return;
+      liveView.dispatch(
+        setDiagnostics(
+          liveView.state,
+          toCmDiagnostics(liveView.state.doc, nextDiagnostics)
+        )
+      );
+      markersRef.current = {
+        highlight: useVideoStore.getState().highlightRange,
+        problemsByLine: diagnosticsByLine(nextDiagnostics),
+      };
+      dispatchMarkers();
+    },
+    [dispatchMarkers]
+  );
 
   // Editor creation. The view is created once per mount and owns the live
   // document; React never mirrors keystrokes.
@@ -138,21 +189,35 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     const sync = new EditorStoreSync({
       view,
       onValidate: (text) => {
-        const nextDiagnostics = getDiagnostics(text);
-        setDiagnosticsState(nextDiagnostics);
-        const liveView = viewRef.current;
-        if (!liveView) return;
-        liveView.dispatch(
-          setDiagnostics(
-            liveView.state,
-            toCmDiagnostics(liveView.state.doc, nextDiagnostics)
+        const validationRun = ++validationRunRef.current;
+        const syntaxDiagnostics = getDiagnostics(text);
+        publishDiagnostics(syntaxDiagnostics);
+
+        // Asset existence is browser-host state (IndexedDB plus same-origin
+        // static files), so it stays outside core syntax validation. Publish
+        // parser diagnostics immediately, then layer in asynchronous media
+        // warnings only if this is still the newest validation of the same
+        // live document.
+        void ensureAssetLibraryLoaded()
+          .then(() =>
+            getMissingAssetDiagnostics(text, {
+              assets: useAssetLibrary.getState().assets,
+            })
           )
-        );
-        markersRef.current = {
-          highlight: useVideoStore.getState().highlightRange,
-          problemsByLine: diagnosticsByLine(nextDiagnostics),
-        };
-        dispatchMarkers();
+          .then((assetDiagnostics) => {
+            const liveView = viewRef.current;
+            if (
+              validationRun !== validationRunRef.current ||
+              !liveView ||
+              liveView.state.doc.toString() !== text
+            ) {
+              return;
+            }
+            publishDiagnostics(sortDiagnostics([...syntaxDiagnostics, ...assetDiagnostics]));
+          })
+          .catch((error) => {
+            console.warn("[markdown-video] Asset validation failed:", error);
+          });
       },
       onUserEdit: () => {
         // Any user edit clears the source-range highlight.
@@ -172,7 +237,17 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     registerActiveEditorFlush(flush);
     registerActiveEditorView(view);
 
+    // Upload/delete changes asset existence without changing markdown. Force
+    // one validation pass so warnings appear/disappear immediately.
+    void ensureAssetLibraryLoaded();
+    const unsubscribeAssetLibrary = useAssetLibrary.subscribe((state, previous) => {
+      if (state.libraryRevision !== previous.libraryRevision) {
+        syncRef.current?.validateNow();
+      }
+    });
+
     return () => {
+      unsubscribeAssetLibrary();
       registerActiveEditorFlush(null);
       registerActiveEditorView(null);
       sync.destroy();
@@ -180,7 +255,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
       viewRef.current = null;
       syncRef.current = null;
     };
-  }, [dispatchMarkers]);
+  }, [dispatchMarkers, publishDiagnostics]);
 
   // Keep marker decorations in sync with highlight-only changes. Validation
   // passes already rebuild the full set; this covers the highlight changing
@@ -263,25 +338,75 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
           changes: { from: clampedFrom, to: clampedTo, insert: text },
         });
       },
+      insertSceneTemplate: (template: string) => {
+        const view = viewRef.current;
+        if (!view) return false;
+
+        // The insertion calculation must use the same text the store and
+        // parser saw. Flush first so pending typing participates in scene
+        // ranges, then verify there was no ordering race before dispatching.
+        syncRef.current?.flushPending();
+        const store = useVideoStore.getState();
+        const liveText = view.state.doc.toString();
+        if (liveText !== store.markdown) {
+          console.warn("[markdown-video] Scene insertion skipped: editor and store markdown diverged");
+          return false;
+        }
+
+        const ranges = store.scenes.map((scene) => scene.sourceMap?.scene);
+        const cursorLine = liveText.slice(0, view.state.selection.main.head).split("\n").length;
+        const cursorSceneIndex = sceneIndexAtCursorLine(ranges, cursorLine);
+        const insertion = sceneTemplateInsertion(
+          liveText,
+          template,
+          ranges,
+          cursorSceneIndex >= 0 ? cursorSceneIndex : sceneIndexAtTime(store.scenes, store.currentTime)
+        );
+        const end = insertion.offset + insertion.text.length;
+        view.dispatch({
+          changes: { from: insertion.offset, insert: insertion.text },
+          selection: EditorSelection.cursor(end),
+          effects: EditorView.scrollIntoView(end, { y: "end" }),
+        });
+        // Palette insertion is a discrete authoring action, not typing: commit
+        // it immediately so preview/properties update and undo captures exactly
+        // this insertion as one history entry.
+        syncRef.current?.flushPending();
+        view.contentDOM.focus();
+        return true;
+      },
+      insertDirective: (directive: string) => {
+        const view = viewRef.current;
+        if (!view) return false;
+
+        syncRef.current?.flushPending();
+        const store = useVideoStore.getState();
+        const liveText = view.state.doc.toString();
+        if (liveText !== store.markdown) {
+          console.warn("[markdown-video] Directive insertion skipped: editor and store markdown diverged");
+          return false;
+        }
+
+        const insertion = sceneDirectiveInsertion(
+          liveText,
+          directive,
+          store.scenes.map((scene) => scene.sourceMap?.scene),
+          sceneIndexAtTime(store.scenes, store.currentTime),
+          view.state.selection.main.head
+        );
+        const end = insertion.offset + insertion.text.length;
+        view.dispatch({
+          changes: { from: insertion.offset, insert: insertion.text },
+          selection: EditorSelection.cursor(end),
+          effects: EditorView.scrollIntoView(end, { y: "end" }),
+        });
+        syncRef.current?.flushPending();
+        view.contentDOM.focus();
+        return true;
+      },
     }),
     []
   );
-
-  const insertTemplate = (type: keyof typeof EXAMPLE_TEMPLATES) => {
-    const view = viewRef.current;
-    if (!view) return;
-    const template = EXAMPLE_TEMPLATES[type];
-    const text = view.state.doc.toString();
-    const separator = text.trim() ? "\n\n---\n\n" : "";
-    const insert = separator + template;
-    const from = view.state.doc.length;
-    view.dispatch({
-      changes: { from, insert },
-      selection: EditorSelection.cursor(from + insert.length),
-      effects: EditorView.scrollIntoView(from + insert.length, { y: "end" }),
-    });
-    view.contentDOM.focus();
-  };
 
   const clearHighlight = useCallback(() => {
     if (highlightRange) {
@@ -366,25 +491,19 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
         </span>
       </div>
 
-      {/* Quick insert buttons */}
-      <div className="p-2 border-b border-gray-200 dark:border-neutral-800 flex gap-2 flex-wrap shrink-0 bg-gray-50/50 dark:bg-neutral-900/50">
-        {Object.entries(EXAMPLE_TEMPLATES).map(([key]) => (
-          <button
-            key={key}
-            onClick={() =>
-              insertTemplate(key as keyof typeof EXAMPLE_TEMPLATES)
-            }
-            className={cn(
-              "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-              "hover:translate-x-[-2px]"
-            )}
-          >
-            <CornerMarkers />
-            <span className="text-sm font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
-              {key.charAt(0).toUpperCase() + key.slice(1)}
-            </span>
-          </button>
-        ))}
+      {/* Scene insertion entry point */}
+      <div className="p-2 border-b border-gray-200 dark:border-neutral-800 shrink-0 bg-gray-50/50 dark:bg-neutral-900/50">
+        <button
+          type="button"
+          onClick={onOpenInsertPalette}
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-pink-200 bg-white px-3 py-2 text-sm font-medium text-pink-600 shadow-sm transition-colors hover:bg-pink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:border-pink-900/60 dark:bg-neutral-950 dark:text-pink-400 dark:hover:bg-pink-950/25"
+        >
+          <Plus className="h-4 w-4" />
+          Insert scene or directive
+          <kbd className="ml-auto whitespace-nowrap rounded border border-pink-200 bg-pink-50 px-1.5 py-0.5 text-[10px] dark:border-pink-900/60 dark:bg-pink-950/25">
+            ⌘/Ctrl I
+          </kbd>
+        </button>
       </div>
 
       {/* CodeMirror mounts here and owns the live document. */}

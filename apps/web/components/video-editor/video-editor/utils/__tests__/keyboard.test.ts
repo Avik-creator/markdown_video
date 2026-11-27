@@ -1,7 +1,9 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from "vitest";
 import {
   detectShortcutPlatform,
   hasPlainShortcutModifier,
+  isNativeTextUndoTarget,
   matchesCtrlOrMetaShortcut,
   matchesKey,
   normalizeKey,
@@ -399,5 +401,48 @@ describe("stepFrameTime", () => {
 
   it("uses a safe default for an invalid frame rate", () => {
     expect(stepFrameTime(1, "next", 10, 0)).toBeCloseTo(1 + 1 / 30);
+  });
+});
+
+describe("isNativeTextUndoTarget", () => {
+  it("returns true for text inputs outside the editor", () => {
+    const input = document.createElement("input");
+    document.body.appendChild(input);
+    expect(isNativeTextUndoTarget(input)).toBe(true);
+    input.remove();
+  });
+
+  it("returns true for textareas", () => {
+    const textarea = document.createElement("textarea");
+    document.body.appendChild(textarea);
+    expect(isNativeTextUndoTarget(textarea)).toBe(true);
+    textarea.remove();
+  });
+
+  it("returns true for contenteditable elements outside CodeMirror", () => {
+    const div = document.createElement("div");
+    div.setAttribute("contenteditable", "true");
+    document.body.appendChild(div);
+    expect(isNativeTextUndoTarget(div)).toBe(true);
+    div.remove();
+  });
+
+  it("returns false inside a CodeMirror editor surface", () => {
+    const editor = document.createElement("div");
+    editor.className = "cm-editor";
+    const content = document.createElement("div");
+    content.setAttribute("contenteditable", "true");
+    editor.appendChild(content);
+    document.body.appendChild(editor);
+    expect(isNativeTextUndoTarget(content)).toBe(false);
+    editor.remove();
+  });
+
+  it("returns false for non-editable targets", () => {
+    const div = document.createElement("div");
+    document.body.appendChild(div);
+    expect(isNativeTextUndoTarget(div)).toBe(false);
+    expect(isNativeTextUndoTarget(null)).toBe(false);
+    div.remove();
   });
 });

@@ -11,13 +11,10 @@ import {
   type WarmResourceLifecycle,
 } from "../utils/export-utils";
 
-const FFMPEG_PACKAGE_BASE = "https://unpkg.com/@ffmpeg/ffmpeg@0.12.15/dist";
-const FFMPEG_ESM_BASE = `${FFMPEG_PACKAGE_BASE}/esm`;
-const FFMPEG_UMD_URL = `${FFMPEG_PACKAGE_BASE}/umd/ffmpeg.js`;
-const FFMPEG_CORE_ESM_BASE =
-  "https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm";
-const FFMPEG_CORE_URL = `${FFMPEG_CORE_ESM_BASE}/ffmpeg-core.js`;
-const FFMPEG_WASM_URL = `${FFMPEG_CORE_ESM_BASE}/ffmpeg-core.wasm`;
+const FFMPEG_UMD_PATH = "/ffmpeg/control/ffmpeg.js";
+const FFMPEG_WORKER_PATH = "/ffmpeg/worker/worker.js";
+const FFMPEG_CORE_PATH = "/ffmpeg/core/ffmpeg-core.js";
+const FFMPEG_WASM_PATH = "/ffmpeg/core/ffmpeg-core.wasm";
 
 type FFmpegConstructor = new () => FFmpeg;
 type FFmpegWindow = Window & {
@@ -54,12 +51,19 @@ function acquireFFmpegLease(
   return ffmpegLifecycle.acquire();
 }
 
+function sameOriginAssetUrl(path: string) {
+  return new URL(path, window.location.origin).toString();
+}
+
 /**
- * Load the small ffmpeg.wasm control library as a classic browser script
- * instead of statically bundling it. The package's conditional
- * `new Worker(new URL(...))` is not statically analyzable by Turbopack. The
- * large core is fetched by the worker directly with immutable CDN/browser
- * caching, avoiding an extra 30 MB copy through the main thread.
+ * Load the small ffmpeg.wasm control library from a same-origin static copy.
+ * Importing the package ESM directly does not compile: its conditional
+ * `new Worker(new URL(classWorkerURL, import.meta.url))` is not statically
+ * analyzable by Turbopack and fails the production build. The control script,
+ * module worker, core JS, and wasm are therefore copied verbatim at build time
+ * from the lockfile-pinned `@ffmpeg/ffmpeg` and `@ffmpeg/core` packages by
+ * `scripts/copy-ffmpeg-assets.mjs`. Once served from our own origin, the
+ * script has no more authority than the application bundle itself.
  */
 function loadFFmpegConstructor(): Promise<FFmpegConstructor> {
   const existing = (window as FFmpegWindow).FFmpegWASM?.FFmpeg;
@@ -69,7 +73,7 @@ function loadFFmpegConstructor(): Promise<FFmpegConstructor> {
     ffmpegConstructorPromise = new Promise<FFmpegConstructor>(
       (resolve, reject) => {
         const script = document.createElement("script");
-        script.src = FFMPEG_UMD_URL;
+        script.src = FFMPEG_UMD_PATH;
         script.async = true;
         script.onload = () => {
           const Constructor = (window as FFmpegWindow).FFmpegWASM?.FFmpeg;
@@ -80,23 +84,12 @@ function loadFFmpegConstructor(): Promise<FFmpegConstructor> {
         document.head.appendChild(script);
       }
     ).catch((error: unknown) => {
-      // A network failure should not poison later attempts.
+      // A missing asset or failed parse should not poison later attempts.
       ffmpegConstructorPromise = null;
       throw error;
     });
   }
   return ffmpegConstructorPromise;
-}
-
-function createFFmpegWorkerURL() {
-  // The blob wrapper is same-origin, while its absolute import keeps the
-  // upstream worker implementation (and its small relative imports) on the
-  // CDN. It runs as a module worker, which is what FFmpeg.load uses when a
-  // classWorkerURL is supplied.
-  const source = `import "${FFMPEG_ESM_BASE}/worker.js";`;
-  return URL.createObjectURL(
-    new Blob([source], { type: "text/javascript" })
-  );
 }
 
 let ffmpegCoreLoadRequest: {
@@ -118,17 +111,18 @@ async function loadFFmpegCore(instance: FFmpeg) {
     return;
   }
 
-  let classWorkerURL: string | null = null;
   const promise = (async () => {
     try {
-      classWorkerURL = createFFmpegWorkerURL();
       // FFmpeg instances are deliberately reusable after terminate():
       // terminate clears the worker, and load() creates a fresh one.
       // Cancellation therefore does not bypass the warm-object lifecycle.
+      // Absolute same-origin URLs are required because the UMD build carries a
+      // compile-time file: URL as its import.meta.url fallback; root-relative
+      // paths would otherwise be resolved against that incorrect base.
       await instance.load({
-        classWorkerURL,
-        coreURL: FFMPEG_CORE_URL,
-        wasmURL: FFMPEG_WASM_URL,
+        classWorkerURL: sameOriginAssetUrl(FFMPEG_WORKER_PATH),
+        coreURL: sameOriginAssetUrl(FFMPEG_CORE_PATH),
+        wasmURL: sameOriginAssetUrl(FFMPEG_WASM_PATH),
       });
     } catch (error) {
       // A partial/failed core load should not be kept warm. terminate()
@@ -140,10 +134,6 @@ async function loadFFmpegCore(instance: FFmpeg) {
         // Best effort only.
       }
       throw error;
-    } finally {
-      if (classWorkerURL) {
-        URL.revokeObjectURL(classWorkerURL);
-      }
     }
   })();
 

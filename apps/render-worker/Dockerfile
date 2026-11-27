@@ -35,7 +35,7 @@ RUN pnpm --filter @markdown-video/core build \
     && pnpm --filter @markdown-video/render-page build \
     && pnpm --filter markdown-video build \
     && pnpm --filter @markdown-video/render-worker build \
-    && pnpm --filter markdown-video exec playwright install chromium \
+    && pnpm --filter markdown-video exec playwright-core install chromium \
     && pnpm --filter @markdown-video/render-worker deploy --prod --legacy /prod/render-worker
 
 FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c AS runtime
@@ -53,7 +53,7 @@ ENV NODE_ENV=production \
 # the render page bundles its own COLRv1 emoji webfont, and keeping a system
 # color font would make glyph selection depend on the container OS again.
 RUN apt-get update \
-    && npx --yes playwright@1.65.1 install-deps chromium \
+    && npx --yes playwright-core@1.65.1 install-deps chromium \
     && apt-get install -y --no-install-recommends ffmpeg \
     && apt-get purge -y fonts-noto-color-emoji \
     && rm -rf /var/lib/apt/lists/* /root/.npm

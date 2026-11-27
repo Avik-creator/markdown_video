@@ -84,6 +84,20 @@ animation: $missingAnimation
     expect(result.warnings).toEqual([]);
     expect(result.valid).toBe(true);
   });
+
+  it("surfaces expansion-budget exhaustion as a validation parse error", () => {
+    const value = "x".repeat(20_000);
+    const references = Array.from({ length: 220 }, () => "$payload").join("\n");
+    const result = validateMarkdownSyntax(
+      `!var payload ${value}\n!scene\n!text\n${references}\n`
+    );
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toHaveLength(1);
+    expect(result.errors[0].message).toMatch(
+      /^Parse error: Variable expansion exceeded the parser safety budget/
+    );
+  });
 });
 
 describe("camera inline and keyframe validation", () => {

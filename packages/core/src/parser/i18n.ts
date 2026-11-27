@@ -13,7 +13,10 @@ import type {
   VideoVariables,
 } from "../types.js";
 import { DELIMITERS } from "./constants.js";
-import { substituteVariables } from "./utils.js";
+import {
+  substituteVariables,
+  type VariableExpansionBudget,
+} from "./utils.js";
 
 export const LOCALIZATION_TOKEN_PATTERN =
   /^[A-Za-z0-9_]+(?:-[A-Za-z0-9_]+)*$/;
@@ -62,7 +65,8 @@ export interface ParsedLocalizationStringsBlock {
 export function parseLocalizationStringsBlock(
   lines: readonly string[],
   startIndex: number,
-  variables: VideoVariables = {}
+  variables: VideoVariables = {},
+  expansionBudget?: VariableExpansionBudget
 ): ParsedLocalizationStringsBlock {
   const localizationStrings: LocalizationStrings = {};
   let currentKey: string | null = null;
@@ -107,7 +111,7 @@ export function parseLocalizationStringsBlock(
     if (currentKey && translationMatch && isLocalizationToken(translationMatch[1])) {
       const locale = translationMatch[1];
       const unquotedValue = stripLocalizationQuotes(translationMatch[2]);
-      const value = substituteVariables(unquotedValue, variables);
+      const value = substituteVariables(unquotedValue, variables, expansionBudget);
       localizationStrings[currentKey] = {
         ...localizationStrings[currentKey],
         [locale]: value,

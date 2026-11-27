@@ -9,6 +9,7 @@ import {
   PLAYBACK_SPEEDS,
   getShortcutTarget,
   hasPlainShortcutModifier,
+  isNativeTextUndoTarget,
   matchesCtrlOrMetaShortcut,
   normalizeKey,
   playbackSpeedIndex,
@@ -29,8 +30,8 @@ interface UseKeyboardShortcutsOptions {
   addMarker: (time: number, label: string) => void
   zoom: ZoomLevel
   setZoom: (zoom: ZoomLevel) => void
-  rightPanel: "properties" | "guide" | "templates"
-  setRightPanel: (panel: "properties" | "guide" | "templates") => void
+  rightPanel: "properties" | "guide" | "templates" | "assets"
+  setRightPanel: (panel: "properties" | "guide" | "templates" | "assets") => void
   setShowFind: (show: boolean) => void
   setShowFindReplace: (show: boolean) => void
   setShowExportModal: (show: boolean) => void
@@ -38,6 +39,7 @@ interface UseKeyboardShortcutsOptions {
   saveProject: () => void
   openProject: () => void
   createNewProject: () => void
+  openInsertPalette: () => void
 }
 
 export function useKeyboardShortcuts({
@@ -62,6 +64,7 @@ export function useKeyboardShortcuts({
   saveProject,
   openProject,
   createNewProject,
+  openInsertPalette,
 }: UseKeyboardShortcutsOptions) {
   useEffect(() => {
     const stepOneFrame = (direction: "next" | "previous") => {
@@ -82,15 +85,24 @@ export function useKeyboardShortcuts({
     const handleKeyDown = (e: KeyboardEvent) => {
       // Global shortcuts (work even when editing). Key matching is
       // case-insensitive so Cmd+Shift+Z works although browsers report "Z".
-      if (matchesCtrlOrMetaShortcut(e, "z")) {
-        e.preventDefault()
-        undo()
-        return
-      }
-      if (matchesCtrlOrMetaShortcut(e, "z", { shiftKey: true })) {
-        e.preventDefault()
-        redo()
-        return
+      //
+      // Undo/redo are document-level operations, but text inputs outside the
+      // CodeMirror editor (find/replace fields, property controls) own their
+      // native text undo. Hijacking it would apply a large, surprising
+      // document mutation instead of reverting a few typed characters, so let
+      // those events through untouched. CodeMirror's contenteditable surface
+      // is excluded: the store's document history is the intended undo there.
+      if (!isNativeTextUndoTarget(e.target)) {
+        if (matchesCtrlOrMetaShortcut(e, "z", { shiftKey: true })) {
+          e.preventDefault()
+          redo()
+          return
+        }
+        if (matchesCtrlOrMetaShortcut(e, "z")) {
+          e.preventDefault()
+          undo()
+          return
+        }
       }
       if (matchesCtrlOrMetaShortcut(e, "f")) {
         e.preventDefault()
@@ -122,6 +134,11 @@ export function useKeyboardShortcuts({
       if (matchesCtrlOrMetaShortcut(e, "e")) {
         e.preventDefault()
         setShowExportModal(true)
+        return
+      }
+      if (matchesCtrlOrMetaShortcut(e, "i")) {
+        e.preventDefault()
+        openInsertPalette()
         return
       }
 
@@ -274,6 +291,7 @@ export function useKeyboardShortcuts({
     saveProject,
     openProject,
     createNewProject,
+    openInsertPalette,
     setRightPanel,
   ])
 }

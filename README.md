@@ -91,7 +91,7 @@ flowchart LR
 ```
 
 Interactive editing and manual export remain client-side: the parser produces scenes, the preview draws them,
-and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts in Redis for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
+and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The editor's Assets panel can store music and images in browser-local IndexedDB and reference them as `./filename`; those bytes never leave the browser during editing/export and are not included in share links. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts in Redis for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
 
 ## 🏗️ Project Structure
 
@@ -140,9 +140,23 @@ apps/web/                       # Next.js application
   └── public/
       ├── og-image.png          # Open Graph image for sharing
       └── site.webmanifest      # PWA manifest
+apps/cli/                       # npm-published headless markdown-to-MP4/GIF CLI
 apps/render-worker/             # Authenticated server-side Chromium/ffmpeg renderer
 packages/                       # Shared core/scenes packages
 ```
+
+## ⌨️ Command-line renderer
+
+The `markdown-video` CLI renders the same document format headlessly to MP4 or GIF. The npm artifact is self-contained (including the render page and its 80 provenance-verified fonts); ffmpeg remains a system dependency and Chromium is installed into the Playwright user cache.
+
+```bash
+npm install -g markdown-video
+markdown-video install-browser
+markdown-video doctor
+markdown-video render video.md -o video.mp4
+```
+
+See [`apps/cli/README.md`](apps/cli/README.md) for npx usage, all render flags, music/captions, safety semantics, and ffmpeg installation guidance.
 
 ## ☁️ Deploying MCP rendering
 

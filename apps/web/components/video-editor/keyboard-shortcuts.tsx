@@ -51,6 +51,7 @@ const shortcuts = [
       { keys: ["Ctrl", "Z"], description: "Undo" },
       { keys: ["Ctrl", "Shift", "Z"], description: "Redo" },
       { keys: ["Ctrl", "/"], description: "Toggle comment" },
+      { keys: ["Ctrl", "I"], description: "Insert scene or directive" },
       { keys: ["Ctrl", "F"], description: "Find" },
       { keys: ["Ctrl", "H"], description: "Find & Replace" },
       { keys: ["Ctrl", "N"], description: "New project" },

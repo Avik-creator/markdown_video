@@ -108,14 +108,21 @@ Losses: -4
     ]);
   });
 
-  it("retains an invalid negative scene duration so validation can report it", () => {
+  it.each([
+    ["negative", "-2", 0.001],
+    ["zero", "0", 0.001],
+    ["sub-millisecond", "0.0001", 0.001],
+    ["huge finite", "1000000000000000", 9_223_372_036_854.775],
+    ["overflowing positive", "9".repeat(400), 9_223_372_036_854.775],
+    ["overflowing negative", `-${"9".repeat(400)}`, 0.001],
+  ] as const)("clamps a %s scene duration into renderable numeric range", (_label, input, expected) => {
     const [scene] = parseMarkdown(`!scene
-!duration -2
+!duration ${input}
 !text
-Invalid duration
+Duration clamping
 `);
 
-    expect(scene.duration).toBe(-2);
+    expect(scene.duration).toBe(expected);
   });
 
   it("does not produce NaN highlight lines for invalid highlight input", () => {
@@ -240,5 +247,24 @@ Left panel copy
         image: { src: "/right.png", fit: "contain" },
       },
     });
+  });
+
+  it("rejects variable expansion amplification beyond the parser safety budget", () => {
+    const value = "x".repeat(20_000);
+    const references = Array.from({ length: 220 }, () => "$payload").join("\n");
+    const markdown = `!var payload ${value}\n!scene\n!text\n${references}\n`;
+
+    expect(() => parseMarkdownFull(markdown)).toThrowError(
+      /Variable expansion exceeded the parser safety budget/
+    );
+  });
+
+  it("still parses legitimate heavy variable use below the expansion budget", () => {
+    const value = "heavyx".repeat(1_000); // 6,000 characters per use
+    const references = Array.from({ length: 160 }, () => "$copy").join("\n");
+    const [scene] = parseMarkdown(`!var copy ${value}\n!scene\n!text\n${references}\n`);
+
+    expect(scene.text?.content).toHaveLength(160 * value.length + 159);
+    expect(scene.text?.content.startsWith(value)).toBe(true);
   });
 });

@@ -1,8 +1,8 @@
 import { createServer } from "node:http"
-import { createRequire } from "node:module"
 import { createReadStream } from "node:fs"
 import { stat } from "node:fs/promises"
 import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 import { RenderError } from "./errors.js"
 
@@ -26,29 +26,29 @@ export interface RenderPageServer {
   close(): Promise<void>
 }
 
-export function resolveRenderPageDist() {
-  const require = createRequire(import.meta.url)
-  let packageJsonPath: string
-  try {
-    packageJsonPath = require.resolve("@markdown-video/render-page/package.json")
-  } catch (error) {
-    throw new RenderError(
-      "Could not resolve @markdown-video/render-page. Run pnpm install first.",
-      { cause: error instanceof Error ? error : undefined },
-    )
+function renderPageCandidates() {
+  const moduleDir = path.dirname(fileURLToPath(import.meta.url))
+  return [
+    // Published packages carry the complete Vite payload beside the bundled
+    // JavaScript, so rendering does not depend on private workspace packages.
+    path.join(moduleDir, "render-page"),
+    // Source checkout fallback used by unit/integration tests before the CLI's
+    // own dist directory has been assembled. Both src/ and dist/ are one level
+    // below apps/cli, so this resolves to apps/render/dist in either case.
+    path.resolve(moduleDir, "../../render/dist"),
+  ]
+}
+
+export async function resolveRenderPageDist() {
+  const candidates = renderPageCandidates()
+  for (const rootDir of candidates) {
+    const stats = await stat(rootDir).catch(() => null)
+    if (stats?.isDirectory()) return rootDir
   }
 
-  const rootDir = path.join(path.dirname(packageJsonPath), "dist")
-  return stat(rootDir)
-    .then((stats) => {
-      if (!stats.isDirectory()) throw new Error("not a directory")
-      return rootDir
-    })
-    .catch(() => {
-      throw new RenderError(
-        `Render-page build is missing at ${rootDir}. Run: pnpm --filter @markdown-video/render-page build`,
-      )
-    })
+  throw new RenderError(
+    "Render-page assets are missing. Reinstall markdown-video; when developing in the monorepo, run: pnpm --filter markdown-video... build",
+  )
 }
 
 function sendFile(

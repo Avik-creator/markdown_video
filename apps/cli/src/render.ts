@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { performance } from "node:perf_hooks"
 
-import { chromium, type Browser, type Locator, type Page } from "playwright"
+import { type Browser, type Locator, type Page } from "playwright-core"
 import {
   captionSidecarPathsForOutput,
   createRenderPlan,
@@ -14,7 +14,9 @@ import {
   type RenderPlan,
 } from "@markdown-video/core"
 
+import { openChromium } from "./browser.js"
 import { RenderError, throwIfAborted, UsageError } from "./errors.js"
+import { assertFfmpegReady } from "./ffmpeg-check.js"
 import { buildFfmpegArgs, startFfmpeg, type FFmpegProcess } from "./ffmpeg.js"
 import { prepareMusicInput } from "./music.js"
 import { resolveOutputPath } from "./paths.js"
@@ -271,18 +273,7 @@ async function openCaptureSession({
 
   try {
     server = await serveRenderPage()
-    browser = await chromium.launch({
-      headless: true,
-      ...(chromiumExecutablePath ? { executablePath: chromiumExecutablePath } : {}),
-      args: [
-        "--disable-background-networking",
-        "--disable-component-update",
-        "--disable-extensions",
-        "--disable-sync",
-        "--hide-scrollbars",
-        "--mute-audio",
-      ],
-    })
+    browser = await openChromium(chromiumExecutablePath)
 
     const context = await browser.newContext({
       viewport: {
@@ -437,6 +428,7 @@ export async function renderVideo(
       overwrite: settings.overwrite,
       ...(preparedMusic ? { music: { ...music!, inputPath: preparedMusic.inputPath } } : {}),
     })
+    await assertFfmpegReady(executable)
   } catch (error) {
     if (mediaTempDir) await rm(mediaTempDir, { recursive: true, force: true })
     throw error

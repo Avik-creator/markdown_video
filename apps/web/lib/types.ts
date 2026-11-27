@@ -4,6 +4,8 @@
 
 import type {
   AspectRatio,
+  DirectiveEditResult,
+  DirectiveValueEdit,
   ExportSettings,
   LocalizationStrings,
   MusicTrack,
@@ -32,6 +34,11 @@ export interface VideoStore {
   // Core state
   markdown: string;
   setMarkdown: (markdown: string, addToHistory?: boolean) => void;
+  /**
+   * Pure directive rewrite applied to the current committed markdown. Callers
+   * editing through CodeMirror must flush pending typing before invoking it.
+   */
+  applyDirectiveEdit: (edit: DirectiveValueEdit) => DirectiveEditResult;
   scenes: Scene[];
   segments: TimelineSegment[];
   totalDuration: number;
