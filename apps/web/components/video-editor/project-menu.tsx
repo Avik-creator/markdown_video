@@ -14,6 +14,7 @@ import {
 import { cn } from "@/lib/utils"
 import CornerMarkers from "@components/CornerMarkers"
 import { FolderOpen, Save, FilePlus, Trash2 } from "lucide-react"
+import { downloadMarkdownProject } from "@/lib/project-files"
 
 export function ProjectMenu() {
   const setMarkdown = useVideoStore((state) => state.setMarkdown)
@@ -42,13 +43,7 @@ export function ProjectMenu() {
 
   const handleSave = useCallback(() => {
     flushPendingEditorText()
-    const blob = new Blob([useVideoStore.getState().markdown], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "project.mdv"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadMarkdownProject(useVideoStore.getState().markdown)
   }, [])
 
   const handleClear = useCallback(() => {

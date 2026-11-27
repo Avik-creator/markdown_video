@@ -19,6 +19,7 @@ import { NEW_PROJECT_MARKDOWN } from "@/lib/default-markdown"
 import type { InsertableSnippet } from "@/lib/editor/snippets"
 import { EditorHeader } from "./components/EditorHeader"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
+import { downloadMarkdownProject } from "@/lib/project-files"
 
 type RightPanel = "properties" | "guide" | "templates" | "assets"
 
@@ -79,13 +80,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
 
   const saveProject = useCallback(() => {
     flushEditor()
-    const blob = new Blob([useVideoStore.getState().markdown], { type: "text/markdown" })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement("a")
-    a.href = url
-    a.download = "project.mdv"
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadMarkdownProject(useVideoStore.getState().markdown)
   }, [flushEditor])
 
   const openProject = useCallback(() => {
