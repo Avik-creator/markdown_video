@@ -75,16 +75,15 @@ export function Provenance() {
                 preload="none"
                 width={1920}
                 height={1080}
-                poster="/landing/launch-v2-poster.webp"
+                poster="/landing/launch-poster.png"
                 aria-label="Markdown Video launch video rendered from launch.video.md"
                 className="block aspect-video w-full rounded-[6px] bg-[#130a24]"
               >
-                <source src="/landing/launch-v2.mp4" type="video/mp4" />
-                <track kind="captions" src="/landing/launch-v2.vtt" srcLang="en" label="English" default />
+                <source src="/landing/launch.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
               <figcaption className="flex flex-wrap items-center justify-between gap-2 px-2 pb-1 pt-3 font-mono text-[11px] text-[color:var(--landing-muted)]">
-                <span>launch-v2.mp4 · user-initiated playback · sound available</span>
+                <span>launch.mp4 · user-initiated playback · sound available</span>
                 <span>1920×1080 · 30fps · vtt</span>
               </figcaption>
             </figure>

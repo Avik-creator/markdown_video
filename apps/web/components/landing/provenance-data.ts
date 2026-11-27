@@ -18,7 +18,7 @@ export type SourceProof = {
 export const sourceProofs: SourceProof[] = [
   {
     file: "launch.video.md",
-    bytes: 1837,
+    bytes: 1978,
     artifact: "launch-v2.mp4 + vtt",
     href: `${exampleSnapshotUrl}/launch.video.md`,
   },

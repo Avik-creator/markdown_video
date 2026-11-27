@@ -64,8 +64,8 @@ const evidenceRows: EvidenceRow[] = [
   {
     capability: "resolution + fps",
     syntax: "--resolution 480p | 720p | 1080p | 1440p | 4k\n--fps 1..60 --aspect-ratio 16:9 | 9:16 | 1:1 | 4:3",
-    proof: "launch-v2.mp4 probes as 1920×1080 H.264 at 30fps; hero-showcase.mp4 as 960×720 at 18fps.",
-    href: "/landing/launch-v2.mp4",
+    proof: "launch.mp4 probes as 1920×1080 H.264 at 30fps; hero-showcase.mp4 as 960×720 at 18fps.",
+    href: "/landing/launch.mp4",
   },
 ];
 

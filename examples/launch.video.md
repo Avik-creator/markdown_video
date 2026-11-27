@@ -42,8 +42,12 @@ animation: fadeIn
 !terminal
 typing: true
 speed: 90
-$ markdown-video render launch.video.md -o launch-v2.mp4
-> 1920×1080 · 30fps · h264
+fontSize: lg
+width: 1180
+```
+$ markdown-video render launch.md -o launch.mp4
+✓ 1920×1080 · 30fps · h264 · rendered in seconds
+```
 
 ---
 
@@ -61,13 +65,18 @@ animation: slideUp
 ---
 
 !scene
-!duration 2.4
+!duration 2.6
 !background #0c0718
 !transition fade
 !terminal
 typing: true
 speed: 100
+fontSize: lg
+width: 1180
+```
 $ npm install -g markdown-video
+added 1 package in 4s
+```
 
 ---
 
@@ -87,18 +96,6 @@ claude mcp add --transport http \
   https://markdownvideo.avikmukherjee.com/mcp
 ```
 
----
-
-!scene
-!duration 2.2
-!background #d41674
-!transition fade
-!text
-captions. music. locales. agents.
-size: xl
-color: #fff4ec
-fontFamily: sans
-animation: slideUp
 
 ---
 
@@ -122,19 +119,33 @@ animation: fadeIn
 !text
 render the video.
 size: 2xl
-color: #ff4fa3
+color: #d41674
 fontFamily: display
 animation: slideUp
 
 ---
 
 !scene
-!duration 3.2
+!duration 2.6
 !background #130a24
 !transition fade
 !text
-markdownvideo.avikmukherjee.com
+npm install -g markdown-video
 size: lg
 color: #fff4ec
-fontFamily: mono
+fontFamily: jetbrains
+animation: fadeIn
+
+---
+
+!scene
+!duration 3.4
+!background #130a24
+!transition fade
+!text
+the video you just watched is a 2kb text file.
+it's in the repo.
+size: lg
+color: #fff4ec
+fontFamily: display
 animation: fadeIn
