@@ -81,6 +81,13 @@ fetch remote `http(s)` URLs. When rendering untrusted markdown in automation,
 used by the render worker: `data:` and `blob:` images still work, but remote
 URLs render as blocked/broken images instead of giving the document network
 egress.
+
+Markdown-relative image paths are not currently resolved to files beside the
+input markdown: the render page is a host application, so `./image.png` is
+interpreted as a host-relative URL rather than a document-relative filesystem
+path. Use HTTPS/data images, host-static URLs, or render through a host that
+explicitly provides document media resolution.
+
 ## Music and captions
 
 A document can declare one document-level music track:

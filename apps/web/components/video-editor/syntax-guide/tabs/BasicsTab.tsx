@@ -329,7 +329,10 @@ stagger: 0.3s
             description="Image scene directive"
             options={directiveOptions("image")}
           />
-          <DirectiveDoc directive="src:" description="Image URL (required)" />
+          <DirectiveDoc
+            directive="src:"
+            description="Image URL or ./file uploaded in Assets (required)"
+          />
           <DirectiveDoc
             directive="fit:"
             description="Image fit mode"

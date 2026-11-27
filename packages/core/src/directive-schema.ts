@@ -404,7 +404,8 @@ export const DIRECTIVE_SCHEMAS = [
         name: "src",
         type: "string",
         required: true,
-        description: "Image URL or path",
+        description:
+          "Image URL or path. In the browser editor, same-tree relative paths check uploaded browser-local assets before static files.",
       },
       {
         name: "fit",
@@ -1222,7 +1223,7 @@ export const DIRECTIVE_SCHEMAS = [
         type: "url",
         required: true,
         description:
-          "HTTPS URL, data/blob URL, or local/relative audio file. CLI paths resolve relative to the markdown file; browser paths resolve against the app origin.",
+          "HTTPS URL, data/blob URL, or local/relative audio file. CLI paths resolve relative to the markdown file; browser relative paths check uploaded browser-local assets before the app origin/static fallback.",
       },
     ],
     properties: [
