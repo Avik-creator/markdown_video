@@ -76,10 +76,12 @@ import {
 } from "./constants.js";
 import {
   collectVariableDefinitions,
+  createVariableExpansionBudget,
   generateId,
   isSceneDirective,
   parseDirective,
   substituteVariables,
+  type VariableExpansionBudget,
 } from "./utils.js";
 import {
   isLocalizationToken,
@@ -187,7 +189,8 @@ export function parseMarkdownFull(markdown: string): ParseResult {
 
 function parseMarkdownInternal(
   markdown: string,
-  inheritedVariables: VideoVariables = {}
+  inheritedVariables: VideoVariables = {},
+  expansionBudget: VariableExpansionBudget = createVariableExpansionBudget()
 ): ParseResult {
   const scenes: Scene[] = [];
   const chapters: Chapter[] = [];
@@ -206,7 +209,7 @@ function parseMarkdownInternal(
     let line = lines[i].trim();
 
     // Variable substitution
-    line = substituteVariables(line, variables);
+    line = substituteVariables(line, variables, expansionBudget);
 
     // Check for complete scene directive words (with aliases)
     const sceneDirective = isSceneDirective(line);
@@ -228,7 +231,7 @@ function parseMarkdownInternal(
 
       // Parse scene properties
       while (i < lines.length) {
-        const currentLine = substituteVariables(lines[i].trim(), variables);
+        const currentLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
 
         // End of scene or next scene (check for complete scene aliases)
         const isNextScene = isSceneDirective(currentLine);
@@ -372,7 +375,8 @@ function parseMarkdownInternal(
               while (i < lines.length) {
                 const textLine = substituteVariables(
                   lines[i].trim(),
-                  variables
+                  variables,
+                  expansionBudget
                 );
                 if (
                   textLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
@@ -484,11 +488,12 @@ function parseMarkdownInternal(
               while (i < lines.length) {
                 const codeLine = substituteVariables(
                   lines[i].trim(),
-                  variables
+                  variables,
+                  expansionBudget
                 );
 
                 if (codeLine.startsWith(DELIMITERS.CODE_FENCE)) {
-                  const parsed = parseCodeBlock(lines, i, variables);
+                  const parsed = parseCodeBlock(lines, i, variables, expansionBudget);
                   scene.code = {
                     language: parsed.language,
                     content: parsed.code,
@@ -572,7 +577,7 @@ function parseMarkdownInternal(
               let typingSpeed = directivePropertyDefault<number>("terminal", "speed", 30);
 
               while (i < lines.length) {
-                const termLine = substituteVariables(lines[i].trim(), variables);
+                const termLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
                 const property = parseDirectivePropertyLine("terminal", termLine);
 
                 if (property?.name === "typing") {
@@ -589,7 +594,7 @@ function parseMarkdownInternal(
                   termLine.startsWith(DELIMITERS.TERMINAL_PROMPT_DOLLAR) ||
                   termLine.startsWith(DELIMITERS.TERMINAL_PROMPT_ARROW)
                 ) {
-                  const parsed = parseTerminalBlock(lines, i, variables);
+                  const parsed = parseTerminalBlock(lines, i, variables, expansionBudget);
                   scene.terminal = {
                     commands: parsed.commands,
                     typing,
@@ -648,7 +653,7 @@ function parseMarkdownInternal(
                 directivePropertyDefault<boolean>("chart", "animate", true);
               i++;
 
-              const parsed = parseChartData(lines, i, variables);
+              const parsed = parseChartData(lines, i, variables, expansionBudget);
               scene.chart = {
                 type: chartType,
                 data: parsed.data,
@@ -718,7 +723,8 @@ function parseMarkdownInternal(
               while (i < lines.length) {
                 const mockupLine = substituteVariables(
                   lines[i].trim(),
-                  variables
+                  variables,
+                  expansionBudget
                 );
                 if (
                   mockupLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
@@ -858,7 +864,7 @@ function parseMarkdownInternal(
               i++;
               // Consume separate property lines if any
               while (i < lines.length) {
-                const nextLine = substituteVariables(lines[i].trim(), variables);
+                const nextLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
                 if (
                   nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
                   nextLine === DELIMITERS.SCENE_SEPARATOR
@@ -1036,7 +1042,7 @@ function parseMarkdownInternal(
               i++;
               // Consume separate property lines if any
               while (i < lines.length) {
-                const nextLine = substituteVariables(lines[i].trim(), variables);
+                const nextLine = substituteVariables(lines[i].trim(), variables, expansionBudget);
                 if (
                   nextLine.startsWith(DELIMITERS.DIRECTIVE_PREFIX) ||
                   nextLine === DELIMITERS.SCENE_SEPARATOR
@@ -1102,7 +1108,8 @@ function parseMarkdownInternal(
                 i,
                 variables,
                 (childMarkdown, childVariables) =>
-                  parseMarkdownInternal(childMarkdown, childVariables).scenes[0]
+                  parseMarkdownInternal(childMarkdown, childVariables, expansionBudget).scenes[0],
+                expansionBudget
               );
               scene.split = {
                 left: parsedLayout.left,
@@ -1387,7 +1394,7 @@ function parseMarkdownInternal(
         // grammar is parsed from the raw lines; malformed lines are ignored
         // here and reported by the validator. Multiple blocks merge.
         i++;
-        const parsedStrings = parseLocalizationStringsBlock(lines, i, variables);
+        const parsedStrings = parseLocalizationStringsBlock(lines, i, variables, expansionBudget);
         mergeLocalizationStrings(
           localizationStrings,
           parsedStrings.localizationStrings

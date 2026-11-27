@@ -241,4 +241,23 @@ Left panel copy
       },
     });
   });
+
+  it("rejects variable expansion amplification beyond the parser safety budget", () => {
+    const value = "x".repeat(20_000);
+    const references = Array.from({ length: 220 }, () => "$payload").join("\n");
+    const markdown = `!var payload ${value}\n!scene\n!text\n${references}\n`;
+
+    expect(() => parseMarkdownFull(markdown)).toThrowError(
+      /Variable expansion exceeded the parser safety budget/
+    );
+  });
+
+  it("still parses legitimate heavy variable use below the expansion budget", () => {
+    const value = "heavyx".repeat(1_000); // 6,000 characters per use
+    const references = Array.from({ length: 160 }, () => "$copy").join("\n");
+    const [scene] = parseMarkdown(`!var copy ${value}\n!scene\n!text\n${references}\n`);
+
+    expect(scene.text?.content).toHaveLength(160 * value.length + 159);
+    expect(scene.text?.content.startsWith(value)).toBe(true);
+  });
 });

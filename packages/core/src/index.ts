@@ -139,13 +139,16 @@ export {
 
 // Source-level directive helpers used by editor completions and tooling.
 export {
+  MAX_VARIABLE_EXPANSION_CHARS,
+  VariableExpansionLimitError,
   normalizeDirective,
   parseDirective,
   collectVariableDefinitions,
+  createVariableExpansionBudget,
   isSceneDirective,
   substituteVariables,
 } from "./parser/utils.js";
-export type { ParsedDirective } from "./parser/utils.js";
+export type { ParsedDirective, VariableExpansionBudget } from "./parser/utils.js";
 
 // Localization parsing and resolution.
 export {

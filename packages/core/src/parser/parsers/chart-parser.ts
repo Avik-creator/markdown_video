@@ -1,20 +1,24 @@
 // Chart data parsing
 
 import type { ChartDataItem, VideoVariables } from "../../types.js"
-import { substituteVariables } from "../utils.js"
+import {
+  substituteVariables,
+  type VariableExpansionBudget,
+} from "../utils.js"
 
 const CHART_VALUE_PATTERN = /^(.+?):\s*(-?(?:\d+(?:\.\d+)?|\.\d+))(?:\s+(.+))?$/
 
 export function parseChartData(
   lines: string[],
   startIndex: number,
-  variables: VideoVariables = {}
+  variables: VideoVariables = {},
+  expansionBudget?: VariableExpansionBudget
 ): { data: ChartDataItem[]; endIndex: number } {
   const data: ChartDataItem[] = []
   let i = startIndex
 
   while (i < lines.length) {
-    const line = substituteVariables(lines[i].trim(), variables)
+    const line = substituteVariables(lines[i].trim(), variables, expansionBudget)
 
     if (line.startsWith("!") || line === "---") {
       break

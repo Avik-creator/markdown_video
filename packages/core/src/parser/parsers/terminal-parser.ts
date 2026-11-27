@@ -1,12 +1,16 @@
 // Terminal block parsing
 
 import type { TerminalCommand, VideoVariables } from "../../types.js"
-import { substituteVariables } from "../utils.js"
+import {
+  substituteVariables,
+  type VariableExpansionBudget,
+} from "../utils.js"
 
 export function parseTerminalBlock(
   lines: string[],
   startIndex: number,
-  variables: VideoVariables = {}
+  variables: VideoVariables = {},
+  expansionBudget?: VariableExpansionBudget
 ): { commands: TerminalCommand[]; endIndex: number } {
   const commands: TerminalCommand[] = []
   let i = startIndex
@@ -29,7 +33,7 @@ export function parseTerminalBlock(
 
   while (i < lines.length) {
     const rawLine = lines[i]
-    const line = substituteVariables(rawLine.trim(), variables)
+    const line = substituteVariables(rawLine.trim(), variables, expansionBudget)
 
     if (line.startsWith("!") || line === "---" || line.startsWith("```")) {
       break
@@ -49,7 +53,7 @@ export function parseTerminalBlock(
       // using '>' as its prompt (or when no command has started yet).
       if (currentPrompt === "$") {
         if (rawLine.trim()) {
-          outputLines.push(substituteVariables(rawLine, variables))
+          outputLines.push(substituteVariables(rawLine, variables, expansionBudget))
         }
       } else {
         flushCommand()
@@ -61,7 +65,7 @@ export function parseTerminalBlock(
     }
 
     if (currentPrompt !== null && rawLine.trim()) {
-      outputLines.push(substituteVariables(rawLine, variables))
+      outputLines.push(substituteVariables(rawLine, variables, expansionBudget))
     }
     i++
   }
