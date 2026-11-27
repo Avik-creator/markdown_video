@@ -195,15 +195,17 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
       />
 
       {/* Main content area */}
-      <div className="flex-1 flex overflow-hidden min-h-0 relative">
-        <MarkdownEditor ref={editorRef} onOpenInsertPalette={openInsertPalette} />
-        <div className="flex-1 flex flex-col min-w-0 relative">
-          <ScenePreview />
+      <div className="flex-1 min-h-0 relative overflow-x-auto overflow-y-hidden">
+        <div className="flex h-full min-w-[1024px]">
+          <MarkdownEditor ref={editorRef} onOpenInsertPalette={openInsertPalette} />
+          <div className="flex-1 flex flex-col min-w-0 relative">
+            <ScenePreview />
+          </div>
+          {rightPanel === "guide" && <SyntaxGuide onClose={() => setRightPanel("properties")} />}
+          {rightPanel === "templates" && <TemplatesPanel onClose={() => setRightPanel("properties")} />}
+          {rightPanel === "assets" && <AssetsPanel editorRef={editorRef} onClose={() => setRightPanel("properties")} />}
+          {rightPanel === "properties" && <SceneProperties />}
         </div>
-        {rightPanel === "guide" && <SyntaxGuide onClose={() => setRightPanel("properties")} />}
-        {rightPanel === "templates" && <TemplatesPanel onClose={() => setRightPanel("properties")} />}
-        {rightPanel === "assets" && <AssetsPanel editorRef={editorRef} onClose={() => setRightPanel("properties")} />}
-        {rightPanel === "properties" && <SceneProperties />}
 
         <FindReplace
           open={showFind}

@@ -58,8 +58,8 @@ export function EditorHeader({
   const persistenceFailed = useVideoStore((state) => state.persistenceFailed)
 
   return (
-    <header className="flex h-11 items-center justify-between gap-4 border-b border-border bg-panel px-3 shrink-0">
-      <div className="flex items-center gap-3">
+    <header className="flex h-11 items-center justify-between gap-4 overflow-x-auto border-b border-border bg-panel px-3 shrink-0">
+      <div className="flex shrink-0 items-center gap-3">
         <Link href="/" className="flex items-center gap-2 group relative">
          <Image src="/icon.png" alt="Markdown Video Logo" width={28} height={28} className="h-7 w-7 rounded-[5px]" />
         </Link>
@@ -80,7 +80,7 @@ export function EditorHeader({
         )}
       </div>
 
-      <div className="flex items-center gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <Button
           variant="ghost"
           size="icon"
@@ -185,7 +185,7 @@ export function EditorHeader({
         </Button>
       </div>
 
-      <div className="flex items-center gap-1.5">
+      <div className="flex shrink-0 items-center gap-1.5">
         <button
           type="button"
           onClick={() => togglePanel("templates")}
