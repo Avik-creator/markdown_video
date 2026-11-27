@@ -24,6 +24,12 @@ declare module "./types" {
      * untagged external mutations. Runtime-only.
      */
     markdownOrigin: string | null;
+    /**
+     * True when the last localStorage persist write failed (quota exhausted
+     * or storage unavailable). Runtime-only; a visible "changes are not
+     * being saved" indicator is wired to this flag.
+     */
+    persistenceFailed: boolean;
   }
 }
 
@@ -157,7 +163,21 @@ function createDedupedJSONStorage():
       } else {
         lastWrittenState = null;
       }
-      return jsonStorage.setItem(name, value);
+      try {
+        return jsonStorage.setItem(name, value);
+      } catch {
+        // Quota exhaustion or storage denial must never throw out of a
+        // store update (it would surface as an uncaught exception in
+        // unrelated UI code). Flag the failure instead so the UI can warn
+        // that changes are not being saved. The lazy reference is safe:
+        // setItem can only fire after the store exists.
+        try {
+          useVideoStore.setState({ persistenceFailed: true });
+        } catch {
+          // Persistence failure reporting must never break the editor.
+        }
+        return undefined;
+      }
     },
   };
 }
@@ -173,6 +193,7 @@ export const useVideoStore = create<VideoStore>()(
         markdown: DEFAULT_MARKDOWN,
         markdownRevision: 0,
         markdownOrigin: null,
+        persistenceFailed: false,
         scenes: initial.scenes,
         segments: initial.segments,
         totalDuration: initial.totalDuration,
