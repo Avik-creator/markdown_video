@@ -256,7 +256,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
           onClick={() => setShowReplaceRow(!showReplaceRow)}
           aria-label={showReplaceRow ? "Hide replace controls" : "Show replace controls"}
           aria-expanded={showReplaceRow}
@@ -286,7 +286,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
           onClick={() => goToMatch("previous")}
           disabled={!hasMatches}
           aria-label="Previous match"
@@ -297,7 +297,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
           onClick={() => goToMatch("next")}
           disabled={!hasMatches}
           aria-label="Next match"
@@ -309,7 +309,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-muted-foreground hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-foreground"
           onClick={onClose}
           aria-label="Close find"
           title="Close find (Escape)"
@@ -334,7 +334,7 @@ export function FindReplace({
             size="sm"
             onClick={handleReplaceOne}
             disabled={!hasMatches}
-            className="h-8 text-xs text-muted-foreground hover:text-white"
+            className="h-8 text-xs text-muted-foreground hover:text-foreground"
             aria-label="Replace one match"
             title="Replace current match"
           >
@@ -346,7 +346,7 @@ export function FindReplace({
             size="sm"
             onClick={handleReplaceAll}
             disabled={!hasMatches}
-            className="h-8 text-xs text-muted-foreground hover:text-white"
+            className="h-8 text-xs text-muted-foreground hover:text-foreground"
             aria-label="Replace all matches"
             title="Replace all matches"
           >

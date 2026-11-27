@@ -117,7 +117,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                     insert(active);
                   }
                 }}
-                className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-neutral-500"
+                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground dark:placeholder:text-muted-foreground"
               />
               <kbd className="whitespace-nowrap rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground dark:border-border dark:bg-surface dark:text-muted-foreground">
                 ⌘/Ctrl I
@@ -142,10 +142,10 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                       onMouseEnter={() => setActiveIndex(index)}
                       onClick={() => insert(snippet)}
                       className={cn(
-                        "w-full rounded-lg px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500",
+                        "w-full rounded-lg px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent",
                         selected
                           ? "bg-accent-soft text-foreground dark:bg-accent-soft dark:text-foreground"
-                          : "text-foreground hover:bg-gray-50 dark:text-foreground dark:hover:bg-neutral-900"
+                          : "text-foreground hover:bg-surface dark:text-foreground dark:hover:bg-surface"
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
@@ -169,7 +169,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
             </ul>
           </div>
 
-          <div className="flex min-h-0 flex-col bg-gray-50/70 dark:bg-neutral-900/40">
+          <div className="flex min-h-0 flex-col bg-surface dark:bg-surface">
             <div className="border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground dark:border-border dark:text-muted-foreground">
               Markdown preview
             </div>

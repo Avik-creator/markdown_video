@@ -13,7 +13,6 @@ import {
   Monitor,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-import CornerMarkers from "@components/CornerMarkers"
 import { ProjectMenu } from "../../project-menu"
 import { ThemeSelector } from "../../theme-selector"
 import { ASPECT_RATIOS, ZOOM_LEVELS } from "../utils/constants"
@@ -59,10 +58,10 @@ export function EditorHeader({
   const persistenceFailed = useVideoStore((state) => state.persistenceFailed)
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 bg-panel dark:bg-panel border-b border-border dark:border-border shrink-0">
+    <header className="flex h-11 items-center justify-between gap-4 border-b border-border bg-panel px-3 shrink-0">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 group relative">
-         <Image src="/icon.png" alt="Markdown Video Logo" width={64} height={64} />
+         <Image src="/icon.png" alt="Markdown Video Logo" width={28} height={28} className="h-7 w-7 rounded-[5px]" />
         </Link>
 
         <div className="w-px h-4 bg-line-strong mx-1" />
@@ -87,7 +86,7 @@ export function EditorHeader({
           size="icon"
           onClick={undo}
           disabled={!canUndo()}
-          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-7 w-7 rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground disabled:opacity-30"
           title="Undo (Ctrl+Z)"
           aria-label="Undo"
         >
@@ -98,7 +97,7 @@ export function EditorHeader({
           size="icon"
           onClick={redo}
           disabled={!canRedo()}
-          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-7 w-7 rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground disabled:opacity-30"
           title="Redo (Ctrl+Shift+Z)"
           aria-label="Redo"
         >
@@ -115,13 +114,13 @@ export function EditorHeader({
             if (prev) setZoom(prev)
           }}
           disabled={zoom <= 50}
-          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-7 w-7 rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground disabled:opacity-30"
           title="Zoom out"
           aria-label="Zoom out"
         >
           <ZoomOut className="w-4 h-4" />
         </Button>
-        <span className="text-xs text-muted-foreground dark:text-muted-foreground min-w-10 text-center">{zoom}%</span>
+        <span className="min-w-10 text-center font-mono text-[11px] text-muted-foreground">{zoom}%</span>
         <Button
           variant="ghost"
           size="icon"
@@ -130,7 +129,7 @@ export function EditorHeader({
             if (next) setZoom(next)
           }}
           disabled={zoom >= 150}
-          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-7 w-7 rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground disabled:opacity-30"
           title="Zoom in"
           aria-label="Zoom in"
         >
@@ -141,12 +140,12 @@ export function EditorHeader({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800">
+            <Button variant="ghost" size="sm" className="h-7 gap-1.5 rounded-md px-2 font-mono text-muted-foreground transition-colors hover:bg-surface hover:text-foreground">
               <Monitor className="w-4 h-4" />
               <span className="text-xs">{aspectRatio}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-panel dark:bg-surface border-border dark:border-border">
+          <DropdownMenuContent className="border-border bg-popover">
             {Object.entries(ASPECT_RATIOS).map(([ratio, { label }]) => (
               <DropdownMenuItem
                 key={ratio}
@@ -167,7 +166,7 @@ export function EditorHeader({
           variant="ghost"
           size="icon"
           onClick={() => setShowFind(true)}
-          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
+          className="h-7 w-7 rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           title="Find (Ctrl+F)"
           aria-label="Find"
         >
@@ -178,7 +177,7 @@ export function EditorHeader({
           variant="ghost"
           size="icon"
           onClick={() => setShowShortcuts(true)}
-          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
+          className="h-7 w-7 rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           title="Keyboard Shortcuts (K)"
           aria-label="Keyboard shortcuts"
         >
@@ -186,18 +185,18 @@ export function EditorHeader({
         </Button>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => togglePanel("templates")}
           aria-pressed={rightPanel === "templates"}
           className={cn(
-            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-0.5"
+            "inline-flex h-7 items-center rounded-md border border-border px-2.5 text-muted-foreground transition-colors duration-200",
+            "hover:border-line-strong hover:bg-surface hover:text-foreground",
+            rightPanel === "templates" && "border-accent bg-accent-soft text-accent"
           )}
         >
-          <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em]">
             Templates
           </span>
         </button>
@@ -206,12 +205,12 @@ export function EditorHeader({
           onClick={() => togglePanel("assets")}
           aria-pressed={rightPanel === "assets"}
           className={cn(
-            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-0.5"
+            "inline-flex h-7 items-center rounded-md border border-border px-2.5 text-muted-foreground transition-colors duration-200",
+            "hover:border-line-strong hover:bg-surface hover:text-foreground",
+            rightPanel === "assets" && "border-accent bg-accent-soft text-accent"
           )}
         >
-          <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em]">
             Assets
           </span>
         </button>
@@ -220,13 +219,13 @@ export function EditorHeader({
           onClick={() => togglePanel("guide")}
           aria-pressed={rightPanel === "guide"}
           className={cn(
-            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-0.5"
+            "inline-flex h-7 items-center rounded-md border border-border px-2.5 text-muted-foreground transition-colors duration-200",
+            "hover:border-line-strong hover:bg-surface hover:text-foreground",
+            rightPanel === "guide" && "border-accent bg-accent-soft text-accent"
           )}
           title="Syntax Guide (Press ?)"
         >
-          <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em]">
             Guide
           </span>
         </button>
@@ -237,12 +236,11 @@ export function EditorHeader({
           type="button"
           onClick={() => setShowShareModal(true)}
           className={cn(
-            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-0.5"
+            "inline-flex h-7 items-center rounded-md border border-border px-2.5 text-muted-foreground transition-colors duration-200",
+            "hover:border-line-strong hover:bg-surface hover:text-foreground"
           )}
         >
-          <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em]">
             Share
           </span>
         </button>
@@ -250,12 +248,10 @@ export function EditorHeader({
           type="button"
           onClick={() => setShowExportModal(true)}
           className={cn(
-            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
-            "hover:translate-x-0.5"
+            "tool-button tool-button-primary h-7 px-2.5"
           )}
         >
-          <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="font-mono text-[11px] font-medium uppercase tracking-[0.12em]">
             Export
           </span>
         </button>

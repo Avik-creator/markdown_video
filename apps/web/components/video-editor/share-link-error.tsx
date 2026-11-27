@@ -56,7 +56,7 @@ export function ShareLinkError({ kind, isEmbed = false }: ShareLinkErrorProps) {
           isEmbed ? "max-w-sm p-5" : "max-w-md p-8"
         }`}
       >
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-warning">
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-warning-soft text-warning dark:bg-warning-soft dark:text-warning">
           <AlertTriangle className="h-5 w-5" aria-hidden="true" />
         </div>
         <h1 id="share-link-error-title" className="mt-4 font-serif text-xl font-semibold">
@@ -69,7 +69,7 @@ export function ShareLinkError({ kind, isEmbed = false }: ShareLinkErrorProps) {
         <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
           <Button
             asChild
-            className="border-0 bg-foreground text-white hover:bg-gray-800 dark:bg-foreground dark:text-gray-900 dark:hover:bg-neutral-200"
+            className="border-0 bg-foreground text-foreground hover:bg-foreground/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
           >
             <Link href="/editor" target={isEmbed ? "_blank" : undefined} rel={isEmbed ? "noreferrer" : undefined}>
               Open your editor
@@ -79,7 +79,7 @@ export function ShareLinkError({ kind, isEmbed = false }: ShareLinkErrorProps) {
             <Button
               asChild
               variant="outline"
-              className="border-border bg-panel text-foreground hover:bg-gray-50 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-neutral-800"
+              className="border-border bg-panel text-foreground hover:bg-surface dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-surface"
             >
               <Link href="/">Back to home</Link>
             </Button>

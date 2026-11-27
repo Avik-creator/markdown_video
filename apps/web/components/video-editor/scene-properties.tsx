@@ -175,7 +175,7 @@ function ControlShell({
             aria-label={`Jump to ${accessibilityLabel} in markdown source`}
             title={`Jump to line ${inspection.line}`}
             onClick={() => onJump(inspection.line)}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-pink-50 hover:text-pink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-pink-950/40 dark:hover:text-pink-400"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent-soft hover:text-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:text-muted-foreground dark:hover:bg-accent-soft dark:hover:text-accent"
           >
             <MousePointerClick className="h-3.5 w-3.5" />
           </button>
@@ -186,7 +186,7 @@ function ControlShell({
             aria-label={`Reset ${accessibilityLabel} to default`}
             title="Remove the explicit value"
             onClick={onClear}
-            className="rounded p-1 text-muted-foreground transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-surface hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:text-muted-foreground dark:hover:bg-surface dark:hover:text-foreground"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
@@ -277,8 +277,8 @@ function ValueControl({
   const disabled = Boolean(disabledReason);
   const inputClass = cn(
     "w-full rounded-md border border-border bg-panel px-2.5 py-1.5 text-sm text-foreground shadow-sm outline-none transition-colors",
-    "placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-100",
-    "dark:border-border dark:bg-surface dark:text-foreground dark:placeholder:text-neutral-500 dark:focus:border-pink-700 dark:focus:ring-pink-950/60",
+    "placeholder:text-muted-foreground focus:border-accent focus:ring-2 focus:ring-accent-soft",
+    "dark:border-border dark:bg-surface dark:text-foreground dark:placeholder:text-muted-foreground dark:focus:border-accent dark:focus:ring-accent-soft",
     disabled && "cursor-not-allowed opacity-55"
   );
 
@@ -654,7 +654,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
                 aria-label="Duplicate scene"
                 title="Duplicate scene (undoable)"
                 onClick={() => applySceneOperation("duplicate")}
-                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-info-soft hover:text-info focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:text-muted-foreground dark:hover:bg-info-soft dark:hover:text-info"
               >
                 <Copy className="h-3.5 w-3.5" />
               </button>
@@ -663,7 +663,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
                 aria-label="Delete scene"
                 title="Delete scene (undoable)"
                 onClick={() => applySceneOperation("delete")}
-                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-destructive-soft hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:text-muted-foreground dark:hover:bg-destructive-soft dark:hover:text-destructive"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -750,7 +750,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
               />
             ))}
             {scene.type === "split" && (
-              <p className="rounded-md bg-info-soft px-2.5 py-2 text-xs text-blue-700 dark:bg-info-soft dark:text-info">
+              <p className="rounded-md bg-info-soft px-2.5 py-2 text-xs text-info dark:bg-info-soft dark:text-info">
                 Nested split-panel content remains markdown-edited; scene-level layout properties are editable here.
               </p>
             )}
@@ -763,7 +763,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
               <Sparkles className="h-3.5 w-3.5" /> Effects
             </div>
             {effectInspections.map((effect) => (
-              <div key={effect.directiveName} className="space-y-4 rounded-lg border border-hairline p-3 dark:border-neutral-900">
+              <div key={effect.directiveName} className="space-y-4 rounded-lg border border-hairline p-3 dark:border-border">
                 <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
                   {titleCase(effect.directiveName)}
                 </div>

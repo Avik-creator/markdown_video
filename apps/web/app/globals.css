@@ -149,6 +149,7 @@
   --color-panel-raised: var(--panel-raised);
   --color-inset: var(--inset);
   --color-preview-canvas: var(--preview-canvas);
+  --color-overlay: var(--overlay);
   --color-hairline: var(--hairline);
   --color-line: var(--line);
   --color-line-soft: var(--line-soft);

@@ -94,7 +94,7 @@ export function KeyboardShortcuts({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-panel border-border text-white max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-panel border-border text-foreground max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             Keyboard Shortcuts
@@ -123,7 +123,7 @@ export function KeyboardShortcuts({
                             {key === "Ctrl" ? modifierKey : key}
                           </kbd>
                           {j < shortcut.keys.length - 1 && (
-                            <span className="text-zinc-600 mx-0.5">+</span>
+                            <span className="text-muted-foreground mx-0.5">+</span>
                           )}
                         </span>
                       ))}

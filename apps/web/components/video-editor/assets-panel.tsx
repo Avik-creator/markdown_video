@@ -142,7 +142,7 @@ function AssetRow({
           size="sm"
           variant="ghost"
           onClick={onInsert}
-          className="h-8 border border-border bg-panel px-2 text-xs text-foreground hover:bg-gray-100 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-white/10"
+          className="h-8 border border-border bg-panel px-2 text-xs text-foreground hover:bg-surface dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-surface"
           aria-label={`Insert reference to ${asset.filename}`}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -152,7 +152,7 @@ function AssetRow({
           size="sm"
           variant="ghost"
           onClick={onCopy}
-          className="h-8 border border-border bg-panel px-2 text-xs text-foreground hover:bg-gray-100 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-white/10"
+          className="h-8 border border-border bg-panel px-2 text-xs text-foreground hover:bg-surface dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-surface"
           aria-label={`Copy reference to ${asset.filename}`}
         >
           <Copy className="h-3.5 w-3.5" />
@@ -162,7 +162,7 @@ function AssetRow({
           size="sm"
           variant="ghost"
           onClick={onDelete}
-          className="h-8 border border-border bg-panel px-2 text-xs text-destructive hover:bg-red-50 hover:text-red-700 dark:border-border dark:bg-surface dark:text-destructive dark:hover:bg-white/10 dark:hover:text-red-300"
+          className="h-8 border border-border bg-panel px-2 text-xs text-destructive hover:bg-destructive-soft hover:text-destructive dark:border-border dark:bg-surface dark:text-destructive dark:hover:bg-surface dark:hover:text-destructive"
           aria-label={`Delete ${asset.filename}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -352,7 +352,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 text-muted-foreground hover:text-gray-900 dark:text-muted-foreground dark:hover:text-white"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground dark:text-muted-foreground dark:hover:text-foreground"
           aria-label="Close assets panel"
         >
           <X className="h-4 w-4" />
@@ -364,7 +364,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={isUploading}
-          className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-4 py-5 text-center transition-colors hover:border-sky-500 hover:bg-sky-50 disabled:opacity-60 dark:border-border dark:bg-surface dark:hover:border-sky-400 dark:hover:bg-sky-500/10"
+          className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-4 py-5 text-center transition-colors hover:border-info hover:bg-info-soft disabled:opacity-60 dark:border-border dark:bg-surface dark:hover:border-info dark:hover:bg-info-soft"
         >
           <Upload className="mb-2 h-5 w-5 text-info dark:text-info" />
           <span className="text-sm font-medium text-foreground dark:text-foreground">
@@ -391,7 +391,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
                   ? "border-destructive/40 bg-destructive-soft text-destructive dark:border-destructive/40 dark:bg-destructive-soft dark:text-destructive"
                   : notice.tone === "warning"
                     ? "border-warning/40 bg-warning-soft text-warning dark:border-warning/40 dark:bg-warning-soft dark:text-warning"
-                    : "border-sky-200 bg-info-soft text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-info"
+                    : "border-info/40 bg-info-soft text-info dark:border-info/40 dark:bg-info-soft dark:text-info"
               )}
             >
               <FileWarning className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -470,7 +470,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
 
       {isDragging && (
         <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-info-soft backdrop-blur-[1px]">
-          <div className="rounded-lg border border-info bg-panel px-4 py-3 text-sm font-medium text-sky-700 shadow-lg dark:bg-panel dark:text-info">
+          <div className="rounded-lg border border-info bg-panel px-4 py-3 text-sm font-medium text-info shadow-lg dark:bg-panel dark:text-info">
             Drop to upload assets
           </div>
         </div>

@@ -64,9 +64,9 @@ export function ThemeSelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-white hover:bg-zinc-800">
+        <Button variant="ghost" size="sm" className="h-7 gap-1.5 rounded-md px-2 font-mono text-muted-foreground transition-colors hover:bg-surface hover:text-foreground">
           <Palette className="w-4 h-4" />
-          <span className="text-xs">{currentTheme.name}</span>
+          <span className="text-[11px]">{currentTheme.name}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="bg-panel border-border w-48">

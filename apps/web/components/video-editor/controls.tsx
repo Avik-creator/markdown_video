@@ -98,7 +98,7 @@ export function Controls() {
           title="Skip back 3 seconds"
           className={cn(
             "h-8 w-8 flex items-center justify-center text-muted-foreground dark:text-muted-foreground",
-            "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            "hover:text-foreground dark:hover:text-foreground hover:bg-surface dark:hover:bg-surface rounded transition-colors"
           )}
         >
           <SkipBack className="w-4 h-4" aria-hidden="true" />
@@ -111,7 +111,7 @@ export function Controls() {
           title={isPlaying ? "Pause" : "Play"}
           className={cn(
             "h-10 w-10 flex items-center justify-center text-foreground dark:text-foreground",
-            "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            "hover:bg-surface dark:hover:bg-surface rounded transition-colors"
           )}
         >
           {isPlaying ? (
@@ -128,7 +128,7 @@ export function Controls() {
           title="Skip forward 3 seconds"
           className={cn(
             "h-8 w-8 flex items-center justify-center text-muted-foreground dark:text-muted-foreground",
-            "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            "hover:text-foreground dark:hover:text-foreground hover:bg-surface dark:hover:bg-surface rounded transition-colors"
           )}
         >
           <SkipForward className="w-4 h-4" aria-hidden="true" />
@@ -143,8 +143,8 @@ export function Controls() {
             title={isPreviewMusicMuted ? "Unmute preview music" : "Mute preview music"}
             className={cn(
               "h-8 w-8 flex items-center justify-center",
-              "text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100",
-              "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+              "text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground",
+              "hover:bg-surface dark:hover:bg-surface rounded transition-colors"
             )}
           >
             {isPreviewMusicMuted ? (
@@ -174,7 +174,7 @@ export function Controls() {
           className={cn(
             "bg-panel dark:bg-surface text-foreground dark:text-foreground text-xs rounded px-2 py-1",
             "border border-border dark:border-border",
-            "focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-neutral-600"
+            "focus:outline-none focus:ring-1 focus:ring-accent dark:focus:ring-accent"
           )}
         >
           <option value={0.5}>0.5x</option>

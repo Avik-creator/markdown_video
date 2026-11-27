@@ -752,7 +752,7 @@ export default function FfmpegRender({
         <Button
           onClick={render}
           disabled={!loadFfmpeg || !exportValidation.valid}
-          className="w-full gap-2 bg-accent hover:bg-pink-600 text-white"
+          className="w-full gap-2 bg-accent hover:bg-accent-deep text-foreground"
         >
           {!loadFfmpeg ? (
             <>
@@ -794,7 +794,7 @@ export default function FfmpegRender({
             </div>
           </div>
           <div className="text-center">
-            <p className="text-white font-medium">
+            <p className="text-foreground font-medium">
               {status === "preparing" && "Preparing..."}
               {status === "capturing" && "Capturing frames..."}
               {status === "encoding" && "Encoding video..."}
@@ -817,7 +817,7 @@ export default function FfmpegRender({
         <Button
           onClick={handleReset}
           variant="outline"
-          className="w-full border-border text-foreground hover:bg-zinc-800 bg-transparent"
+          className="w-full border-border text-foreground hover:bg-surface bg-transparent"
         >
           Cancel
         </Button>
@@ -834,7 +834,7 @@ export default function FfmpegRender({
             <CheckCircle2 className="w-8 h-8 text-green-400" />
           </div>
           <div className="text-center">
-            <p className="text-white font-medium">Export Complete!</p>
+            <p className="text-foreground font-medium">Export Complete!</p>
             <p className="text-sm text-muted-foreground mt-1">
               Your video is ready to download
             </p>
@@ -863,7 +863,7 @@ export default function FfmpegRender({
         <div className="flex gap-3">
           <Button
             asChild
-            className="flex-1 gap-2 bg-accent hover:bg-pink-600 text-white"
+            className="flex-1 gap-2 bg-accent hover:bg-accent-deep text-foreground"
           >
             <a href={previewUrl} download={outputFileName}>
               <Download className="w-4 h-4" />
@@ -873,7 +873,7 @@ export default function FfmpegRender({
           <Button
             onClick={handleReset}
             variant="outline"
-            className="border-border text-foreground hover:bg-zinc-800 bg-transparent"
+            className="border-border text-foreground hover:bg-surface bg-transparent"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -888,7 +888,7 @@ export default function FfmpegRender({
               <Button
                 asChild
                 variant="outline"
-                className="flex-1 border-border text-foreground hover:bg-zinc-800 bg-transparent"
+                className="flex-1 border-border text-foreground hover:bg-surface bg-transparent"
               >
                 <a href={captionUrls.srt} download="video.srt">
                   <Download className="w-4 h-4" />
@@ -898,7 +898,7 @@ export default function FfmpegRender({
               <Button
                 asChild
                 variant="outline"
-                className="flex-1 border-border text-foreground hover:bg-zinc-800 bg-transparent"
+                className="flex-1 border-border text-foreground hover:bg-surface bg-transparent"
               >
                 <a href={captionUrls.vtt} download="video.vtt">
                   <Download className="w-4 h-4" />
@@ -917,18 +917,18 @@ export default function FfmpegRender({
     return (
       <div className="py-6 space-y-6">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
+          <div className="w-16 h-16 rounded-full bg-destructive-soft flex items-center justify-center">
             <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
           <div className="text-center">
-            <p className="text-white font-medium">Export Failed</p>
+            <p className="text-foreground font-medium">Export Failed</p>
             <p className="text-sm text-destructive mt-1">{errorMessage}</p>
           </div>
         </div>
 
         <Button
           onClick={handleReset}
-          className="w-full bg-panel-raised hover:bg-zinc-700 text-white"
+          className="w-full bg-panel-raised hover:bg-surface text-foreground"
         >
           Try Again
         </Button>

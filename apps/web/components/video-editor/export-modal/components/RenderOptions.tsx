@@ -68,7 +68,7 @@ function CustomDropdown({
         )}
       >
         <CornerMarkers />
-        <span className="text-sm font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+        <span className="text-sm font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-accent dark:group-hover:decoration-accent">
           {selectedOption?.label}
         </span>
         <ChevronDown

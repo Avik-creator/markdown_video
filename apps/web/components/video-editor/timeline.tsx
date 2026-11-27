@@ -105,9 +105,9 @@ function TimelineSegment({
       aria-describedby="timeline-reorder-instructions"
       data-timeline-scene-position={position}
       className={cn(
-        "relative h-full flex items-center justify-center text-white text-sm font-medium border-r border-black/20 last:border-r-0 transition-all cursor-grab active:cursor-grabbing select-none group",
-        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 dark:focus-visible:ring-neutral-100 focus-visible:ring-inset",
-        isActive && "ring-1 ring-accent dark:ring-neutral-100 ring-inset",
+        "relative h-full flex items-center justify-center text-white text-sm font-medium border-r border-line last:border-r-0 transition-all cursor-grab active:cursor-grabbing select-none group",
+        "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent focus-visible:ring-inset",
+        isActive && "ring-1 ring-accent dark:ring-accent ring-inset",
       )}
       style={{
         width: `${widthPercent}%`,
@@ -415,7 +415,7 @@ export function Timeline() {
           aria-valuemax={totalDuration}
           aria-valuenow={currentTime}
           aria-valuetext={`${currentTime.toFixed(1)} of ${totalDuration.toFixed(1)} seconds`}
-          className="absolute inset-0 cursor-pointer select-none rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400 dark:focus-visible:ring-neutral-500"
+          className="absolute inset-0 cursor-pointer select-none rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent dark:focus-visible:ring-accent"
           onPointerDown={handleScrubPointerDown}
           onPointerMove={handleScrubPointerMove}
           onPointerUp={handleScrubPointerEnd}
@@ -439,12 +439,12 @@ export function Timeline() {
             key={`chapter-${segment.sceneId}`}
             type="button"
             aria-label={`Seek to chapter ${segment.chapter} at ${segment.startTime.toFixed(1)} seconds`}
-            className="absolute flex items-center gap-1 cursor-pointer group z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-neutral-500 rounded-sm"
+            className="absolute flex items-center gap-1 cursor-pointer group z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent rounded-sm"
             style={{ left: `${positionPercentForTime(segment.startTime, totalDuration)}%` }}
             onClick={() => seekTo(segment.startTime)}
           >
-            <Bookmark className="w-3 h-3 text-muted-foreground dark:text-muted-foreground group-hover:text-gray-900 dark:group-hover:text-neutral-100" />
-            <span className="text-xs text-muted-foreground dark:text-muted-foreground group-hover:text-gray-900 dark:group-hover:text-neutral-100 hidden group-hover:inline group-focus-visible:inline bg-panel dark:bg-surface px-1 rounded border border-border dark:border-border">
+            <Bookmark className="w-3 h-3 text-muted-foreground dark:text-muted-foreground group-hover:text-foreground dark:group-hover:text-foreground" />
+            <span className="text-xs text-muted-foreground dark:text-muted-foreground group-hover:text-foreground dark:group-hover:text-foreground hidden group-hover:inline group-focus-visible:inline bg-panel dark:bg-surface px-1 rounded border border-border dark:border-border">
               {segment.chapter}
             </span>
           </button>
@@ -460,10 +460,10 @@ export function Timeline() {
             <button
               type="button"
               aria-label={`Seek to marker ${marker.label} at ${marker.time.toFixed(1)} seconds`}
-              className="flex items-center cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-neutral-500"
+              className="flex items-center cursor-pointer rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent"
               onClick={() => seekTo(marker.time)}
             >
-              <div className="w-2 h-2 rounded-full bg-gray-600 dark:bg-neutral-400 group-hover:scale-125 transition-transform" />
+              <div className="w-2 h-2 rounded-full bg-line-strong dark:bg-line-strong group-hover:scale-125 transition-transform" />
             </button>
             <div className="hidden group-hover:flex group-focus-within:flex items-center gap-1 ml-1 bg-panel dark:bg-surface rounded px-2 py-0.5 border border-border dark:border-border">
               <span className="text-xs text-foreground dark:text-foreground">{marker.label}</span>
@@ -474,7 +474,7 @@ export function Timeline() {
                   e.stopPropagation()
                   removeMarker(marker.id)
                 }}
-                className="text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-neutral-500 rounded-sm"
+                className="text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:focus-visible:ring-accent rounded-sm"
               >
                 <Trash2 className="w-3 h-3" />
               </button>

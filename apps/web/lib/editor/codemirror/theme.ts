@@ -23,7 +23,7 @@ export const markdownEditorTheme = EditorView.theme({
   },
   ".cm-content": {
     padding: "12px",
-    caretColor: "#ec4899",
+    caretColor: "var(--accent)",
   },
   ".cm-line": {
     padding: "0",
@@ -103,7 +103,7 @@ export const markdownEditorTheme = EditorView.theme({
     border: "1px solid var(--cm-md-tooltip-border)",
     borderRadius: "6px",
     boxShadow:
-      "0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+      "0 1px 2px var(--shadow)",
     fontSize: "12px",
     overflow: "hidden",
   },
@@ -170,59 +170,34 @@ export const markdownSyntaxHighlighting = syntaxHighlighting(markdownHighlightSt
  */
 export const MARKDOWN_EDITOR_CSS_VARS = `
 .cm-md-editor-host {
-  --cm-md-text: #171717;
-  --cm-md-gutter-bg: #f9fafb;
-  --cm-md-gutter-border: #e5e7eb;
-  --cm-md-gutter-text: #9ca3af;
-  --cm-md-highlight-bg: rgb(236 72 153 / 0.15);
-  --cm-md-highlight-border: #ec4899;
-  --cm-md-highlight-text: #ec4899;
-  --cm-md-error: #ef4444;
-  --cm-md-error-bg: rgb(239 68 68 / 0.1);
-  --cm-md-error-text: #dc2626;
-  --cm-md-warning: #f59e0b;
-  --cm-md-warning-bg: rgb(245 158 11 / 0.1);
-  --cm-md-warning-text: #d97706;
-  --cm-md-tooltip-bg: #ffffff;
-  --cm-md-tooltip-border: #e5e7eb;
-  --cm-md-tooltip-selected: rgb(236 72 153 / 0.12);
-  --cm-md-tooltip-detail: #6b7280;
-  --cm-md-syntax-heading: #be185d;
-  --cm-md-syntax-code: #0f766e;
-  --cm-md-syntax-link: #2563eb;
-  --cm-md-syntax-quote: #16a34a;
-  --cm-md-syntax-comment: #16a34a;
-  --cm-md-syntax-keyword: #7c3aed;
-  --cm-md-syntax-string: #b45309;
-  --cm-md-syntax-number: #0369a1;
-  --cm-md-syntax-property: #0e7490;
+  --cm-md-text: var(--foreground);
+  --cm-md-gutter-bg: var(--inset);
+  --cm-md-gutter-border: var(--hairline);
+  --cm-md-gutter-text: var(--muted-foreground);
+  --cm-md-highlight-bg: var(--accent-soft);
+  --cm-md-highlight-border: var(--accent);
+  --cm-md-highlight-text: var(--accent);
+  --cm-md-error: var(--destructive);
+  --cm-md-error-bg: var(--destructive-soft);
+  --cm-md-error-text: var(--destructive);
+  --cm-md-warning: var(--warning);
+  --cm-md-warning-bg: var(--warning-soft);
+  --cm-md-warning-text: var(--warning);
+  --cm-md-tooltip-bg: var(--popover);
+  --cm-md-tooltip-border: var(--border);
+  --cm-md-tooltip-selected: var(--accent-soft);
+  --cm-md-tooltip-detail: var(--muted-foreground);
+  --cm-md-syntax-heading: var(--accent-deep);
+  --cm-md-syntax-code: var(--info);
+  --cm-md-syntax-link: var(--mark-ink);
+  --cm-md-syntax-quote: var(--muted-foreground);
+  --cm-md-syntax-comment: var(--muted-foreground);
+  --cm-md-syntax-keyword: var(--accent);
+  --cm-md-syntax-string: var(--mark-ink);
+  --cm-md-syntax-number: var(--info);
+  --cm-md-syntax-property: var(--foreground);
 }
 .dark .cm-md-editor-host {
-  --cm-md-text: #f5f5f5;
-  --cm-md-gutter-bg: #171717;
-  --cm-md-gutter-border: #262626;
-  --cm-md-gutter-text: #525252;
-  --cm-md-highlight-bg: rgb(236 72 153 / 0.2);
-  --cm-md-highlight-border: #ec4899;
-  --cm-md-highlight-text: #f472b6;
-  --cm-md-error: #ef4444;
-  --cm-md-error-bg: rgb(239 68 68 / 0.12);
-  --cm-md-error-text: #f87171;
-  --cm-md-warning: #f59e0b;
-  --cm-md-warning-bg: rgb(245 158 11 / 0.12);
-  --cm-md-warning-text: #fbbf24;
-  --cm-md-tooltip-bg: #171717;
-  --cm-md-tooltip-border: #404040;
-  --cm-md-tooltip-selected: rgb(236 72 153 / 0.25);
-  --cm-md-tooltip-detail: #737373;
-  --cm-md-syntax-heading: #f472b6;
-  --cm-md-syntax-code: #5eead4;
-  --cm-md-syntax-link: #93c5fd;
-  --cm-md-syntax-quote: #86efac;
-  --cm-md-syntax-comment: #86efac;
-  --cm-md-syntax-keyword: #c4b5fd;
-  --cm-md-syntax-string: #fcd34d;
-  --cm-md-syntax-number: #7dd3fc;
-  --cm-md-syntax-property: #67e8f9;
+  --cm-md-syntax-heading: var(--accent-deep);
 }
 `;

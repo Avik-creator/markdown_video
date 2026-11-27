@@ -477,7 +477,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           {highlightRange && (
             <button
               onClick={clearHighlight}
-              className="flex items-center gap-1 text-xs text-accent dark:text-accent bg-accent-soft dark:bg-accent-soft px-2 py-0.5 rounded-full border border-accent/40 dark:border-accent/40 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors"
+              className="flex items-center gap-1 text-xs text-accent dark:text-accent bg-accent-soft dark:bg-accent-soft px-2 py-0.5 rounded-full border border-accent/40 dark:border-accent/40 hover:bg-accent-soft dark:hover:bg-accent-soft transition-colors"
             >
               <MousePointerClick className="w-3 h-3" />
               Line {highlightRange.startLine}
@@ -496,7 +496,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         <button
           type="button"
           onClick={onOpenInsertPalette}
-          className="flex w-full items-center justify-center gap-2 rounded-md border border-accent/40 bg-panel px-3 py-2 text-sm font-medium text-accent shadow-sm transition-colors hover:bg-pink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:border-accent/40 dark:bg-panel dark:text-accent dark:hover:bg-pink-950/25"
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-accent/40 bg-panel px-3 py-2 text-sm font-medium text-accent shadow-sm transition-colors hover:bg-accent-soft focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent dark:border-accent/40 dark:bg-panel dark:text-accent dark:hover:bg-accent-soft"
         >
           <Plus className="h-4 w-4" />
           Insert scene or directive
@@ -569,7 +569,7 @@ function ProblemsPanel({
       <button
         onClick={onToggle}
         aria-expanded={open}
-        className="w-full flex items-center gap-3 px-3 py-2 text-xs text-foreground dark:text-foreground hover:bg-gray-100 dark:hover:bg-neutral-800"
+        className="w-full flex items-center gap-3 px-3 py-2 text-xs text-foreground dark:text-foreground hover:bg-surface dark:hover:bg-surface"
       >
         {errorCount > 0 && (
           <span className="flex items-center gap-1 text-destructive dark:text-destructive">
@@ -593,7 +593,7 @@ function ProblemsPanel({
           {diagnostics.map((d, i) => (
             <li
               key={`${d.line ?? "doc"}-${i}`}
-              className="flex items-start gap-2 px-3 py-1.5 text-xs border-b border-hairline dark:border-neutral-800/60 last:border-b-0"
+              className="flex items-start gap-2 px-3 py-1.5 text-xs border-b border-hairline dark:border-hairline last:border-b-0"
             >
               {d.severity === "error" ? (
                 <CircleX className="w-3.5 h-3.5 mt-0.5 shrink-0 text-destructive" />
@@ -622,7 +622,7 @@ function ProblemsPanel({
               {d.fix && (
                 <button
                   onClick={() => onFix(d)}
-                  className="shrink-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-accent dark:text-accent hover:bg-pink-50 dark:hover:bg-pink-950/40"
+                  className="shrink-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-accent dark:text-accent hover:bg-accent-soft dark:hover:bg-accent-soft"
                 >
                   <Wand2 className="w-3 h-3" />
                   Fix

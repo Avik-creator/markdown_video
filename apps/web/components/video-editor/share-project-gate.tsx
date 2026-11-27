@@ -143,7 +143,7 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
     return (
       <main className="flex h-screen items-center justify-center bg-panel text-muted-foreground dark:bg-panel dark:text-muted-foreground">
         <div className="flex items-center gap-3 text-sm" role="status">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-gray-400 dark:bg-neutral-500" aria-hidden="true" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-line-strong dark:bg-line-strong" aria-hidden="true" />
           Checking shared project...
         </div>
       </main>
@@ -204,14 +204,14 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
               type="button"
               variant="outline"
               onClick={keepLocalProject}
-              className="border-border bg-panel text-foreground hover:bg-gray-50 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-neutral-800"
+              className="border-border bg-panel text-foreground hover:bg-surface dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-surface"
             >
               Keep my project
             </Button>
             <Button
               type="button"
               onClick={acceptSharedProject}
-              className="border-0 bg-foreground text-white hover:bg-gray-800 dark:bg-foreground dark:text-gray-900 dark:hover:bg-neutral-200"
+              className="border-0 bg-foreground text-foreground hover:bg-foreground/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
             >
               Load shared project
             </Button>

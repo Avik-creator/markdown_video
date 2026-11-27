@@ -236,7 +236,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
         {shareError && (
           <div
             role="alert"
-            className="mt-4 flex gap-3 rounded-lg border border-destructive/40 bg-destructive-soft p-3 text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+            className="mt-4 flex gap-3 rounded-lg border border-destructive/40 bg-destructive-soft p-3 text-destructive dark:border-destructive/40 dark:bg-destructive-soft dark:text-destructive"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="space-y-1 text-sm">
@@ -277,7 +277,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                   variant="outline"
                   disabled={isGenerating || !shareLink}
                   aria-label={copied === "link" ? "Project link copied" : "Copy project link"}
-                  className="border-border dark:border-border bg-panel dark:bg-surface hover:bg-gray-50 dark:hover:bg-neutral-800 shrink-0"
+                  className="border-border dark:border-border bg-panel dark:bg-surface hover:bg-surface dark:hover:bg-surface shrink-0"
                 >
                   {copied === "link" ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                 </Button>
@@ -288,7 +288,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
               type="button"
               onClick={handleNativeShare}
               disabled={!canNativeShare || isGenerating || !shareLink}
-              className="w-full gap-2 bg-foreground dark:bg-foreground hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full gap-2 bg-foreground dark:bg-foreground hover:bg-foreground/90 dark:hover:bg-foreground/90 text-foreground dark:text-background border-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Share2 className="w-4 h-4" aria-hidden="true" />
               Share via...
@@ -315,8 +315,8 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                     onClick={() => setEmbedSize(key)}
                     className={
                       embedSize === key
-                        ? "bg-foreground dark:bg-foreground text-white dark:text-gray-900"
-                        : "bg-panel dark:bg-surface border-border dark:border-border text-foreground dark:text-foreground hover:bg-gray-50 dark:hover:bg-neutral-800"
+                        ? "bg-foreground dark:bg-foreground text-foreground dark:text-background"
+                        : "bg-panel dark:bg-surface border-border dark:border-border text-foreground dark:text-foreground hover:bg-surface dark:hover:bg-surface"
                     }
                   >
                     {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -348,7 +348,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                   size="sm"
                   disabled={!embedCode}
                   aria-label={copied === "embed" ? "Embed code copied" : "Copy embed code"}
-                  className="absolute top-2 right-2 h-7 bg-surface dark:bg-surface hover:bg-gray-200 dark:hover:bg-neutral-700 z-10"
+                  className="absolute top-2 right-2 h-7 bg-surface dark:bg-surface hover:bg-surface dark:hover:bg-surface z-10"
                 >
                   {copied === "embed" ? <Check className="w-3 h-3 text-green-600 dark:text-green-400" /> : <Copy className="w-3 h-3" />}
                 </Button>

@@ -46,7 +46,7 @@ export function LocalePicker({ className }: { className?: string }) {
         id={selectId}
         value={effectiveLocale ?? ""}
         onChange={(event) => setActiveLocale(event.target.value)}
-        className="cursor-pointer rounded bg-transparent font-medium text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-pink-500"
+        className="cursor-pointer rounded bg-transparent font-medium text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent"
       >
         {locales.map((locale) => (
           <option key={locale} value={locale} className="bg-neutral-950 text-foreground">
