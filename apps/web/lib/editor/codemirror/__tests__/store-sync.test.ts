@@ -107,6 +107,19 @@ describe("EditorStoreSync", () => {
       expect(useVideoStore.getState().markdown).toBe(INITIAL + " now");
     });
 
+    it("destroy commits uncommitted typing instead of dropping it", () => {
+      typeText(view, " unsaved");
+      expect(useVideoStore.getState().markdown).toBe(INITIAL);
+      sync!.destroy();
+      expect(useVideoStore.getState().markdown).toBe(INITIAL + " unsaved");
+    });
+
+    it("destroy after a clean state does not add history noise", () => {
+      const pastLength = useVideoStore.getState().history.past.length;
+      sync!.destroy();
+      expect(useVideoStore.getState().history.past.length).toBe(pastLength);
+    });
+
     it("flushPending is a no-op when the store already matches", () => {
       typeText(view, " now");
       sync!.flushPending();

@@ -153,6 +153,15 @@ export class EditorStoreSync {
   }
 
   destroy() {
+    // Commit any uncommitted typing before tearing down: the debounce window
+    // (up to 500ms after the last keystroke) must never silently drop text
+    // when the editor unmounts during navigation. The store outlives the
+    // component, so the flush persists as usual.
+    try {
+      this.flushPending();
+    } catch {
+      // Flushing must never block teardown.
+    }
     this.destroyed = true;
     this.cancelCommit();
     this.cancelValidation();
