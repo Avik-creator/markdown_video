@@ -1,9 +1,24 @@
 export {
   parseCliArgs,
+  parseDiffCliArgs,
   parsePreviewCliArgs,
   type CliArgs,
+  type DiffCliArgs,
   type PreviewCliArgs,
 } from "./args.js"
+export {
+  diffDocuments,
+  DIFF_UNEXPECTED_CHANGES_EXIT_CODE,
+  type DiffDocumentsOptions,
+  type DiffDocumentsResult,
+} from "./diff.js"
+export type {
+  DiffReport,
+  DiffSceneDescriptor,
+  FrameDiffSampleResult,
+  SceneAlignmentStatus,
+  SceneDiffReportRow,
+} from "./diff-model.js"
 export { buildFfmpegArgs, startFfmpeg } from "./ffmpeg.js"
 export {
   expectedOutputExtension,

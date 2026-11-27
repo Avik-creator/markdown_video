@@ -4,11 +4,14 @@ import path from "node:path"
 
 import {
   parseCliArgs,
+  parseDiffCliArgs,
   parseDoctorCliArgs,
   parseInstallBrowserCliArgs,
   parsePreviewCliArgs,
 } from "./args.js"
 import { installPlaywrightChromium } from "./browser.js"
+import { diffDocuments } from "./diff.js"
+import { formatDiffReport } from "./diff-format.js"
 import { formatDoctorReport, runDoctorChecks } from "./doctor.js"
 import { UsageError } from "./errors.js"
 import { resolveInputPath } from "./paths.js"
@@ -41,6 +44,7 @@ Usage:
   markdown-video render - --output <output.mp4>               # read markdown from stdin
   markdown-video --markdown "# Hello" --output hello.mp4
   markdown-video preview <input.md> --times 0,1.5,3 --json
+  markdown-video diff <old.md> <new.md> [--json] [--out-dir frames]
   markdown-video doctor [--ffmpeg <path>] [--chromium <path>]
   markdown-video install-browser [--with-deps]
   markdown-video --version
@@ -113,6 +117,44 @@ Preview options:
 Preview frames are direct lossless PNG screenshots at exact timeline times, not
 lossy frames extracted from a rendered video. JSON output writes no extra stdout
 text; diagnostics are written to stderr.
+`
+
+const DIFF_HELP = `markdown-video diff — compare rendered frames scene by scene
+
+Usage:
+  markdown-video diff <old.md> <new.md> [options]
+
+What it does:
+  Parses both documents, aligns scenes by content (including insertions,
+  deletions, and reorders), captures only representative exact-time PNG frames,
+  and compares those frame pairs perceptually. No mp4 or ffmpeg encode is used.
+
+Output:
+  Human output is the default. Use --json for exactly one machine-readable
+  JSON object on stdout. Use --out-dir to write old | new | diff-highlight
+  composite PNGs for each compared sample.
+
+Options:
+      --json                   print the machine-readable diff report
+      --out-dir <dir>          write side-by-side comparison PNG files
+      --threshold <percent>    unchanged-content failure threshold (default 0.1)
+      --outlier-threshold <percent>
+                               high-similarity modified-scene outlier threshold (default 25)
+      --samples-per-scene <n>  1, 2 (default), or 3 interior frames per aligned scene
+      --resolution <preset>    480p, 720p, 1080p (default), 1440p, or 4k
+      --aspect-ratio <ratio>   project aspect ratio: 16:9 (default), 9:16, 1:1, 4:3
+      --locale <code>          localization override used by the scene renderer
+      --overwrite              replace existing comparison PNG files
+      --allow-outside-cwd      permit the output directory outside the working directory
+      --deny-remote-network    block all non-loopback browser network requests
+      --chromium <path>        Chromium executable (default: Playwright browser)
+  -h, --help                   print this help
+
+Exit status:
+  0  no unexpected visual changes
+  3  unexpected visual changes were found
+  2  usage/input error
+  1  renderer or dependency failure
 `
 
 const DOCTOR_HELP = `markdown-video doctor — check renderer dependencies
@@ -205,11 +247,11 @@ async function readMarkdownInput({
   }
 }
 
-function installCancellationHandlers() {
+function installCancellationHandlers(action = "render") {
   const abort = new AbortController()
   const cancel = (signal: NodeJS.Signals) => {
     if (!abort.signal.aborted) {
-      process.stderr.write(`\nReceived ${signal}; cancelling render...\n`)
+      process.stderr.write(`\nReceived ${signal}; cancelling ${action}...\n`)
       abort.abort()
     }
   }
@@ -293,6 +335,58 @@ async function runPreviewCommand(argv: string[]) {
   }
 }
 
+async function runDiffCommand(argv: string[]) {
+  const args = parseDiffCliArgs(argv)
+  if (args.help) {
+    process.stdout.write(DIFF_HELP)
+    return 0
+  }
+
+  if (!args.oldInputPath || !args.newInputPath) {
+    throw new UsageError("Missing diff input files. Expected <old.md> and <new.md>.")
+  }
+
+  const cwd = process.cwd()
+  const resolvedOldInputPath = resolveInputPath(args.oldInputPath, cwd)
+  const resolvedNewInputPath = resolveInputPath(args.newInputPath, cwd)
+  const [oldMarkdown, newMarkdown] = await Promise.all([
+    readFile(resolvedOldInputPath, "utf8"),
+    readFile(resolvedNewInputPath, "utf8"),
+  ])
+  const cancellation = installCancellationHandlers("diff")
+
+  try {
+    const result = await diffDocuments({
+      oldMarkdown,
+      newMarkdown,
+      oldPath: args.oldInputPath,
+      newPath: args.newInputPath,
+      cwd,
+      resolution: args.resolution,
+      aspectRatio: args.aspectRatio,
+      locale: args.locale ?? null,
+      chromiumExecutablePath: args.chromiumExecutablePath,
+      allowRemoteNetwork: !args.denyRemoteNetwork,
+      samplesPerScene: args.samplesPerScene,
+      unchangedThresholdPercent: args.thresholdPercent,
+      modifiedOutlierPercent: args.outlierThresholdPercent,
+      outDir: args.outDir,
+      overwrite: args.overwrite,
+      allowOutsideCwd: args.allowOutsideCwd,
+      signal: cancellation.signal,
+    })
+
+    if (args.json) {
+      process.stdout.write(`${JSON.stringify(result.report)}\n`)
+    } else {
+      process.stdout.write(formatDiffReport(result.report))
+    }
+    return result.exitCode
+  } finally {
+    cancellation.cleanup()
+  }
+}
+
 export async function main(argv = process.argv.slice(2)) {
   if (argv[0] === "doctor") {
     const doctorArgs = parseDoctorCliArgs(argv.slice(1))
@@ -321,6 +415,10 @@ export async function main(argv = process.argv.slice(2)) {
 
   if (argv[0] === "preview") {
     return runPreviewCommand(argv.slice(1))
+  }
+
+  if (argv[0] === "diff") {
+    return runDiffCommand(argv.slice(1))
   }
 
   const args = parseCliArgs(argv)

@@ -749,6 +749,7 @@ export function unexpectedReasonsForScene({
 
   if (
     status === "modified" &&
+    hasChange &&
     contentSimilarity !== null &&
     contentSimilarity >= MODIFIED_OUTLIER_MIN_CONTENT_SIMILARITY &&
     maxFrameChangePercent >= thresholds.modifiedOutlierPercent
