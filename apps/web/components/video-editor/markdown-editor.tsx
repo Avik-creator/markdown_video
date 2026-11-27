@@ -411,8 +411,8 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         >
           <Plus className="h-4 w-4" />
           Insert scene
-          <kbd className="ml-auto rounded border border-pink-200 bg-pink-50 px-1.5 py-0.5 text-[10px] dark:border-pink-900/60 dark:bg-pink-950/25">
-            Ctrl I
+          <kbd className="ml-auto whitespace-nowrap rounded border border-pink-200 bg-pink-50 px-1.5 py-0.5 text-[10px] dark:border-pink-900/60 dark:bg-pink-950/25">
+            ⌘/Ctrl I
           </kbd>
         </button>
       </div>

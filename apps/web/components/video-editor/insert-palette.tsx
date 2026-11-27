@@ -104,8 +104,8 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                 }}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-neutral-500"
               />
-              <kbd className="rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
-                Ctrl I
+              <kbd className="whitespace-nowrap rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+                ⌘/Ctrl I
               </kbd>
             </div>
 

@@ -57,6 +57,19 @@ const REMOVABLE_REQUIRED_POSITIONAL_DIRECTIVES = new Set([
   "locale",
 ]);
 
+
+// Schema names are intentionally terse positional tokens ("seconds", "code").
+// These are presentation labels only; the control types, options, defaults and
+// validation still come entirely from the core directive schema.
+const SCENE_VALUE_DISPLAY_LABELS: Record<string, string> = {
+  "duration.seconds": "Scene duration",
+  "background.color": "Background",
+  "transition.type": "Transition",
+  "transition.duration": "Transition duration",
+  "chapter.title": "Chapter title",
+  "locale.code": "Locale",
+};
+
 const TYPE_ICONS: Record<string, typeof Layers> = {
   text: Type,
   code: Code,
@@ -206,8 +219,9 @@ function ValueControl({
   disabledReason,
 }: ValueControlProps) {
   const schema = inspection.schema;
-  const label = titleCase(schema.name);
-  const accessibilityLabel = `${titleCase(directive)} ${label}`;
+  const schemaLabel = titleCase(schema.name);
+  const label = SCENE_VALUE_DISPLAY_LABELS[`${directive}.${schema.name}`] ?? schemaLabel;
+  const accessibilityLabel = `${titleCase(directive)} ${schemaLabel}`;
   const [draft, setDraft] = useState(() => controlValueText(inspection));
   const [focused, setFocused] = useState(false);
   const [draftError, setDraftError] = useState<string | null>(null);
@@ -291,7 +305,7 @@ function ValueControl({
           className={inputClass}
         >
           <option value="__default">
-            Default{schema.default !== undefined ? ` (${String(schema.default)})` : ""}
+            {schema.default !== undefined ? `Default (${String(schema.default)})` : "Not set"}
           </option>
           {options.map((option) => (
             <option key={option} value={option}>
