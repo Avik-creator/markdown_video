@@ -1,8 +1,27 @@
 {
   "name": "markdown-video",
   "version": "0.1.0",
-  "private": true,
+  "description": "Render markdown video documents to MP4 or GIF with Chromium and ffmpeg",
   "license": "MIT",
+  "author": "Avik Mukherjee (https://github.com/Avik-creator)",
+  "homepage": "https://github.com/Avik-creator/markdown_video/tree/main/apps/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avik-creator/markdown_video.git",
+    "directory": "apps/cli"
+  },
+  "bugs": "https://github.com/Avik-creator/markdown_video/issues",
+  "keywords": [
+    "markdown",
+    "video",
+    "mp4",
+    "gif",
+    "renderer",
+    "cli",
+    "ffmpeg",
+    "playwright",
+    "chromium"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -18,10 +37,15 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
