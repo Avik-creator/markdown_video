@@ -126,6 +126,23 @@ describe("alignSceneFingerprints", () => {
     expect(rows.filter((row) => row.status === "added")).toHaveLength(0)
   })
 
+  it("uses stable anchors to separate an independent deletion and insertion", () => {
+    const rows = alignMarkdown(
+      textDocument(["Alpha", "Deleted scene", "Beta"]),
+      textDocument(["Alpha", "Beta", "Inserted elsewhere"]),
+    )
+
+    expect(rows.map((row) => row.status)).toEqual([
+      "unchanged-content",
+      "removed",
+      "retimed",
+      "added",
+    ])
+    expect(rows.find((row) => row.status === "removed")?.old?.index).toBe(1)
+    expect(rows.find((row) => row.status === "added")?.new?.index).toBe(2)
+    expect(rows.some((row) => row.status === "modified")).toBe(false)
+  })
+
   it("aligns reordered scenes by content rather than by index", () => {
     const rows = alignMarkdown(
       textDocument(["Alpha", "Beta", "Gamma"]),

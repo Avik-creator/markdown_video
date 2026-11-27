@@ -496,6 +496,55 @@ function rowOrderKey(row: SceneAlignmentRow) {
 }
 
 /**
+ * Choose a longest non-crossing subsequence of exact matches. Exact matches
+ * are all trusted as scene matches, but only this monotonic subset is used as
+ * edit-gap anchors. That distinction matters for reorders: a moved exact
+ * scene is still aligned, yet it does not invalidate the surrounding order
+ * information used to separate independent insertions/deletions.
+ */
+function chooseMonotonicExactAnchors(exactPairs: readonly MutablePair[]) {
+  const sorted = [...exactPairs].sort(
+    (a, b) => a.oldScene.index - b.oldScene.index,
+  )
+  if (sorted.length === 0) return []
+
+  const lengths = sorted.map(() => 1)
+  const parents = sorted.map(() => -1)
+  let bestIndex = 0
+  for (let index = 0; index < sorted.length; index += 1) {
+    for (let previous = 0; previous < index; previous += 1) {
+      if (
+        sorted[previous]!.newScene.index < sorted[index]!.newScene.index &&
+        lengths[previous]! + 1 > lengths[index]!
+      ) {
+        lengths[index] = lengths[previous]! + 1
+        parents[index] = previous
+      }
+    }
+    if (lengths[index]! > lengths[bestIndex]!) bestIndex = index
+  }
+
+  const anchors: MutablePair[] = []
+  for (let index = bestIndex; index >= 0; index = parents[index]!) {
+    anchors.push(sorted[index]!)
+    if (parents[index] === -1) break
+  }
+  return anchors.reverse()
+}
+
+function editGapIndex(
+  sceneIndex: number,
+  anchors: readonly MutablePair[],
+  side: "oldScene" | "newScene",
+) {
+  let gap = 0
+  while (gap < anchors.length && sceneIndex > anchors[gap]![side].index) {
+    gap += 1
+  }
+  return gap
+}
+
+/**
  * Align scenes in two phases:
  *
  * 1. Exact canonical-content hashes are matched one-to-one, independently of
@@ -503,17 +552,21 @@ function rowOrderKey(row: SceneAlignmentRow) {
  *    are zipped in document order. This makes moves and reorderings visible
  *    without mistaking stable scenes for edits, while truly duplicated scenes
  *    remain inherently ambiguous.
- * 2. Remaining old/new scenes of the same type receive a recursive content
- *    similarity score plus a small positional prior. Candidates are consumed
- *    greedily in descending score order. A pair must clear both a minimum
- *    content similarity and a combined score; whatever remains is reported as
- *    removed/added rather than force-aligned.
+ *    A longest non-crossing subset of those exact matches is then used as
+ *    edit-gap anchors; reordered exact matches remain aligned but do not
+ *    destroy the surrounding sequence information.
+ * 2. Remaining old/new scenes of the same type and in the same anchor gap
+ *    receive a recursive content similarity score plus a small positional
+ *    prior. Candidates are consumed greedily in descending score order. A
+ *    pair must clear both a minimum content similarity and a combined score;
+ *    whatever remains is reported as removed/added rather than force-aligned.
  *
- * This is a heuristic edit script, not a proof of author intent. In
- * particular, deleting one scene and inserting an unrelated scene nearby can
- * look like a modification, and duplicated scenes cannot be assigned
- * unambiguously. Those limitations are preferable to index-only alignment,
- * which misclassifies every downstream scene after a single insertion.
+ * This is a heuristic edit script, not a proof of author intent. Duplicated
+ * scenes cannot be assigned unambiguously, a modified scene moved across a
+ * stable anchor can fall back to remove+add, and a complete rewrite is
+ * inherently ambiguous. Those limitations are preferable to index-only
+ * alignment, which misclassifies every downstream scene after a single
+ * insertion.
  */
 export function alignSceneFingerprints(
   oldScenes: readonly SceneFingerprint[],
@@ -522,6 +575,7 @@ export function alignSceneFingerprints(
   const matchedOld = new Set<number>()
   const matchedNew = new Set<number>()
   const pairs: MutablePair[] = []
+  const exactPairs: MutablePair[] = []
 
   const oldByHash = new Map<string, SceneFingerprint[]>()
   const newByHash = new Map<string, SceneFingerprint[]>()
@@ -544,12 +598,15 @@ export function alignSceneFingerprints(
       const newScene = newGroup[index]!
       matchedOld.add(oldScene.index)
       matchedNew.add(newScene.index)
-      pairs.push({ oldScene, newScene, similarity: 1 })
+      const pair = { oldScene, newScene, similarity: 1 }
+      pairs.push(pair)
+      exactPairs.push(pair)
     }
   }
 
   const unmatchedOld = oldScenes.filter((scene) => !matchedOld.has(scene.index))
   const unmatchedNew = newScenes.filter((scene) => !matchedNew.has(scene.index))
+  const exactAnchors = chooseMonotonicExactAnchors(exactPairs)
   const candidates: Array<{
     oldScene: SceneFingerprint
     newScene: SceneFingerprint
@@ -561,6 +618,12 @@ export function alignSceneFingerprints(
   for (const oldScene of unmatchedOld) {
     for (const newScene of unmatchedNew) {
       if (oldScene.type !== newScene.type) continue
+      if (
+        editGapIndex(oldScene.index, exactAnchors, "oldScene") !==
+        editGapIndex(newScene.index, exactAnchors, "newScene")
+      ) {
+        continue
+      }
       const similarity = canonicalSimilarity(
         oldScene.canonicalContent,
         newScene.canonicalContent,

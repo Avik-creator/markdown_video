@@ -195,8 +195,8 @@ Each scene is fingerprinted with a SHA-256 hash of canonical parsed content. The
 
 Alignment is a deliberately simple two-phase heuristic:
 
-1. Exact content hashes are matched one-to-one independent of sequence position. Duplicate hash occurrences are zipped in document order. This handles insertions, deletions, and reorders of stable scenes.
-2. Remaining same-type scenes receive a recursive content-similarity score (weighted toward primary text/code/terminal/media content) plus a small positional prior. The best scoring unused pairs are consumed greedily. Scenes that remain unmatched are `added` or `removed`; a scene type replacement is therefore normally remove+add rather than modify.
+1. Exact content hashes are matched one-to-one independent of sequence position. Duplicate hash occurrences are zipped in document order. This handles insertions, deletions, and reorders of stable scenes. A longest non-crossing subset of those exact matches becomes a set of edit-gap anchors; reordered exact matches stay aligned without discarding the surrounding sequence information.
+2. Remaining same-type scenes in the same anchor gap receive a recursive content-similarity score (weighted toward primary text/code/terminal/media content) plus a small positional prior. The best scoring unused pairs are consumed greedily. Scenes that remain unmatched are `added` or `removed`; a scene type replacement is therefore normally remove+add rather than modify.
 
 Rows are classified as:
 
@@ -208,7 +208,7 @@ Rows are classified as:
 | `added` | Present only in the new document; not frame-compared. |
 | `removed` | Present only in the old document; not frame-compared. |
 
-This is not a proof of author intent. Duplicate scenes are inherently ambiguous; deleting one scene while inserting an unrelated scene nearby can look like a modification; and large rewrites of the same type may cross in either direction between `modified` and remove+add depending on similarity. The important guarantee is that alignment is content-aware rather than index-only, so one insertion does not cascade into false edits for every downstream scene.
+This is not a proof of author intent. Duplicate scenes are inherently ambiguous; a modified scene moved across a stable anchor can fall back to remove+add; and large rewrites of the same type may cross in either direction between `modified` and remove+add depending on similarity. The important guarantee is that alignment is content-aware rather than index-only, so one insertion does not cascade into false edits for every downstream scene, and stable anchors keep an independent delete+insert pair from being force-aligned merely because both scenes have the same type.
 
 #### Sampling, comparison, and performance
 
