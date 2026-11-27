@@ -32,6 +32,12 @@ const MAX_MCP_SEARCH_QUERY_LENGTH = 200;
 // body itself before constructing the transport, so this route must enforce the
 // bound before handing the request to it.
 const MAX_MCP_REQUEST_BODY_BYTES = 512 * 1024;
+// Server-side rendering can occupy most of a minute once sandbox fork,
+// bounded render execution, artifact storage, and best-effort fork cleanup are
+// accounted for. Keep the route well below the Hobby-plan 300s ceiling while
+// avoiding an effectively unbounded billable invocation.
+export const maxDuration = 90;
+
 const MCP_BASE_PATH = "/api/mcp";
 const STREAMABLE_HTTP_PATH = `${MCP_BASE_PATH}/mcp`;
 // Every documented tool argument object is flat and has at most one useful
@@ -808,7 +814,7 @@ ${template}
     redisUrl: process.env.REDIS_URL,
     basePath: MCP_BASE_PATH,
     verboseLogs: process.env.NODE_ENV === "development",
-    maxDuration: 60,
+    maxDuration: 90,
     // REDIS_URL is not configured for this deployment, and the legacy SSE
     // transport throws without it. Streamable HTTP remains available at /mcp.
     disableSse: true,
