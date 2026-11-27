@@ -32,6 +32,46 @@ async function copyFiltered(source, destination, root, filter) {
   })
 }
 
+/**
+ * Resolve the production dependency closure from the workspace installation.
+ * The sandbox receives plain files rather than a package-manager install, so
+ * both direct and transitive runtime packages must be present in its flat
+ * node_modules directory.
+ */
+async function resolveRuntimeDependencyClosure(cliRequire, cliPackageJson) {
+  const packages = new Map()
+  const queue = Object.keys(cliPackageJson.dependencies ?? {}).map((name) => ({
+    name,
+    parentRequire: cliRequire,
+  }))
+
+  while (queue.length > 0) {
+    const { name, parentRequire } = queue.shift()
+    if (!name || !parentRequire) continue
+
+    const packageJsonPath = parentRequire.resolve(`${name}/package.json`)
+    const packageRoot = path.dirname(packageJsonPath)
+    const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"))
+    const existing = packages.get(name)
+    if (existing) {
+      if (existing.packageRoot !== packageRoot) {
+        throw new Error(
+          `Runtime dependency ${name} resolves to conflicting versions in the sandbox bundle.`,
+        )
+      }
+      continue
+    }
+
+    packages.set(name, { packageRoot, packageJson })
+    const dependencyRequire = createRequire(packageJsonPath)
+    for (const dependencyName of Object.keys(packageJson.dependencies ?? {})) {
+      queue.push({ name: dependencyName, parentRequire: dependencyRequire })
+    }
+  }
+
+  return packages
+}
+
 async function main() {
   await requireFile(
     path.join(cliDist, "cli.js"),
@@ -44,7 +84,6 @@ async function main() {
 
   const cliRequire = createRequire(path.join(cliDist, "cli.js"))
   const playwrightPackageJsonPath = cliRequire.resolve("playwright-core/package.json")
-  const playwrightRoot = path.dirname(playwrightPackageJsonPath)
   const playwrightPackageJson = JSON.parse(await readFile(playwrightPackageJsonPath, "utf8"))
   const cliPackageJson = JSON.parse(await readFile(path.join(cliRoot, "package.json"), "utf8"))
 
@@ -70,17 +109,25 @@ async function main() {
     { recursive: true },
   )
   await mkdir(path.join(bundleDir, "node_modules"), { recursive: true })
-  await copyFiltered(
-    playwrightRoot,
-    path.join(bundleDir, "node_modules", "playwright-core"),
-    playwrightRoot,
-    shouldCopyPlaywrightFile,
-  )
+  const runtimeDependencies = await resolveRuntimeDependencyClosure(cliRequire, cliPackageJson)
+  for (const [name, dependency] of [...runtimeDependencies.entries()].sort()) {
+    await copyFiltered(
+      dependency.packageRoot,
+      path.join(bundleDir, "node_modules", name),
+      dependency.packageRoot,
+      name === "playwright-core" ? shouldCopyPlaywrightFile : () => true,
+    )
+  }
 
   const manifest = {
     cliName: cliPackageJson.name,
     cliVersion: cliPackageJson.version,
     playwrightCoreVersion: playwrightPackageJson.version,
+    runtimeDependencyVersions: Object.fromEntries(
+      [...runtimeDependencies.entries()]
+        .sort()
+        .map(([name, dependency]) => [name, dependency.packageJson.version]),
+    ),
     layout: "flat-cli-bundle-v1",
     notes: "Generated at build time; do not edit or commit.",
   }
