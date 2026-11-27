@@ -4,6 +4,7 @@ import {
   getRenderLayoutDimensions,
 } from "../render-layout.js";
 import {
+  BROWSER_EXPORT_MAX_FRAME_COUNT,
   createRenderPlan,
   getExportAspectRatio,
   getExportDimensions,
@@ -12,6 +13,7 @@ import {
   getTotalFrameCount,
   getVideoEncodingSettings,
   normalizeOutputFps,
+  validateBrowserExportInput,
   validateExportInput,
 } from "../render-plan.js";
 
@@ -244,5 +246,51 @@ describe("export input validation", () => {
     expect(validation.valid).toBe(false);
     expect(validation.reason).toMatch(/frame/i);
     expect(validation.totalFrameCount).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it("rejects frame counts outside JavaScript's safe integer range", () => {
+    const validation = validateExportInput({
+      sceneCount: 1,
+      totalDuration: Number.MAX_SAFE_INTEGER / 60,
+      fps: 60,
+    });
+
+    expect(Number.isSafeInteger(validation.totalFrameCount)).toBe(false);
+    expect(validation.valid).toBe(false);
+    expect(validation.reason).toMatch(/frame sequence/i);
+  });
+
+  it("applies a consumer frame ceiling inclusively at the boundary", () => {
+    const exact = validateExportInput({
+      sceneCount: 1,
+      totalDuration: 120,
+      fps: 30,
+      maxFrameCount: BROWSER_EXPORT_MAX_FRAME_COUNT,
+    });
+    const over = validateExportInput({
+      sceneCount: 1,
+      totalDuration: 120.02,
+      fps: 30,
+      maxFrameCount: BROWSER_EXPORT_MAX_FRAME_COUNT,
+    });
+
+    expect(exact.totalFrameCount).toBe(BROWSER_EXPORT_MAX_FRAME_COUNT);
+    expect(exact.valid).toBe(true);
+    expect(over.totalFrameCount).toBe(BROWSER_EXPORT_MAX_FRAME_COUNT + 1);
+    expect(over.valid).toBe(false);
+    expect(over.reason).toMatch(/3601 frames.*3600-frame limit/);
+  });
+
+  it("caps browser MEMFS exports without restricting streaming consumers", () => {
+    const input = { sceneCount: 1, totalDuration: 120.02, fps: 30 };
+    const uncapped = validateExportInput(input);
+    const browser = validateBrowserExportInput(input);
+
+    expect(uncapped.valid).toBe(true);
+    expect(browser.valid).toBe(false);
+    expect(browser.totalFrameCount).toBe(BROWSER_EXPORT_MAX_FRAME_COUNT + 1);
+    expect(browser.reason).toMatch(/3600-frame limit/);
+
+    expect(validateBrowserExportInput({ ...input, totalDuration: 120 }).valid).toBe(true);
   });
 });

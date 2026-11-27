@@ -26,7 +26,7 @@ import {
   generateCaptionSidecars,
   getFrameFileName,
   getVideoEncodingSettings,
-  validateExportInput,
+  validateBrowserExportInput,
 } from "@markdown-video/core";
 import {
   RenderRunTracker,
@@ -116,7 +116,7 @@ export default function FfmpegRender({
   const seekTo = useVideoStore((state) => state.seekTo);
   const pause = useVideoStore((state) => state.pause);
 
-  const exportValidation = validateExportInput({
+  const exportValidation = validateBrowserExportInput({
     sceneCount,
     totalDuration,
     fps: exportSettings.fps,

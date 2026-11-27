@@ -218,6 +218,7 @@ export {
 
 // Output render geometry and deterministic frame-count planning.
 export {
+  BROWSER_EXPORT_MAX_FRAME_COUNT,
   getExportDimensions,
   getExportAspectRatio,
   getFrameEncoding,
@@ -226,11 +227,13 @@ export {
   getFrameFileName,
   normalizeOutputFps,
   getTotalFrameCount,
+  validateBrowserExportInput,
   validateExportInput,
 } from "./render-plan.js";
 export type {
   FrameEncoding,
   VideoEncodingSettings,
   RenderPlan,
+  ExportValidationInput,
   ExportValidationResult,
 } from "./render-plan.js";
