@@ -27,6 +27,7 @@ import {
   getFrameFileName,
   getVideoEncodingSettings,
   validateBrowserExportInput,
+  type Scene,
 } from "@markdown-video/core";
 import {
   RenderRunTracker,
@@ -67,6 +68,41 @@ class RenderCancelledError extends Error {
     super("Rendering cancelled");
     this.name = "RenderCancelledError";
   }
+}
+
+// html2canvas-pro interprets imageTimeout as milliseconds. A finite budget is
+// important because zero disables image-load timeouts entirely: one stalled
+// image request could otherwise leave capture forever indistinguishable from a
+// very slow export. Fifteen seconds is generous for foreground browser assets
+// without making a genuinely stuck resource unbounded.
+export const CAPTURE_IMAGE_TIMEOUT_MS = 15_000;
+export const MAX_CONSECUTIVE_FRAME_CAPTURE_FAILURES = 3;
+
+export function describeFrameCaptureContext(
+  scenes: readonly Pick<Scene, "duration" | "type">[],
+  timeSeconds: number,
+) {
+  let sceneStart = 0;
+  for (let index = 0; index < scenes.length; index++) {
+    const scene = scenes[index];
+    const sceneEnd = sceneStart + Math.max(0, scene.duration);
+    if (timeSeconds < sceneEnd || index === scenes.length - 1) {
+      return `scene ${index + 1} (${scene.type}) at ${timeSeconds.toFixed(2)}s`;
+    }
+    sceneStart = sceneEnd;
+  }
+  return `time ${timeSeconds.toFixed(2)}s`;
+}
+
+export function createRepeatedFrameCaptureError(
+  scenes: readonly Pick<Scene, "duration" | "type">[],
+  frameIndex: number,
+  fps: number,
+) {
+  const timeSeconds = frameIndex / fps;
+  return new Error(
+    `Frame capture failed ${MAX_CONSECUTIVE_FRAME_CAPTURE_FAILURES} times in a row at frame ${frameIndex + 1} (${describeFrameCaptureContext(scenes, timeSeconds)}). Check whether the scene contains an image or resource that cannot load in this browser.`,
+  );
 }
 
 function sleep(ms: number, signal: AbortSignal) {
@@ -367,6 +403,7 @@ export default function FfmpegRender({
       setStatus("capturing");
 
       let lastFrame: Uint8Array | null = null;
+      let consecutiveCaptureFailures = 0;
       const frameCanvas = document.createElement("canvas");
       frameCanvas.width = renderPlan.width;
       frameCanvas.height = renderPlan.height;
@@ -404,7 +441,7 @@ export default function FfmpegRender({
             useCORS: true,
             allowTaint: true,
             removeContainer: true,
-            imageTimeout: 0,
+            imageTimeout: CAPTURE_IMAGE_TIMEOUT_MS,
             width: renderPlan.layoutWidth,
             height: renderPlan.layoutHeight,
             windowWidth: renderPlan.layoutWidth,
@@ -452,14 +489,28 @@ export default function FfmpegRender({
             { signal: controller.signal }
           );
           lastFrame = fallbackFrame;
+          consecutiveCaptureFailures = 0;
         } catch (error) {
           if (!isCurrentRun()) {
             throw new RenderCancelledError();
           }
 
+          consecutiveCaptureFailures += 1;
           console.error(`Failed to capture frame ${frameIndex}:`, error);
+          if (
+            consecutiveCaptureFailures >= MAX_CONSECUTIVE_FRAME_CAPTURE_FAILURES
+          ) {
+            throw createRepeatedFrameCaptureError(
+              state.scenes,
+              frameIndex,
+              outputFps,
+            );
+          }
           // FFmpeg's image sequence input stops at the first missing file, so a
-          // gap would silently cut the video short. Repeat the previous frame.
+          // gap would silently cut the video short. Repeat the previous frame
+          // for an isolated/transient capture fault only; the consecutive
+          // failure ceiling above prevents this recovery path from hiding a
+          // persistently broken scene.
           if (!lastFrame) {
             throw new Error("Could not capture the first frame");
           }
@@ -708,6 +759,10 @@ export default function FfmpegRender({
             </>
           )}
         </Button>
+        <p className="text-xs text-zinc-500 text-center">
+          Keep this tab visible while exporting; frame capture uses browser
+          animation frames and stalls in a background tab.
+        </p>
         {!exportValidation.valid && exportValidation.reason && (
           <p role="alert" className="text-xs text-amber-400 text-center">
             {exportValidation.reason}
@@ -747,6 +802,9 @@ export default function FfmpegRender({
         <div className="space-y-2">
           <Progress value={progress} className="h-2 bg-zinc-800" />
           <p className="text-xs text-zinc-500 text-center">{progress}%</p>
+          <p className="text-xs text-zinc-500 text-center">
+            Keep this tab visible until encoding finishes.
+          </p>
         </div>
 
         <Button
