@@ -124,6 +124,28 @@ function clampNumber(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
+// Browser and CLI renderers serialize ffmpeg's `-t` duration with millisecond
+// precision, so 1 ms is the smallest positive scene duration that survives the
+// export pipeline intact. Negative and zero values would otherwise make scene
+// ranges invert or vanish when the editor validator is not part of the parse
+// path (notably CLI and worker renders).
+const MIN_SCENE_DURATION_SECONDS = 0.001;
+
+// ffmpeg parses time offsets into signed 64-bit microsecond counters. Render
+// arguments are serialized with millisecond precision, and the largest whole
+// millisecond representable in that counter is floor((2^63 - 1) / 1000) ms.
+// This is a numeric-overflow ceiling, not a practical length recommendation;
+// frame-count validation remains responsible for rejecting unrenderably long
+// exports before capture starts.
+const MAX_SCENE_DURATION_SECONDS = 9_223_372_036_854.775;
+
+function coerceSceneDuration(duration: number): number {
+  if (!Number.isFinite(duration)) {
+    return duration < 0 ? MIN_SCENE_DURATION_SECONDS : MAX_SCENE_DURATION_SECONDS;
+  }
+  return clampNumber(duration, MIN_SCENE_DURATION_SECONDS, MAX_SCENE_DURATION_SECONDS);
+}
+
 function parseMusicTrack(directiveArgs: string): MusicTrack | null {
   const { positional } = parseInlineArguments(directiveArgs);
   const src = firstInlineValue(positional, 0);
@@ -298,7 +320,7 @@ function parseMarkdownInternal(
               const { positional } = parseInlineArguments(directiveArgs);
               const duration = parseDirectiveNumericValue("duration", "seconds", firstInlineValue(positional, 0));
               if (duration !== undefined) {
-                scene.duration = duration;
+                scene.duration = coerceSceneDuration(duration);
               }
               i++;
               i = consumeDirectiveTail(lines, i);

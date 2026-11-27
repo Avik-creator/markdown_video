@@ -108,14 +108,21 @@ Losses: -4
     ]);
   });
 
-  it("retains an invalid negative scene duration so validation can report it", () => {
+  it.each([
+    ["negative", "-2", 0.001],
+    ["zero", "0", 0.001],
+    ["sub-millisecond", "0.0001", 0.001],
+    ["huge finite", "1000000000000000", 9_223_372_036_854.775],
+    ["overflowing positive", "9".repeat(400), 9_223_372_036_854.775],
+    ["overflowing negative", `-${"9".repeat(400)}`, 0.001],
+  ] as const)("clamps a %s scene duration into renderable numeric range", (_label, input, expected) => {
     const [scene] = parseMarkdown(`!scene
-!duration -2
+!duration ${input}
 !text
-Invalid duration
+Duration clamping
 `);
 
-    expect(scene.duration).toBe(-2);
+    expect(scene.duration).toBe(expected);
   });
 
   it("does not produce NaN highlight lines for invalid highlight input", () => {
