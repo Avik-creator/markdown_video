@@ -22,7 +22,8 @@
     },
     "test": {
       "dependsOn": ["^build"],
-      "outputs": []
+      "outputs": [],
+      "passThroughEnv": ["KV_TEST_POSTGRES_URL"]
     },
     "dev": {
       "cache": false,

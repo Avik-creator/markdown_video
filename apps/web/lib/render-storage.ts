@@ -1,17 +1,19 @@
 import { randomBytes } from "node:crypto";
 
-import { isRedisConfigured, redis } from "@/lib/redis";
+import { isKvConfigured, kvGet, kvSet } from "@/lib/kv";
 
 /**
  * Rendered mp4 objects are temporary derivatives, not source documents. One
  * hour is long enough for an agent/user to inspect or download a result while
- * bounding Redis storage growth from the public render tool.
+ * bounding storage growth from the public render tool.
  */
 export const RENDER_VIDEO_TTL_SECONDS = 60 * 60;
 /**
  * Upstash's common REST request cap is 10 MB. Base64 inflates binary data by
  * 4/3, so 6 MiB of mp4 becomes exactly 8 MiB of payload plus small JSON/key
  * overhead — comfortably below the limit while covering typical short renders.
+ * The cap is backend-independent public behavior (render_video documents it)
+ * and stays unchanged now that storage can also be Postgres.
  */
 export const MAX_RENDER_VIDEO_BYTES = 6 * 1024 * 1024;
 export const RENDER_VIDEO_ID_PATTERN = /^[a-f0-9]{32}$/;
@@ -53,7 +55,7 @@ type StoredRenderVideo = {
 export class RenderStorageConfigurationError extends Error {
   constructor() {
     super(
-      "Render storage is not configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and KV_REST_API_TOKEN)."
+      "Render storage is not configured. Set NEON_DATABASE_URL or DATABASE_URL for Postgres storage, or UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and KV_REST_API_TOKEN) for Redis storage."
     );
     this.name = "RenderStorageConfigurationError";
   }
@@ -69,7 +71,7 @@ export class RenderVideoTooLargeError extends Error {
 }
 
 export function isRenderStorageConfigured() {
-  return isRedisConfigured();
+  return isKvConfigured();
 }
 
 export function isRenderVideoId(id: string) {
@@ -119,10 +121,10 @@ function isStoredRenderVideo(value: unknown): value is StoredRenderVideo {
 }
 
 /**
- * Store an mp4 in the existing Redis backend as a versioned base64 object.
- * Redis values are binary-safe in principle, but the Upstash REST client JSON
- * round-trip is not a binary transport; base64 makes the payload explicit and
- * keeps the implementation small at the cost of 33% storage overhead.
+ * Store an mp4 in the configured storage backend as a versioned base64 object.
+ * The Upstash REST client's JSON round-trip is not a binary transport and the
+ * facade is string-oriented, so base64 makes the payload explicit and keeps
+ * the implementation small at the cost of 33% storage overhead.
  */
 export async function storeRenderVideo({
   mp4,
@@ -139,7 +141,7 @@ export async function storeRenderVideo({
   fps: number;
   totalFrames: number;
 }): Promise<RenderVideoMetadata> {
-  if (!isRedisConfigured()) {
+  if (!isKvConfigured()) {
     throw new RenderStorageConfigurationError();
   }
   if (mp4.byteLength > MAX_RENDER_VIDEO_BYTES) {
@@ -162,7 +164,7 @@ export async function storeRenderVideo({
     expiresAt,
   };
 
-  await redis.set(renderVideoKey(id), stored, { ex: RENDER_VIDEO_TTL_SECONDS });
+  await kvSet(renderVideoKey(id), JSON.stringify(stored), RENDER_VIDEO_TTL_SECONDS);
   return metadataFor(id, stored);
 }
 
@@ -172,14 +174,28 @@ export async function storeRenderVideo({
  * from an unguessable ID that never existed.
  */
 export async function readRenderVideo(id: string): Promise<RenderVideoObject | null> {
-  if (!isRedisConfigured()) {
+  if (!isKvConfigured()) {
     throw new RenderStorageConfigurationError();
   }
   if (!isRenderVideoId(id)) {
     return null;
   }
 
-  const value: unknown = await redis.get(renderVideoKey(id));
+  const raw = await kvGet(renderVideoKey(id));
+  if (raw === null) {
+    return null;
+  }
+
+  // Values written by storeRenderVideo are canonical JSON on every backend.
+  // Anything that fails to parse is corruption and behaves as not-found, like
+  // any other malformed payload.
+  let value: unknown;
+  try {
+    value = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+
   if (!isStoredRenderVideo(value)) {
     return null;
   }

@@ -4,8 +4,8 @@ import { VideoEditor } from "@components/video-editor/video-editor"
 import { ShareLinkError, type ShareLinkErrorKind } from "@components/video-editor/share-link-error"
 import { ShareProjectGate } from "@components/video-editor/share-project-gate"
 import { enforceProjectReadRateLimit } from "@/lib/rate-limit"
-import { parseProjectMarkdown } from "@/lib/project-storage"
-import { redis } from "@/lib/redis"
+import { parseProjectJson, parseProjectMarkdown } from "@/lib/project-storage"
+import { kvGet } from "@/lib/kv"
 import { decodeShareMarkdownPayload } from "@markdown-video/core"
 
 export const metadata: Metadata = {
@@ -61,17 +61,17 @@ async function resolveSharedMarkdown(mdParam: string | undefined, projectParam: 
     }
 
     // Valid-shaped project IDs hit the same shared project lookup budget as
-    // /api/projects before touching Redis. Malformed IDs return above without
+    // /api/projects before touching storage. Malformed IDs return above without
     // reading request headers or consuming any of that budget, and ordinary
     // editor visits never enter this branch. Project storage and distributed
-    // rate limiting use the same Redis dependency, so a rate-limit failure is
+    // rate limiting use the same storage dependency, so a rate-limit failure is
     // surfaced as an error rather than bypassed — but a genuine 429 (the
     // visitor is simply asking too often, retryable within seconds) is told
     // apart from a 503 (the rate-limit dependency itself is down) because the
     // advice differs: "try again shortly" versus "storage is not responding".
     // Keep the framework's headers() call outside try/catch so any rendering
     // control-flow exception retains Next.js semantics. Rate-limit enforcement
-    // itself handles expected Redis failures by returning a 503 Response; this
+    // itself handles expected storage failures by returning a 503 Response; this
     // catch is only a defense against unexpected implementation errors.
     const requestHeaders = await headers()
     try {
@@ -88,17 +88,20 @@ async function resolveSharedMarkdown(mdParam: string | undefined, projectParam: 
     }
 
     try {
-      // The Upstash client auto-deserializes JSON, so stored values may be the
-      // versioned wrapper object, a legacy plain string, or a corrupted scalar;
-      // parseProjectMarkdown normalizes all three (see lib/project-storage).
-      const storedValue = await redis.get(`project:${projectParam}`)
-      const parsedMarkdown = parseProjectMarkdown(storedValue)
+      // The facade returns plain strings on every backend; parseProjectJson
+      // recovers the versioned wrapper, legacy plain strings, and corrupted
+      // scalars into the shapes parseProjectMarkdown normalizes (see
+      // lib/project-storage).
+      const storedValue = await kvGet(`project:${projectParam}`)
+      const parsedMarkdown = storedValue === null
+        ? null
+        : parseProjectMarkdown(parseProjectJson(storedValue))
       if (parsedMarkdown === null) {
         return { status: "error", kind: "project-not-found" }
       }
       sharedMarkdown = parsedMarkdown
     } catch (error) {
-      console.error("Error fetching shared project from Redis:", error)
+      console.error("Error fetching shared project from storage:", error)
       return { status: "error", kind: "project-unavailable" }
     }
   }

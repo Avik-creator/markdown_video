@@ -7,14 +7,16 @@ import {
   type RateLimitRequestLike,
 } from "@/lib/rate-limit";
 import {
+  parseProjectJson,
   parseProjectMarkdown,
   serializeProjectMarkdown,
 } from "@/lib/project-storage";
 import {
-  REDIS_CONFIGURATION_MESSAGE,
-  isRedisConfigured,
-  redis,
-} from "@/lib/redis";
+  KV_CONFIGURATION_MESSAGE,
+  isKvConfigured,
+  kvGet,
+  kvSet,
+} from "@/lib/kv";
 
 const MAX_PROJECT_BODY_BYTES = 1024 * 1024; // 1 MiB
 const PROJECT_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
@@ -28,9 +30,9 @@ const createProjectSchema = z.object({
 // always produces 11 URL-safe characters.
 const projectIdSchema = z.string().regex(/^[A-Za-z0-9_-]{11}$/);
 
-function redisNotConfiguredResponse() {
+function storageNotConfiguredResponse() {
   return NextResponse.json(
-    { error: REDIS_CONFIGURATION_MESSAGE },
+    { error: KV_CONFIGURATION_MESSAGE },
     {
       status: 503,
       headers: { "Retry-After": RETRY_AFTER_SECONDS },
@@ -38,7 +40,7 @@ function redisNotConfiguredResponse() {
   );
 }
 
-function redisOperationUnavailableResponse() {
+function storageOperationUnavailableResponse() {
   return NextResponse.json(
     { error: "Project storage is temporarily unavailable" },
     {
@@ -59,8 +61,8 @@ async function preExecutionErrorResponse(
   request: NextRequest,
   enforceRateLimit: (request: RateLimitRequestLike) => Promise<Response | null>
 ) {
-  if (!isRedisConfigured()) {
-    return redisNotConfiguredResponse();
+  if (!isKvConfigured()) {
+    return storageNotConfiguredResponse();
   }
 
   return enforceRateLimit(request);
@@ -159,16 +161,18 @@ export async function POST(request: NextRequest) {
   const key = `project:${projectId}`;
 
   try {
-    // Store in Redis with 7 day expiration. The markdown is wrapped in a
-    // versioned object so the Upstash client's automatic JSON deserialization
-    // round-trips it type-safely even when the document is valid JSON itself
-    // (e.g. the entire markdown is `42` or `true`); see lib/project-storage.
-    await redis.set(key, serializeProjectMarkdown(parsedBody.data.markdown), {
-      ex: PROJECT_TTL_SECONDS,
-    });
+    // Store with 7 day expiration. The markdown is wrapped in a versioned
+    // object so the storage round-trip is type-safe even when the document is
+    // valid JSON itself (e.g. the entire markdown is `42` or `true`); see
+    // lib/project-storage.
+    await kvSet(
+      key,
+      JSON.stringify(serializeProjectMarkdown(parsedBody.data.markdown)),
+      PROJECT_TTL_SECONDS
+    );
   } catch (error) {
-    console.error("Error storing project in Redis:", error);
-    return redisOperationUnavailableResponse();
+    console.error("Error storing project:", error);
+    return storageOperationUnavailableResponse();
   }
 
   return NextResponse.json({ projectId });
@@ -197,19 +201,21 @@ export async function GET(request: NextRequest) {
 
   const key = `project:${parsedProjectId.data}`;
 
-  // Fetch as unknown: the Upstash client auto-deserializes JSON, so legacy
-  // plain-string writes whose content was valid JSON (e.g. `42`) may come
-  // back as non-strings. parseProjectMarkdown normalizes the versioned
-  // wrapper, legacy strings, and corrupted scalars into markdown or null.
-  let storedValue: unknown;
+  // The facade returns plain strings on every backend; parseProjectJson
+  // recovers the versioned wrapper object from canonical JSON while passing
+  // legacy plain-string and scalar-shaped entries through in the shapes
+  // parseProjectMarkdown normalizes into markdown or null.
+  let rawValue: string | null;
   try {
-    storedValue = await redis.get(key);
+    rawValue = await kvGet(key);
   } catch (error) {
-    console.error("Error retrieving project from Redis:", error);
-    return redisOperationUnavailableResponse();
+    console.error("Error retrieving project from storage:", error);
+    return storageOperationUnavailableResponse();
   }
 
-  const markdown = parseProjectMarkdown(storedValue);
+  const markdown = rawValue === null
+    ? null
+    : parseProjectMarkdown(parseProjectJson(rawValue));
   if (markdown === null) {
     return NextResponse.json({ error: "Project not found" }, { status: 404 });
   }

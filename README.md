@@ -25,7 +25,7 @@ Transform your Markdown into animated videos with a custom syntax that brings yo
 - **Keyboard Shortcuts**: Boost productivity with keyboard shortcuts for common editor actions
 - **Find & Replace**: Quickly edit content across your markdown
 - **Theme Support**: Light and dark theme with customizable color schemes
-- **Experimental Sharing**: Generate links that open a project in the editor; large-project links require a configured Redis backend and expire after 7 days. There is no dedicated embed player yet; iframe embeds currently expose the editor UI
+- **Experimental Sharing**: Generate links that open a project in the editor; large-project links require a configured storage backend (Postgres or Redis) and expire after 7 days. There is no dedicated embed player yet; iframe embeds currently expose the editor UI
 
 > **Platform note:** The editor is designed primarily for modern desktop browsers. Mobile editing is not optimized yet, and browser-based export can be resource-intensive for longer videos.
 
@@ -72,7 +72,7 @@ flowchart LR
     MCP["/api/mcp<br/>12 tools: authoring + rendering"]
     FF["@ffmpeg/ffmpeg<br/>wasm, in the browser"]
     MP4["MP4 or GIF download"]
-    REDIS[("Upstash Redis<br/>shares, rate limits,<br/>temporary mp4 artifacts")]
+    DB[("Postgres or Redis<br/>shares, rate limits,<br/>temporary mp4 artifacts")]
     WORKER["render-worker container<br/>Chromium + native ffmpeg"]
 
     MD --> ED
@@ -83,15 +83,15 @@ flowchart LR
     STORE --> EXP
     EXP --> FF
     FF --> MP4
-    ED <-->|"/api/projects"| REDIS
+    ED <-->|"/api/projects"| DB
     AGENT --> MCP
     MCP --> PARSE
     MCP --> WORKER
-    MCP --> REDIS
+    MCP --> DB
 ```
 
 Interactive editing and manual export remain client-side: the parser produces scenes, the preview draws them,
-and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The editor's Assets panel can store music and images in browser-local IndexedDB and reference them as `./filename`; those bytes never leave the browser during editing/export and are not included in share links. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts in Redis for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
+and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The editor's Assets panel can store music and images in browser-local IndexedDB and reference them as `./filename`; those bytes never leave the browser during editing/export and are not included in share links. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
 
 ## 🏗️ Project Structure
 
@@ -133,7 +133,8 @@ apps/web/                       # Next.js application
   │   │   └── utils.ts            # Helper utilities
   │   ├── types.ts                # TypeScript type definitions
   │   ├── use-video-store.ts      # Zustand video state management
-  │   ├── redis.ts                # Redis client for share snapshots
+  │   ├── kv.ts                   # Storage facade: Postgres (Neon) primary, Redis fallback
+  │   ├── redis.ts                # Redis client used by the kv fallback backend
   │   ├── github.ts               # GitHub API integration
   │   ├── templates.ts            # Template definitions
   │   └── utils.ts                # General utilities
@@ -165,8 +166,8 @@ The normal editor needs only the existing web deployment. Enabling `render_previ
 1. Deploy the worker image with the repository root as Docker context:
    `docker build -t markdown-video-render-worker -f apps/render-worker/Dockerfile .`
    Run it with `RENDER_WORKER_SHARED_SECRET` (at least 32 random characters). Optional worker limits are `PORT`, `HOST`, `RENDER_WORKER_CONCURRENCY` (default `1`, max `4`), and `RENDER_WORKER_QUEUE_LIMIT` (default `8`). Prefer a private network; if public, always use HTTPS at the platform/load balancer. Restrict container egress where your host supports it—the browser already blocks non-loopback scene image requests, but network policy is still useful defense in depth.
-2. Configure the web app with the same `RENDER_WORKER_SHARED_SECRET` and `RENDER_WORKER_URL`, plus either `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL`/`KV_REST_API_TOKEN`. Set `NEXT_PUBLIC_SITE_URL` to the canonical public web origin so returned render URLs are not host-header derived.
-3. Rendered MP4s use IDs containing 128 bits of cryptographic randomness, expire after **1 hour**, and are capped at **6 MiB** before base64 encoding (8 MiB in Redis, chosen below Upstash's common 10 MB request ceiling). `render_preview` allows **10 requests/IP/hour**, `render_video` **5/IP/hour**, and video reads **120/IP/minute**; these policies are fail-closed because rendering is expensive.
+2. Configure the web app with the same `RENDER_WORKER_SHARED_SECRET` and `RENDER_WORKER_URL`, plus storage: `NEON_DATABASE_URL` (or `DATABASE_URL`) for Postgres — the primary backend, self-bootstrapping on first use — or, for existing self-hosted deployments, `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL`/`KV_REST_API_TOKEN` for Redis. Set `NEXT_PUBLIC_SITE_URL` to the canonical public web origin so returned render URLs are not host-header derived.
+3. Rendered MP4s use IDs containing 128 bits of cryptographic randomness, expire after **1 hour**, and are capped at **6 MiB** before base64 encoding (8 MiB stored, originally chosen below Upstash's common 10 MB request ceiling and kept backend-independent). `render_preview` allows **10 requests/IP/hour**, `render_video` **5/IP/hour**, and video reads **120/IP/minute**; these policies are fail-closed because rendering is expensive.
 
 The tools are absent only in the sense that they return configuration tool errors when these variables are missing; read-only authoring MCP tools continue to work.
 
@@ -217,7 +218,7 @@ The tools are absent only in the sense that they return configuration tool error
 - **Video Rendering**: [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/) - Browser-based video encoding
 - **Screenshot to Canvas**: [HTML2Canvas Pro](https://html2canvas.hertzen.com/) - DOM to canvas rendering
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) - React animation library
-- **Database**: [Upstash Redis](https://upstash.com/) - Optional serverless Redis backend for large share links
+- **Database**: [Neon Postgres](https://neon.com/) - Optional serverless Postgres backend for share links, rate limiting, and temporary render artifacts (Upstash Redis remains supported as a fallback)
 - **Icons**: [Lucide React](https://lucide.dev/) - SVG icon library
 - **Toast Notifications**: [Sonner](https://sonner.emilkowal.ski/) - Toast notification system
 - **Themes**: [Next.js Themes](https://github.com/pacocoursey/next-themes) - Theme switching

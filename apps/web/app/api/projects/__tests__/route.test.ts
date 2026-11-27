@@ -2,27 +2,25 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NextRequest } from "next/server";
 
 const {
-  redisGet,
-  redisSet,
-  redisConfigured,
+  kvGet,
+  kvSet,
+  kvConfigured,
   enforceProjectReadRateLimit,
   enforceProjectWriteRateLimit,
 } = vi.hoisted(() => ({
-  redisGet: vi.fn(),
-  redisSet: vi.fn(),
-  redisConfigured: vi.fn(),
+  kvGet: vi.fn(),
+  kvSet: vi.fn(),
+  kvConfigured: vi.fn(),
   enforceProjectReadRateLimit: vi.fn(),
   enforceProjectWriteRateLimit: vi.fn(),
 }));
 
-vi.mock("@/lib/redis", () => ({
-  redis: {
-    get: redisGet,
-    set: redisSet,
-  },
-  isRedisConfigured: redisConfigured,
-  REDIS_CONFIGURATION_MESSAGE:
-    "Redis is not configured. Set UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and KV_REST_API_TOKEN).",
+vi.mock("@/lib/kv", () => ({
+  kvGet,
+  kvSet,
+  isKvConfigured: kvConfigured,
+  KV_CONFIGURATION_MESSAGE:
+    "Storage is not configured. Set NEON_DATABASE_URL or DATABASE_URL for Postgres storage, or UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN (or KV_REST_API_URL and KV_REST_API_TOKEN) for Redis storage.",
 }));
 
 vi.mock("@/lib/rate-limit", () => ({
@@ -75,16 +73,16 @@ function getProject(id?: string) {
 
 describe("/api/projects", () => {
   beforeEach(() => {
-    redisGet.mockReset();
-    redisSet.mockReset();
-    redisConfigured.mockReset();
+    kvGet.mockReset();
+    kvSet.mockReset();
+    kvConfigured.mockReset();
     enforceProjectReadRateLimit.mockReset();
     enforceProjectWriteRateLimit.mockReset();
 
-    redisConfigured.mockReturnValue(true);
+    kvConfigured.mockReturnValue(true);
     enforceProjectReadRateLimit.mockResolvedValue(null);
     enforceProjectWriteRateLimit.mockResolvedValue(null);
-    redisSet.mockResolvedValue("OK");
+    kvSet.mockResolvedValue(undefined);
   });
 
   it("creates a project with the existing response shape and 7-day TTL", async () => {
@@ -94,13 +92,13 @@ describe("/api/projects", () => {
     const body = await response.json();
     expect(body.projectId).toMatch(/^[A-Za-z0-9_-]{11}$/);
 
-    expect(redisSet).toHaveBeenCalledTimes(1);
-    const [key, storedValue, options] = redisSet.mock.calls[0];
+    expect(kvSet).toHaveBeenCalledTimes(1);
+    const [key, storedValue, ttlSeconds] = kvSet.mock.calls[0];
     expect(key).toBe(`project:${body.projectId}`);
-    // The markdown is wrapped in a versioned object so Upstash's automatic
-    // JSON deserialization round-trips it type-safely.
-    expect(storedValue).toEqual({ v: 1, markdown: "!scene\n!text\nHello" });
-    expect(options).toEqual({ ex: PROJECT_TTL_SECONDS });
+    // The markdown is wrapped in a versioned object so the storage round-trip
+    // is type-safe even for documents that are themselves valid JSON.
+    expect(JSON.parse(storedValue)).toEqual({ v: 1, markdown: "!scene\n!text\nHello" });
+    expect(ttlSeconds).toBe(PROJECT_TTL_SECONDS);
   });
 
   it("applies the write rate limit to POST before reading the body or storing", async () => {
@@ -112,7 +110,7 @@ describe("/api/projects", () => {
   });
 
   it("applies the read rate limit to GET", async () => {
-    redisGet.mockResolvedValue({ v: 1, markdown: "stored" });
+    kvGet.mockResolvedValue(JSON.stringify({ v: 1, markdown: "stored" }));
 
     const response = await GET(getProject("abcDEF123-_"));
 
@@ -127,7 +125,7 @@ describe("/api/projects", () => {
 
     expect(response.status).toBe(400);
     expect(body.error).toMatch(/malformed json/i);
-    expect(redisSet).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 
   it("returns 413 when the request body exceeds 1 MiB", async () => {
@@ -139,7 +137,7 @@ describe("/api/projects", () => {
 
     expect(response.status).toBe(413);
     expect(body.error).toMatch(/too large/i);
-    expect(redisSet).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 
   it("enforces the body cap for streamed bodies without a content-length", async () => {
@@ -149,7 +147,7 @@ describe("/api/projects", () => {
     const response = await POST(request);
 
     expect(response.status).toBe(413);
-    expect(redisSet).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 
   it("accepts a request body exactly at the 1 MiB boundary", async () => {
@@ -160,7 +158,7 @@ describe("/api/projects", () => {
     const response = await POST(postBody(exactBoundaryBody));
 
     expect(response.status).toBe(200);
-    expect(redisSet).toHaveBeenCalledTimes(1);
+    expect(kvSet).toHaveBeenCalledTimes(1);
   });
 
   it("returns 400 when markdown is missing or is not a string", async () => {
@@ -170,19 +168,20 @@ describe("/api/projects", () => {
       expect(response.status).toBe(400);
       expect((await response.json()).error).toBe("Markdown is required");
     }
-    expect(redisSet).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 
-  it("returns a clear 503 when Redis is not configured", async () => {
-    redisConfigured.mockReturnValue(false);
+  it("returns a clear 503 naming both backends when storage is not configured", async () => {
+    kvConfigured.mockReturnValue(false);
 
     const response = await POST(validPost());
     const body = await response.json();
 
     expect(response.status).toBe(503);
-    expect(body.error).toContain("Redis is not configured");
+    expect(body.error).toContain("Storage is not configured");
+    expect(body.error).toContain("NEON_DATABASE_URL");
     expect(body.error).toContain("UPSTASH_REDIS_REST_URL");
-    expect(redisSet).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 
   it("returns the write rate-limit response before writing", async () => {
@@ -197,22 +196,22 @@ describe("/api/projects", () => {
 
     expect(response.status).toBe(429);
     expect((await response.json()).error).toBe("Rate limit exceeded");
-    expect(redisSet).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 
   it("loads a project stored in the versioned wrapper shape", async () => {
-    redisGet.mockResolvedValue({ v: 1, markdown: "!scene\n!text\nStored" });
+    kvGet.mockResolvedValue(JSON.stringify({ v: 1, markdown: "!scene\n!text\nStored" }));
 
     const response = await GET(getProject("abcDEF123-_"));
     const body = await response.json();
 
     expect(response.status).toBe(200);
     expect(body).toEqual({ markdown: "!scene\n!text\nStored" });
-    expect(redisGet).toHaveBeenCalledWith("project:abcDEF123-_");
+    expect(kvGet).toHaveBeenCalledWith("project:abcDEF123-_");
   });
 
   it("still loads legacy plain-string projects", async () => {
-    redisGet.mockResolvedValue("!scene\n!text\nLegacy");
+    kvGet.mockResolvedValue("!scene\n!text\nLegacy");
 
     const response = await GET(getProject("abcDEF123-_"));
     const body = await response.json();
@@ -222,9 +221,9 @@ describe("/api/projects", () => {
   });
 
   it("recovers legacy scalar-corrupted documents with String conversion", async () => {
-    // Simulates the Upstash client auto-deserializing a legacy plain-string
-    // write whose entire markdown was `42` into the number 42.
-    redisGet.mockResolvedValue(42);
+    // A legacy plain-string write whose entire markdown was `42` reads back
+    // through the facade as the canonical JSON scalar text.
+    kvGet.mockResolvedValue("42");
 
     const response = await GET(getProject("abcDEF123-_"));
     const body = await response.json();
@@ -234,7 +233,7 @@ describe("/api/projects", () => {
   });
 
   it("recovers legacy boolean-corrupted documents", async () => {
-    redisGet.mockResolvedValue(true);
+    kvGet.mockResolvedValue("true");
 
     const response = await GET(getProject("abcDEF123-_"));
     const body = await response.json();
@@ -247,12 +246,12 @@ describe("/api/projects", () => {
     const postResponse = await POST(validPost("42"));
     expect(postResponse.status).toBe(200);
 
-    const [, storedValue] = redisSet.mock.calls[0];
-    expect(storedValue).toEqual({ v: 1, markdown: "42" });
+    const [, storedValue] = kvSet.mock.calls[0];
+    expect(JSON.parse(storedValue)).toEqual({ v: 1, markdown: "42" });
 
-    // The Upstash client stores the wrapper as JSON and parses it back into
-    // the same object shape, so the read path sees the object form.
-    redisGet.mockResolvedValue(JSON.parse(JSON.stringify(storedValue)));
+    // The wrapper object is stored as canonical JSON on every backend and
+    // parses back into the same shape on read.
+    kvGet.mockResolvedValue(storedValue);
 
     const getResponse = await GET(getProject("abcDEF123-_"));
     const body = await getResponse.json();
@@ -266,7 +265,7 @@ describe("/api/projects", () => {
 
     expect(response.status).toBe(400);
     expect((await response.json()).error).toBe("Project ID is required");
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 
   it("rejects malformed project IDs before hitting Redis", async () => {
@@ -276,11 +275,11 @@ describe("/api/projects", () => {
       expect(response.status).toBe(400);
       expect((await response.json()).error).toBe("Invalid project ID");
     }
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 
   it("returns 404 when the project does not exist", async () => {
-    redisGet.mockResolvedValue(null);
+    kvGet.mockResolvedValue(null);
 
     const response = await GET(getProject("abcDEF123-_"));
 
@@ -299,6 +298,6 @@ describe("/api/projects", () => {
     const response = await GET(getProject("abcDEF123-_"));
 
     expect(response.status).toBe(429);
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 });

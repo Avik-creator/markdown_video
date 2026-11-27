@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   enforceProjectReadRateLimit,
   getRequestHeaders,
-  redisGet,
+  kvGet,
   shareLinkErrorComponent,
   shareProjectGateComponent,
   videoEditorComponent,
 } = vi.hoisted(() => ({
   enforceProjectReadRateLimit: vi.fn(),
   getRequestHeaders: vi.fn(),
-  redisGet: vi.fn(),
+  kvGet: vi.fn(),
   shareLinkErrorComponent: () => null,
   shareProjectGateComponent: () => null,
   videoEditorComponent: () => null,
@@ -24,10 +24,8 @@ vi.mock("@/lib/rate-limit", () => ({
   enforceProjectReadRateLimit,
 }));
 
-vi.mock("@/lib/redis", () => ({
-  redis: {
-    get: redisGet,
-  },
+vi.mock("@/lib/kv", () => ({
+  kvGet,
 }));
 
 vi.mock("@components/video-editor/video-editor", () => ({
@@ -58,7 +56,7 @@ describe("editor page share-project resolution", () => {
   beforeEach(() => {
     enforceProjectReadRateLimit.mockReset();
     getRequestHeaders.mockReset();
-    redisGet.mockReset();
+    kvGet.mockReset();
 
     getRequestHeaders.mockResolvedValue(
       new Headers({ "x-forwarded-for": "198.51.100.77" })
@@ -73,11 +71,11 @@ describe("editor page share-project resolution", () => {
     expect(element.props).toEqual({ isEmbed: false });
     expect(getRequestHeaders).not.toHaveBeenCalled();
     expect(enforceProjectReadRateLimit).not.toHaveBeenCalled();
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 
   it("applies the project rate limit with request headers before reading a valid project share", async () => {
-    redisGet.mockResolvedValue("!scene\n!text\nStored project");
+    kvGet.mockResolvedValue("!scene\n!text\nStored project");
 
     const element = await renderEditor({ project: "abcDEF123-_" });
 
@@ -85,7 +83,7 @@ describe("editor page share-project resolution", () => {
     expect(enforceProjectReadRateLimit).toHaveBeenCalledTimes(1);
     const [rateLimitSource] = enforceProjectReadRateLimit.mock.calls[0];
     expect(rateLimitSource.headers.get("x-forwarded-for")).toBe("198.51.100.77");
-    expect(redisGet).toHaveBeenCalledWith("project:abcDEF123-_");
+    expect(kvGet).toHaveBeenCalledWith("project:abcDEF123-_");
     expect(element.type).toBe(shareProjectGateComponent);
     expect(element.props).toEqual({
       initialMarkdown: "!scene\n!text\nStored project",
@@ -94,7 +92,7 @@ describe("editor page share-project resolution", () => {
   });
 
   it("resolves projects stored in the versioned wrapper shape", async () => {
-    redisGet.mockResolvedValue({ v: 1, markdown: "42" });
+    kvGet.mockResolvedValue(JSON.stringify({ v: 1, markdown: "42" }));
 
     const element = await renderEditor({ project: "abcDEF123-_" });
 
@@ -106,9 +104,9 @@ describe("editor page share-project resolution", () => {
   });
 
   it("recovers legacy scalar-corrupted projects", async () => {
-    // Simulates the Upstash client auto-deserializing a legacy plain-string
-    // write whose entire markdown was `42` into the number 42.
-    redisGet.mockResolvedValue(42);
+    // A legacy plain-string write whose entire markdown was `42` reads back
+    // through the facade as the canonical JSON scalar text.
+    kvGet.mockResolvedValue("42");
 
     const element = await renderEditor({ project: "abcDEF123-_" });
 
@@ -120,7 +118,7 @@ describe("editor page share-project resolution", () => {
   });
 
   it("treats unparseable stored values as project-not-found", async () => {
-    redisGet.mockResolvedValue([1, 2, 3]);
+    kvGet.mockResolvedValue("[1,2,3]");
 
     const element = await renderEditor({ project: "abcDEF123-_" });
 
@@ -135,7 +133,7 @@ describe("editor page share-project resolution", () => {
     expect(element.props).toEqual({ kind: "project-not-found", isEmbed: false });
     expect(getRequestHeaders).not.toHaveBeenCalled();
     expect(enforceProjectReadRateLimit).not.toHaveBeenCalled();
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 
   it("does not swallow headers/rendering control-flow exceptions", async () => {
@@ -144,10 +142,10 @@ describe("editor page share-project resolution", () => {
 
     await expect(renderEditor({ project: "abcDEF123-_" })).rejects.toBe(renderingControlError);
     expect(enforceProjectReadRateLimit).not.toHaveBeenCalled();
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 
-  it("shows the rate-limited error and skips Redis when the project lookup hits a 429", async () => {
+  it("shows the rate-limited error and skips storage when the project lookup hits a 429", async () => {
     enforceProjectReadRateLimit.mockResolvedValueOnce(
       new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
         status: 429,
@@ -159,7 +157,7 @@ describe("editor page share-project resolution", () => {
 
     expect(element.type).toBe(shareLinkErrorComponent);
     expect(element.props).toEqual({ kind: "rate-limited", isEmbed: false });
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 
   it("shows temporary unavailability when rate limiting itself is unavailable (503)", async () => {
@@ -174,6 +172,6 @@ describe("editor page share-project resolution", () => {
 
     expect(element.type).toBe(shareLinkErrorComponent);
     expect(element.props).toEqual({ kind: "project-unavailable", isEmbed: false });
-    expect(redisGet).not.toHaveBeenCalled();
+    expect(kvGet).not.toHaveBeenCalled();
   });
 });
