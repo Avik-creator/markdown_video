@@ -4,7 +4,13 @@ import { createRequire } from "node:module"
 import { readFile } from "node:fs/promises"
 import path from "node:path"
 
-import { parseCliArgs } from "./args.js"
+import {
+  parseCliArgs,
+  parseDoctorCliArgs,
+  parseInstallBrowserCliArgs,
+} from "./args.js"
+import { installPlaywrightChromium } from "./browser.js"
+import { formatDoctorReport, runDoctorChecks } from "./doctor.js"
 import { UsageError } from "./errors.js"
 import { resolveInputPath } from "./paths.js"
 import { renderVideo, type RenderProgress } from "./render.js"
@@ -12,15 +18,24 @@ import { renderVideo, type RenderProgress } from "./render.js"
 const require = createRequire(import.meta.url)
 const packageJson = require("../package.json") as { version: string }
 
-const HELP = `markdown-video — render markdown scenes to a video file
+const HELP = `markdown-video — render markdown scenes to MP4 or GIF
 
 Usage:
   markdown-video render <input.md> --output <output.mp4> [options]
-  markdown-video render - --output <output.mp4>   # read markdown from stdin
+  markdown-video <input.md> --output <output.mp4> [options]   # render may be omitted
+  markdown-video render - --output <output.mp4>               # read markdown from stdin
   markdown-video --markdown "# Hello" --output hello.mp4
+  markdown-video doctor [--ffmpeg <path>] [--chromium <path>]
+  markdown-video install-browser [--with-deps]
+  markdown-video --version
 
-Options:
-  -o, --output <path>        output .mp4 path (or .gif with --format gif)
+Quick start:
+  npm install -g markdown-video
+  markdown-video install-browser
+  markdown-video render video.md -o video.mp4
+
+Render options:
+  -o, --output <path>        output .mp4 path (or .gif with --format gif); required
   -m, --markdown <text>      markdown source instead of an input file
       --resolution <preset>  480p, 720p, 1080p (default), 1440p, or 4k
       --quality <preset>     low, medium, high (default), or ultra
@@ -37,6 +52,51 @@ Options:
       --chromium <path>      Chromium executable (default: Playwright browser)
   -v, --version              print version
   -h, --help                 print this help
+
+Examples:
+  markdown-video render video.md -o video.mp4
+  markdown-video render video.md -o reel.mp4 --format reels --resolution 1080p
+  markdown-video render video.md -o preview.gif --format gif --fps 12
+  markdown-video render video.md -o video.mp4 --burn-captions --locale en
+  cat video.md | markdown-video render - -o video.mp4 --deny-remote-network
+
+Dependencies:
+  ffmpeg with libx264/AAC support must be installed separately. Chromium is
+  installed into the Playwright user cache by \`markdown-video install-browser\`.
+  Run \`markdown-video doctor\` for a complete dependency check and fix-it advice.
+`
+
+const DOCTOR_HELP = `markdown-video doctor — check renderer dependencies
+
+Usage:
+  markdown-video doctor [--ffmpeg <path>] [--chromium <path>]
+
+Checks:
+  • Node.js version (20 or newer)
+  • embedded render-page assets and SHA-256-verified bundled fonts
+  • ffmpeg availability plus libx264/AAC/video/audio filter capabilities
+  • Chromium launchability (Playwright-managed browser or --chromium override)
+
+Options:
+      --ffmpeg <path>    ffmpeg executable to check (default: FFMPEG_BIN or PATH)
+      --chromium <path>  Chromium executable to check instead of Playwright's browser
+  -h, --help             print this help
+
+Exit status is 0 when every check passes and 1 when anything needs attention.
+`
+
+const INSTALL_BROWSER_HELP = `markdown-video install-browser — install Playwright Chromium
+
+Usage:
+  markdown-video install-browser [--with-deps]
+
+Options:
+      --with-deps  on Linux, also install required system libraries (may use sudo)
+  -h, --help       print this help
+
+The browser is installed into Playwright's user cache and shared with other
+Playwright applications of the same browser revision. Set PLAYWRIGHT_BROWSERS_PATH
+before running this command (and before rendering) to choose another cache location.
 `
 
 async function readStdin() {
@@ -74,6 +134,31 @@ function finishProgressLine() {
 }
 
 export async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === "doctor") {
+    const doctorArgs = parseDoctorCliArgs(argv.slice(1))
+    if (doctorArgs.help) {
+      process.stdout.write(DOCTOR_HELP)
+      return 0
+    }
+    const report = await runDoctorChecks({
+      ffmpegPath: doctorArgs.ffmpegPath,
+      chromiumExecutablePath: doctorArgs.chromiumExecutablePath,
+    })
+    process.stdout.write(formatDoctorReport(report))
+    return report.ok ? 0 : 1
+  }
+
+  if (argv[0] === "install-browser") {
+    const installArgs = parseInstallBrowserCliArgs(argv.slice(1))
+    if (installArgs.help) {
+      process.stdout.write(INSTALL_BROWSER_HELP)
+      return 0
+    }
+    await installPlaywrightChromium({ withDeps: installArgs.withDeps })
+    process.stdout.write("Playwright Chromium is installed. Run `markdown-video doctor` to verify the complete setup.\n")
+    return 0
+  }
+
   const args = parseCliArgs(argv)
   if (args.help) {
     process.stdout.write(HELP)

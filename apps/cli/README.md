@@ -1,79 +1,159 @@
-# markdown-video CLI
+# markdown-video
 
-Headless renderer for markdown-video documents. The CLI serves the production
-`@markdown-video/render-page` build from disk on an ephemeral loopback origin,
-drives its promise-based `window.__mv` API with Playwright Chromium, writes JPEG
-frames to native ffmpeg over `image2pipe`, and validates output paths before
-rendering.
+Render markdown video documents to MP4 or animated GIF from the command line.
 
-## Prerequisites
+`markdown-video` uses the same scene parser and renderer as the markdown-video web editor. It serves a bundled, font-complete render page on a local loopback port, captures precisely timed frames with headless Chromium, and encodes them with native ffmpeg. The npm package is self-contained: the render page, React scene bundle, CSS, all 80 bundled WOFF2 fonts, font license, and SHA-256 font provenance metadata are included in the tarball.
 
-- Node.js 20+
-- ffmpeg **and ffprobe** available on `PATH` (or pass `--ffmpeg` / set
-  `FFMPEG_BIN`; ffprobe is needed by the integration tests)
-- Playwright Chromium:
+## Requirements
 
-  ```sh
-  pnpm --filter markdown-video exec playwright install chromium
-  ```
+- **Node.js 20 or newer**
+- **ffmpeg** with the `libx264` and AAC encoders
+- **Chromium**, normally installed by `markdown-video install-browser`
 
-Before use in this monorepo, build the workspace dependencies:
+Runtime rendering does **not** require `ffprobe` (it is only used by this repository's integration tests and by humans inspecting output).
+
+### Install ffmpeg
 
 ```sh
-pnpm --filter @markdown-video/render-page build
-pnpm --filter markdown-video build
+# macOS
+brew install ffmpeg
+
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install -y ffmpeg
+
+# Windows
+winget install Gyan.FFmpeg
 ```
 
-The CLI intentionally does not vendor an ffmpeg binary. Bundled ffmpeg builds
-can be LGPL or GPL depending on how they were compiled (for example the
-`ffmpeg-static` package is GPL-licensed), so using a system/package-manager
-ffmpeg keeps license selection and security updates explicit. Playwright's
-browser binaries are downloaded into the user cache rather than committed;
-Chromium/Chrome for Testing remains governed by its upstream browser licenses.
+The package deliberately does not download `ffmpeg-static` or another bundled ffmpeg binary. Current `ffmpeg-static` releases are license-tagged GPL-3.0-or-later, download a large ffmpeg 6.x binary in a postinstall step from platform-specific third-party sources, and do not participate in the operating system's normal security-update mechanism. The CLI only executes ffmpeg as a separate process, so a system/package-manager ffmpeg is the clearer licensing, reliability, and patching contract. Pass `--ffmpeg` or set `FFMPEG_BIN` to use a non-PATH binary.
 
-## Usage
+## Install
 
 ```sh
-# Render a file to mp4 in the current working directory
-node apps/cli/dist/cli.js render video.md --output video.mp4
+npm install -g markdown-video
+```
 
-# The same binary when installed as a package
-markdown-video render video.md -o video.mp4
+Then install Chromium and verify the machine:
+
+```sh
+markdown-video install-browser
+markdown-video doctor
+```
+
+On Linux, if Chromium reports missing shared libraries:
+
+```sh
+markdown-video install-browser --with-deps
+markdown-video doctor
+```
+
+`install-browser` uses the exact `playwright-core` revision required by the package and stores Chromium in Playwright's user cache. To use a custom cache location, set `PLAYWRIGHT_BROWSERS_PATH` both when installing and when rendering. To use system Chrome/Chromium instead, pass `--chromium /path/to/browser` to `render` or `doctor`.
+
+`npx` also works; the browser cache persists outside the npx package cache:
+
+```sh
+npx markdown-video@latest install-browser
+npx markdown-video@latest render video.md -o video.mp4
+```
+
+## Quickstart
+
+Create `hello.md`:
+
+```markdown
+!scene
+!duration 3
+!text
+Hello, video
+size: xl
+animation: fadeIn
+fontFamily: sans
+```
+
+Render it:
+
+```sh
+markdown-video render hello.md -o hello.mp4
+```
+
+Useful variations:
+
+```sh
+# 720p vertical social output (reels/shorts inherently use 9:16)
+markdown-video render hello.md -o reel.mp4 --format reels --resolution 720p
+
+# GIF output; the output name must end in .gif
+markdown-video render hello.md -o hello.gif --format gif --fps 12
 
 # Inline markdown
-node apps/cli/dist/cli.js --markdown "# Hello" --output hello.mp4
+markdown-video --markdown $'!scene\n!duration 1\n!text\nHi\n' -o hi.mp4
 
-# Read markdown from stdin
-cat video.md | node apps/cli/dist/cli.js render - --output video.mp4
+# Markdown from stdin
+cat hello.md | markdown-video render - -o hello.mp4
 
-# Vertical social output; reels/shorts force 9:16 like the editor exporter
-node apps/cli/dist/cli.js render video.md -o reel.mp4 --format reels --resolution 1080p
-
-# Match common browser-export settings explicitly
-node apps/cli/dist/cli.js render video.md -o video.mp4 \
-  --resolution 720p --quality high --speed balanced --fps 30 \
-  --aspect-ratio 16:9 --locale en
-
-# GIF output uses a generated palette and .gif extension
-node apps/cli/dist/cli.js render video.md -o preview.gif --format gif --fps 12
-
-# Burn generated captions into the video frames (no ffmpeg build requirements)
-node apps/cli/dist/cli.js render video.md -o video.mp4 --burn-captions
-
-# Replace an existing output or explicitly allow a path outside cwd
-node apps/cli/dist/cli.js render video.md -o video.mp4 --overwrite
-node apps/cli/dist/cli.js render video.md -o ../video.mp4 --allow-outside-cwd
-
-# Block remote image/network requests while rendering untrusted markdown
-node apps/cli/dist/cli.js render video.md -o video.mp4 --deny-remote-network
+# Burn generated text-scene captions into the captured frames
+markdown-video render hello.md -o hello-captioned.mp4 --burn-captions
 ```
 
-Run `node apps/cli/dist/cli.js --help` for the complete option list.
+Progress is written to stderr. The final line reports dimensions, format, frame count, fps, elapsed time, and output path.
 
-By default output must stay inside the current working directory and must not
-already exist. This protects against accidental path traversal and overwriting;
-both behaviors have explicit opt-in flags. Input and output paths must be
-different files.
+## Commands
+
+### `markdown-video render`
+
+```text
+markdown-video render <input.md> --output <output.mp4> [options]
+markdown-video <input.md> --output <output.mp4> [options]   # render may be omitted
+markdown-video render - --output <output.mp4>               # read stdin
+markdown-video --markdown "<markdown>" --output <output.mp4>
+```
+
+`--output`/`-o` is required. Input can be one file path, `-` for stdin, or `--markdown`/`-m` text. File input and `--markdown` cannot be combined.
+
+| Option | Meaning |
+| --- | --- |
+| `-o, --output <path>` | Output `.mp4` for mp4-like formats or `.gif` for `--format gif`. Required. |
+| `-m, --markdown <text>` | Markdown source instead of an input file. |
+| `--resolution <preset>` | `480p`, `720p`, `1080p` (default), `1440p`, or `4k`. Presets scale the short side and preserve aspect ratio. |
+| `--quality <preset>` | `low`, `medium`, `high` (default), or `ultra`; selects JPEG frame quality and the x264 CRF target. |
+| `--speed <preset>` | `fastest`, `fast`, `balanced` (default), `slow`, or `slowest`; selects how much x264 encoder time to spend. |
+| `--format <format>` | `mp4` (default), `reels`, `shorts`, `slides`, or `gif`. `reels`/`shorts` always output 9:16; GIF ignores audio. |
+| `--aspect-ratio <ratio>` | Project aspect ratio: `16:9` (default), `9:16`, `1:1`, or `4:3`. Ignored by `reels`/`shorts`, which force 9:16. |
+| `--locale <code>` | Locale override such as `en`, `es`, or `pt-BR` for localized scene strings and captions. |
+| `--fps <number>` | Output frames per second. Rounded and clamped to 1-60; default 30. GIF output is additionally capped at 10fps. |
+| `--overwrite` | Replace an existing output and caption sidecars. Without it, existing files are protected. |
+| `--allow-outside-cwd` | Permit output outside the current working directory. By default output must remain inside cwd. |
+| `--deny-remote-network` | Block non-loopback browser requests. Use for untrusted markdown; `data:`/`blob:` images still work. |
+| `--burn-captions` | Composite generated captions into the DOM before capture, so no ffmpeg subtitles filter or libass build is needed. |
+| `--ffmpeg <path>` | ffmpeg executable. Default: `FFMPEG_BIN`, then `ffmpeg` on PATH. |
+| `--chromium <path>` | Chrome/Chromium executable. Default: Playwright-managed Chromium. |
+| `-v, --version` | Print the package version. |
+| `-h, --help` | Print help. |
+
+Input and output paths must be different files. MP4 output is H.264/yuv420p in an `.mp4` container. If present, music is encoded as AAC at 128 kbps. GIF output uses palette generation and Bayer dithering and loops forever.
+
+### `markdown-video doctor`
+
+```sh
+markdown-video doctor [--ffmpeg /path/to/ffmpeg] [--chromium /path/to/browser]
+```
+
+Checks and reports fix-it instructions for:
+
+- Node.js version;
+- embedded render assets, including all CSS-referenced font files and their SHA-256 provenance;
+- ffmpeg availability and the exact encoder/filter capabilities used by MP4, GIF, and music rendering;
+- a real headless Chromium launch.
+
+Exit status is `0` when everything passes and `1` when anything needs attention.
+
+### `markdown-video install-browser`
+
+```sh
+markdown-video install-browser [--with-deps]
+```
+
+Installs the Playwright-managed Chromium revision used by this package. `--with-deps` is for Linux system libraries and may use sudo. Chromium/Chrome for Testing remains governed by its upstream browser licenses; it is downloaded to the user cache rather than included in the npm tarball.
 
 The CLI preserves document-rendering semantics by default, so image scenes may
 fetch remote `http(s)` URLs. When rendering untrusted markdown in automation,
@@ -88,79 +168,45 @@ interpreted as a host-relative URL rather than a document-relative filesystem
 path. Use HTTPS/data images, host-static URLs, or render through a host that
 explicitly provides document media resolution.
 
-## Music and captions
+## Music
 
-A document can declare one document-level music track:
+A document can declare one document-level music track before the first scene:
 
 ```markdown
-!music ./audio/theme.mp3 volume:0.4 fade:1s loop:true
+!music ./audio/theme.mp3 volume:0.32 fade:0.7s loop:true
+
+!scene
+!duration 4
+!text
+Music is mixed during export.
+size: xl
 ```
 
-The track starts at 0s, loops by default when shorter than the video, is always
-truncated at the video end, and never extends the output duration. `volume` is
-linear gain in the inclusive 0-1 range. `fade` is limited to 30s and is also
-clamped to half the video duration so fade-in and fade-out never overlap. GIF
-output ignores music because the GIF container cannot carry audio. Editor preview
-playback is intentionally silent for music in this step; music is mixed only
-during export/rendering so preview cannot diverge from the deterministic ffmpeg
-clock.
+- `volume` is linear gain from 0 to 1.
+- `fade` is fade-in/fade-out seconds, capped at 30s and clamped so start/end fades do not overlap.
+- `loop` defaults to true; the track is always truncated at the video end and never extends the video.
+- Relative paths resolve against the markdown file's directory (or cwd for stdin/`--markdown`).
+- Remote music must be HTTPS. The CLI downloads it itself with redirect, credential, address, and size validation; Chromium never fetches it.
+- GIF output ignores music because GIF cannot carry audio.
 
-Relative music paths resolve against the markdown file's directory for file
-input, and against the current working directory for stdin or `--markdown`.
-Remote music must be HTTPS. The CLI downloads remote music itself before
-encoding (Chromium never fetches it), rejects credentials and non-public IP
-targets, validates redirects one at a time, pins the validated DNS answer for
-the TLS connection, and enforces a 32MB download cap. Local files are limited
-to 256MB. Programmatic renderers running with `allowRemoteNetwork: false` are
-isolated: only self-contained `data:audio/*` music is accepted there, since
-local paths could expose service files and URLs would create egress/SSRF risk.
+## Captions
 
-When top-level `!text` scenes exist, the CLI writes `<output-stem>.srt` and
-`<output-stem>.vtt` next to the video using the same core timeline math as
-rendering. Existing sidecars are protected by the same overwrite semantics as
-the video. `--burn-captions` additionally composites those captions into the
-frames themselves. Burn-in is DOM-composited at capture time: the render page
-generates cues from the same core caption data as the sidecars and renders
-them inside the captured scene, so ffmpeg receives frames that already
-contain the captions. That means burn-in works with any ffmpeg build (no
-libass/`subtitles` filter requirement), cue timing exactly matches the
-half-open sidecar semantics, and non-Latin captions render with the same web
-font coverage as scene text rather than depending on fontconfig. Burn-in is
-off by default.
+Top-level `!text` scenes automatically produce `<output-stem>.srt` and `<output-stem>.vtt` beside the video. Cue timing uses the same scene timeline math as rendering, including staggered line reveal times. Existing sidecars are protected unless `--overwrite` is passed.
 
-## Encoding semantics
+`--burn-captions` additionally renders captions in the browser inside the captured scene. Burn-in therefore uses the bundled web fonts, matches sidecar timing exactly, handles non-Latin text with the same font coverage as scenes, and does not require libass, fontconfig provisioning, or ffmpeg's `subtitles` filter.
 
-For mp4-like formats (`mp4`, `reels`, `shorts`, and `slides`) the CLI uses the
-shared core render plan and `getVideoEncodingSettings(quality, speed)` matrix,
-then invokes native ffmpeg with array arguments (never a shell):
+## Network and path safety
 
-```text
-ffmpeg -v error -y|-n \
-  -f image2pipe -c:v mjpeg -framerate <fps> -i pipe:0 \
-  -vf scale=<width>:<height>:flags=lanczos:out_range=limited,setsar=1 \
-  -c:v libx264 -preset <preset> -crf <crf> \
-  -pix_fmt yuv420p -t <duration> <output>
-```
+The renderer preserves document semantics by default, so image scenes may reference remote HTTP(S) URLs. Use `--deny-remote-network` for untrusted markdown: Chromium can then reach only the loopback render-page origin, while `data:` and `blob:` images remain available.
 
-The scale is normally a no-op because Playwright captures directly at the
-planned raster dimensions using `deviceScaleFactor`. `out_range=limited` is
-intentional: Chromium screenshots are full-range JPEGs, and merely writing
-`-pix_fmt yuv420p` can otherwise leave current native ffmpeg output tagged as
-`yuvj420p`. The conversion makes the file a conventional limited-range
-yuv420p mp4 while the preset/CRF contract remains identical to browser export.
-When music is present, the mp4 command adds the prepared music file as a second
-input (with `-stream_loop -1` only when `loop:true`), maps video/audio
-explicitly, applies `volume`/`atrim`/`afade` in an output audio filtergraph,
-and encodes AAC at 128kbps. `-t <duration>` remains the hard output boundary.
-
-GIF output caps the GIF frame rate at 10fps (matching the browser exporter's
-size-oriented behavior), creates a 64-color palette, uses Bayer dithering, and
-loops forever.
+Output is confined to the current working directory by default and must not already exist. These are deliberate protections against accidental traversal and overwriting; use `--allow-outside-cwd` and `--overwrite` only when intended.
 
 ## Programmatic API
 
+The package also exports a Node.js API:
+
 ```ts
-import { renderVideo } from "markdown-video"
+import { renderVideo, renderVideoToBuffer, renderFrames } from "markdown-video"
 
 const result = await renderVideo({
   markdown: "!scene\n!duration 2\n!text\nHello\n",
@@ -176,66 +222,23 @@ const result = await renderVideo({
 })
 ```
 
-The package also exports `renderVideoToBuffer` for in-memory MP4 bytes and
-`renderFrames` for deterministic PNG frame buffers. `renderVideo` accepts an optional `AbortSignal`. Cancellation, render errors,
-and normal completion all close the browser, stop ffmpeg when needed, and close
-the loopback asset server. The CLI maps usage/input errors to exit code 2 and
-rendering failures to exit code 1.
+`renderVideoToBuffer` returns MP4 bytes without exposing a caller-chosen output path, and `renderFrames` captures lossless PNG buffers at exact timeline times. Render functions accept an optional `AbortSignal`; cancellation, errors, and completion all close Chromium, stop ffmpeg when needed, and close the loopback asset server.
 
-## Tests and golden frames
+Usage/input errors exit with code 2 in the CLI; rendering/dependency failures exit with code 1.
 
-Unit tests do not launch Chromium or require ffmpeg:
+## Troubleshooting
+
+Start with:
 
 ```sh
-pnpm --filter markdown-video test
+markdown-video doctor
 ```
 
-Integration tests do require the built render page, Playwright Chromium,
-ffmpeg, and ffprobe:
+- **Playwright Chromium is not ready** — run `markdown-video install-browser`; on Linux use `--with-deps` if shared libraries are missing.
+- **ffmpeg is not ready** — install a full system ffmpeg or pass `--ffmpeg`. The check reports exactly which encoder/filter capability is missing.
+- **Render assets/font provenance failed** — reinstall the package. The tarball is expected to contain the complete immutable render-page payload.
+- **Linux/root browser sandbox problems** — prefer a normal user where possible. Chromium may need additional container sandbox flags outside the scope of the CLI; system Chrome can be supplied with `--chromium`.
 
-```sh
-pnpm --filter @markdown-video/render-page build
-pnpm --filter markdown-video build
-pnpm --filter markdown-video test:integration
-```
+## License
 
-Set `MV_SKIP_INTEGRATION=1` to skip these tests in an environment that cannot
-provide the external binaries. The integration suite validates codec, width,
-height, fps, frame count, duration, pixel format/color range, font loading, and
-perceptual golden-frame similarity. The audio/caption integration test creates
-its sine-wave WAV programmatically at test time (no binary audio fixture is
-committed), then uses ffprobe to verify the AAC stream and exact video duration
-and compares the generated SRT/VTT sidecars byte-for-byte. Goldens are compared with `pixelmatch`
-rather than byte equality because anti-aliasing and compression details may
-vary slightly across platforms.
-
-The caption burn-in integration test (`render-captions-burnin.test.ts`) renders
-a five-scene Unicode fixture twice — once with `burnCaptions`, once without as a
-pixel-identical control — and asserts caption presence in the bottom band at cue
-times, caption stability within a cue, and exact half-open boundary behavior
-(the frame at t=1.0 already shows the next cue). Unicode glyph correctness is
-verified with three layered mechanisms, because tofu boxes are themselves pixels
-and a naive non-blank assertion cannot detect missing glyphs: a perceptual
-golden comparison of the Cyrillic caption frame (the primary mechanism — any
-tofu form diffs massively against the visually verified golden), a same-length
-comparison against a plane-15 private-use caption that is guaranteed tofu (real
-Cyrillic glyphs must differ from it; Chromium renders missing glyphs as repeated
-identical `.notdef` boxes, so tofu Cyrillic would be pixel-identical to the tofu
-baseline), and a saturated-yellow pixel count for the emoji caption (color emoji
-render yellow faces; tofu or monochrome fallback never can). The asserted
-scripts (Cyrillic, Greek, Vietnamese) are covered by the render page's bundled
-Inter subsets, so they render deterministically in every environment; the emoji
-assertion relies on a color emoji font, which is present on macOS, preinstalled
-on GitHub's ubuntu runners, and installed in the render-worker image. CJK and
-other system-font-dependent scripts are deliberately not asserted: they fall
-back to system fonts exactly like scene text always has, and CI runners do not
-ship CJK fonts.
-
-Regenerate the small committed 854×480 golden PNGs after an intentional
-scene-rendering change:
-
-```sh
-pnpm --filter markdown-video goldens:update
-```
-
-Then inspect the visual diff carefully before committing it.
+MIT for the CLI and scene/render integration code. Bundled font binaries are unmodified upstream files under the SIL Open Font License 1.1; their license and provenance are included in `dist/render-page/`. ffmpeg and Chromium are separate external programs with their own licenses.

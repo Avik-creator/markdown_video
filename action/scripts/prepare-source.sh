@@ -54,7 +54,7 @@ fi
 cd "$renderer_root"
 
 lockfile_sha256="$(sha256sum pnpm-lock.yaml | awk '{print $1}')"
-playwright_version="$(sed -n 's/^[[:space:]]*"playwright":[[:space:]]*"\([^"]*\)".*/\1/p' apps/cli/package.json | head -n 1)"
+playwright_version="$(sed -n 's/^[[:space:]]*"playwright-core":[[:space:]]*"\([^"]*\)".*/\1/p' apps/cli/package.json | head -n 1)"
 if [[ -z "$playwright_version" ]]; then
   echo "Could not read the Playwright version from apps/cli/package.json." >&2
   exit 1

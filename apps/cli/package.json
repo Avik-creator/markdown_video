@@ -1,13 +1,32 @@
 {
   "name": "markdown-video",
   "version": "0.1.0",
-  "private": true,
+  "description": "Render markdown video documents to MP4 or GIF with Chromium and ffmpeg",
   "license": "MIT",
+  "author": "Avik Mukherjee (https://github.com/Avik-creator)",
+  "homepage": "https://github.com/Avik-creator/markdown_video/tree/main/apps/cli#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Avik-creator/markdown_video.git",
+    "directory": "apps/cli"
+  },
+  "bugs": "https://github.com/Avik-creator/markdown_video/issues",
+  "keywords": [
+    "markdown",
+    "video",
+    "mp4",
+    "gif",
+    "renderer",
+    "cli",
+    "ffmpeg",
+    "playwright",
+    "chromium"
+  ],
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "markdown-video": "./dist/cli.js"
+    "markdown-video": "dist/cli.js"
   },
   "exports": {
     ".": {
@@ -18,13 +37,19 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "engines": {
     "node": ">=20"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
-    "build": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\" && tsc -p tsconfig.build.json",
+    "build": "tsup --config tsup.config.ts && node scripts/embed-render-page.mjs",
+    "publish:prepare": "node scripts/prepare-publish.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
@@ -32,16 +57,17 @@
     "goldens:update": "node scripts/regenerate-goldens.mjs"
   },
   "dependencies": {
-    "@markdown-video/core": "workspace:*",
-    "@markdown-video/render-page": "workspace:*",
-    "playwright": "1.65.1"
+    "playwright-core": "1.65.1"
   },
   "devDependencies": {
+    "@markdown-video/core": "workspace:*",
+    "@markdown-video/render-page": "workspace:*",
     "@types/node": "22.19.3",
     "@types/pngjs": "6.0.5",
     "eslint": "9.39.5",
     "pixelmatch": "8.0.0",
     "pngjs": "7.0.0",
+    "tsup": "8.5.1",
     "typescript": "5.9.3",
     "typescript-eslint": "8.74.0",
     "vitest": "3.2.4"
