@@ -27,15 +27,13 @@ export function CTA() {
               href="/editor"
               className="tool-button tool-button-primary h-9 px-4 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
             >
-              open the editor
+              Open the editor
             </Link>
             <a
-              href="https://github.com/Avik-creator/markdown_video"
-              target="_blank"
-              rel="noopener noreferrer"
+              href="#mcp"
               className="inline-flex min-h-11 items-center text-[15px] font-medium underline decoration-[color:var(--landing-line)] underline-offset-[3px] transition-colors hover:decoration-[color:var(--landing-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
             >
-              read the source
+              Let an agent render it
             </a>
           </div>
         </Reveal>

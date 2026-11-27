@@ -1,7 +1,10 @@
 import { Navbar } from "@components/landing/navbar"
 import { Hero } from "@components/landing/hero"
-import { Features } from "@components/landing/features"
-import { SyntaxDemo, TypeSpecimen } from "@components/landing/syntax-demo"
+import { Provenance } from "@components/landing/provenance"
+import { Workflows } from "@components/landing/features"
+import { PipelineDemo } from "@components/landing/pipeline-demo"
+import { MarkdownFirst } from "@components/landing/syntax-demo"
+import { Capabilities } from "@components/landing/capabilities"
 import { CTA } from "@components/landing/cta"
 import { Footer } from "@components/landing/footer"
 import { getGitHubStars } from "@/lib/github"
@@ -20,9 +23,11 @@ export default async function Page() {
       <Navbar stargazersCount={stargazersCount} />
       <main id="main-content" className="scroll-mt-16">
         <Hero />
-        <Features />
-        <TypeSpecimen />
-        <SyntaxDemo />
+        <Provenance />
+        <Workflows />
+        <PipelineDemo />
+        <MarkdownFirst />
+        <Capabilities />
         <CTA />
       </main>
       <Footer />

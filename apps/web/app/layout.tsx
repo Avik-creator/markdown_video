@@ -107,9 +107,9 @@ const siteUrl = new URL(
 ).origin;
 const ogImageUrl = new URL("/og-image.png", `${siteUrl}/`).toString();
 const siteName = "Markdown Video";
-const title = "Markdown Video - Markdown to MP4 for editors, agents, and CI";
+const title = "Markdown Video - write markdown. render the video.";
 const description =
-  "Turn plain markdown into deterministic MP4s in the browser editor, from the CLI, through the MCP server, or in GitHub Actions - with music, captions, and multi-locale output.";
+  "Turn readable markdown into real MP4s in the browser editor, from the CLI, through the MCP server, or in GitHub Actions - with music, captions, and multi-locale output.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -153,7 +153,7 @@ export const metadata: Metadata = {
         url: ogImageUrl,
         width: 1200,
         height: 630,
-        alt: "Markdown Video editor showing a markdown-generated video scene",
+        alt: "A deep aubergine frame rendered from markdown with the text: this video is a text file.",
         type: "image/png",
       },
     ],
@@ -167,7 +167,7 @@ export const metadata: Metadata = {
         url: ogImageUrl,
         width: 1200,
         height: 630,
-        alt: "Markdown Video editor showing a markdown-generated video scene",
+        alt: "A deep aubergine frame rendered from markdown with the text: this video is a text file.",
       },
     ],
     creator: "@avikm744",

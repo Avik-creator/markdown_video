@@ -1,20 +1,20 @@
 !scene
-!duration 1.6
-!background #f4f0e6
+!duration 1.8
+!background #fff4ec
 !transition fade
 !text
 write markdown.
-get the mp4.
+render the video.
 size: 2xl
-color: #181614
+color: #2b1030
 fontFamily: display
 animation: none
 
 ---
 
 !scene
-!duration 1.9
-!background #f4f0e6
+!duration 2.4
+!background #130a24
 !transition fade
 !code
 typing: true
@@ -24,35 +24,34 @@ fontFamily: jetbrains
 width: 1180
 ```md
 !scene
+!duration 1.8
+!background #fff4ec
 !text
-Launch the release
-size: xl
-animation: slideUp
+write markdown.
+render the video.
 ```
 
 ---
 
 !scene
-!duration 2.2
-!background #171511
+!duration 2
+!background #0c0718
 !transition fade
-!text
-$ markdown-video render hero.md -o hero.mp4
-✓ 960×720 · 18fps · captions written
-size: xl
-color: #f4f0e6
-fontFamily: mono
-animation: fadeIn
+!terminal
+typing: true
+speed: 85
+$ markdown-video render landing-hero.video.md -o hero-showcase.mp4
+> 960×720 · 18fps · captions written
 
 ---
 
 !scene
-!duration 1.5
-!background #a81645
+!duration 1.8
+!background #ff4fa3
 !transition fade
 !text
 agents. CI. music. locales.
 size: 2xl
-color: #fffaf0
+color: #130a24
 fontFamily: sans
 animation: slideUp

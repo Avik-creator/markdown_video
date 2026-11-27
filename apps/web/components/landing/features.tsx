@@ -1,6 +1,6 @@
 import Image from "next/image";
-import { LoopingVideo } from "./looping-video";
 import { Reveal } from "./reveal";
+import { actionDocsUrl, cliCaptionsDocsUrl, cliMusicDocsUrl, mcpDocsUrl } from "./provenance-data";
 
 function Eyebrow({ children }: { children: React.ReactNode }) {
   return (
@@ -11,226 +11,285 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   );
 }
 
-function CodeLine({ children }: { children: React.ReactNode }) {
+function CodeBlock({ children, label }: { children: string; label: string }) {
   return (
-    <div className="overflow-x-auto rounded-md border border-[color:var(--landing-line)]/70 bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed text-[color:var(--landing-ink)] shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
-      <code className="whitespace-nowrap">{children}</code>
+    <div className="overflow-hidden rounded-md border border-[color:var(--landing-line)]/75 bg-[color:var(--landing-code-bg)]">
+      <div className="border-b border-[color:var(--landing-line)]/60 px-3 py-2 font-mono text-[10px] text-[color:var(--landing-muted)]">
+        {label}
+      </div>
+      <pre className="overflow-x-auto whitespace-pre-wrap break-words px-4 py-3 font-mono text-[11.5px] leading-[1.65] text-[color:var(--landing-ink)]">
+        <code>{children}</code>
+      </pre>
     </div>
   );
 }
 
 function ArtifactCaption({ children }: { children: React.ReactNode }) {
   return (
-    <p className="mt-3 flex items-center justify-between gap-4 px-1 font-mono text-[11px] text-[color:var(--landing-muted)]">
+    <p className="mt-3 flex flex-wrap items-center justify-between gap-2 px-1 font-mono text-[11px] text-[color:var(--landing-muted)]">
       {children}
     </p>
   );
 }
 
-export function Features() {
+function TextLink({ href, children }: { href: string; children: React.ReactNode }) {
   return (
-    <section className="relative border-t border-[color:var(--landing-line)]/70 px-5 py-24 md:px-10 md:py-32" aria-labelledby="capabilities-heading">
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="inline-flex min-h-8 items-center text-[14px] font-medium text-[color:var(--landing-ink)] underline decoration-[color:var(--landing-line)] underline-offset-[3px] transition-colors hover:decoration-[color:var(--landing-accent)]"
+    >
+      {children}
+    </a>
+  );
+}
+
+export function Workflows() {
+  return (
+    <section
+      id="workflows"
+      className="relative scroll-mt-20 border-t border-[color:var(--landing-line)]/70 px-4 py-20 sm:px-5 md:px-10 md:py-28"
+      aria-labelledby="workflows-heading"
+    >
       <div className="mx-auto max-w-[1520px]">
-        <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
+        <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr] lg:items-end">
           <Reveal>
-            <Eyebrow>built for the way video gets made now</Eyebrow>
-            <h2 id="capabilities-heading" className="landing-display-tight mt-6 max-w-[820px] text-[clamp(2.9rem,5.8vw,5.8rem)] font-medium leading-[0.88] tracking-[-0.06em]">
-              one document.
+            <Eyebrow>four workflows · one document</Eyebrow>
+            <h2
+              id="workflows-heading"
+              className="landing-display-tight mt-6 max-w-[860px] text-[clamp(2.65rem,5.6vw,5.9rem)] font-medium leading-[0.9] tracking-[-0.06em]"
+            >
+              write once,
               <br />
-              <span className="text-[color:var(--landing-faint)]">four ways out.</span>
+              <span className="text-[color:var(--landing-faint)]">render anywhere.</span>
             </h2>
           </Reveal>
-          <Reveal delay={0.1}>
-            <p className="max-w-[600px] text-[19px] leading-[1.45] tracking-[-0.018em] text-[color:var(--landing-muted)] md:ml-auto">
-              The important paths are first-class: an agent can call MCP, CI can run the action, sound and
-              captions belong to the document, and every locale renders from the same source.
+          <Reveal delay={0.08}>
+            <p className="max-w-[620px] text-[18px] leading-[1.48] tracking-[-0.015em] text-[color:var(--landing-muted)] lg:ml-auto">
+              These are not four export formats bolted onto a timeline. They are four consumers of the same
+              readable input: an agent, a CI runner, an audio/caption renderer, and a locale-specific CLI run.
             </p>
           </Reveal>
         </div>
 
-        <Reveal delay={0.14}>
-          <div className="mt-16 grid overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/62 md:grid-cols-2 xl:grid-cols-4">
-            {[
-              ["01", "MCP for agents", "render previews and final videos through 12 HTTP tools"],
-              ["02", "GitHub Action", "render release videos in CI and upload release assets"],
-              ["03", "music + captions", "document-level audio, SRT/VTT sidecars, optional burn-in"],
-              ["04", "multi-locale", "translate strings once; render any locale with --locale"],
-            ].map(([number, title, copy], index) => (
-              <div
-                key={title}
-                className={`min-h-[172px] border-[color:var(--landing-line)]/75 p-6 ${
-                  [
-                    "",
-                    "border-t md:border-t-0 md:border-l",
-                    "border-t xl:border-t-0 xl:border-l",
-                    "border-t md:border-l xl:border-t-0 xl:border-l",
-                  ][index]
-                }`}
-              >
-                <span className="font-mono text-[11px] text-[color:var(--landing-muted)]">{number}</span>
-                <h3 className="mt-8 text-[21px] font-medium tracking-[-0.035em]">{title}</h3>
-                <p className="mt-2 text-[14px] leading-[1.45] text-[color:var(--landing-muted)]">{copy}</p>
+        <Reveal delay={0.12}>
+          <div className="mt-12 overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/55">
+            <div className="grid gap-px bg-[color:var(--landing-line)]/65 md:grid-cols-5">
+              <div className="bg-[color:var(--landing-paper)] p-5">
+                <span className="font-mono text-[10.5px] text-[color:var(--landing-muted)]">input</span>
+                <p className="mt-3 font-mono text-[12px] text-[color:var(--landing-ink)]">release.video.md</p>
               </div>
-            ))}
+              {[
+                ["agent", "MCP tools"],
+                ["ci", "GitHub Action"],
+                ["sound", "music + captions"],
+                ["locale", "--locale es"],
+              ].map(([label, detail], index) => (
+                <div key={label} className="relative bg-[color:var(--landing-paper)] p-5">
+                  <span aria-hidden="true" className="absolute -left-2 top-1/2 hidden -translate-y-1/2 text-[color:var(--landing-accent)] md:block">
+                    →
+                  </span>
+                  <span className="font-mono text-[10.5px] text-[color:var(--landing-muted)]">0{index + 1} · {label}</span>
+                  <p className="mt-3 text-[15px] font-medium tracking-[-0.02em]">{detail}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </Reveal>
 
-        <div className="mt-24 grid gap-x-10 gap-y-24 lg:grid-cols-12 lg:gap-y-28">
-          <Reveal className="lg:col-span-7">
-            <article id="mcp" className="scroll-mt-28">
-              <div className="max-w-[620px]">
-                <Eyebrow>agents first</Eyebrow>
-                <h3 className="mt-5 text-[clamp(2.35rem,4vw,4.35rem)] font-medium leading-[0.94] tracking-[-0.055em]">
-                  your agent can render the video it just wrote.
+        <div className="mt-12 grid gap-8 xl:grid-cols-2">
+          <Reveal>
+            <article id="mcp" className="flex h-full scroll-mt-24 flex-col overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/45">
+              <div className="border-b border-[color:var(--landing-line)]/75 p-5 sm:p-6">
+                <Eyebrow>01 · mcp for agents</Eyebrow>
+                <h3 className="mt-4 text-[clamp(1.7rem,2.6vw,2.5rem)] font-medium leading-[1] tracking-[-0.045em]">
+                  the agent that writes the document can render it too.
                 </h3>
-                <p className="mt-5 text-[17px] leading-[1.5] text-[color:var(--landing-muted)]">
-                  Connect the hosted MCP server, then let Claude or another MCP client create documents, preview
-                  frames, and render final MP4s with tools like <code>render_preview</code> and <code>render_video</code>.
+                <p className="mt-4 text-[15.5px] leading-[1.52] text-[color:var(--landing-muted)]">
+                  Connect the hosted MCP server, then use authoring tools plus <code>render_preview</code> and{" "}
+                  <code>render_video</code> against the same parser the editor uses.
                 </p>
-                <div className="mt-6">
-                  <CodeLine>
-                    claude mcp add --transport http markdown-video https://markdownvideo.avikmukherjee.com/mcp
-                  </CodeLine>
+                <div className="mt-5">
+                  <CodeBlock label="shell">
+{`claude mcp add --transport http markdown-video https://markdownvideo.avikmukherjee.com/mcp`}
+                  </CodeBlock>
+                </div>
+                <div className="mt-4">
+                  <TextLink href={mcpDocsUrl}>MCP setup in the repository README</TextLink>
                 </div>
               </div>
-
-              <div className="mt-9">
-                <div className="landing-card overflow-hidden rounded-md p-2 sm:p-3">
-                  <div className="overflow-hidden rounded-[13px]">
-                    <LoopingVideo
-                      src="/landing/mcp-agent.mp4"
-                      poster="/landing/mcp-agent-poster.webp"
-                      label="Terminal animation showing an MCP client connecting and rendering video"
-                      className="block aspect-[4/3] w-full scale-[1.6] object-cover"
-                    />
-                  </div>
-                </div>
-                <ArtifactCaption>
-                  <span>rendered artifact · MCP terminal flow</span>
-                  <span>26 kb mp4</span>
-                </ArtifactCaption>
-              </div>
-            </article>
-          </Reveal>
-
-          <Reveal delay={0.08} className="lg:col-span-5 lg:pt-24">
-            <article id="action" className="scroll-mt-28">
-              <div>
-                <Eyebrow>ci without choreography</Eyebrow>
-                <h3 className="mt-5 text-[clamp(2.2rem,3.4vw,3.8rem)] font-medium leading-[0.96] tracking-[-0.052em]">
-                  release videos can render themselves.
-                </h3>
-                <p className="mt-5 text-[17px] leading-[1.5] text-[color:var(--landing-muted)]">
-                  The composite GitHub Action prepares the workspace, invokes the CLI, and can upload the rendered
-                  MP4 back to the GitHub release that triggered it.
-                </p>
-                <div className="mt-6 space-y-2">
-                  <CodeLine>uses: Avik-creator/markdown_video/action@&lt;sha&gt;</CodeLine>
-                  <CodeLine>upload-release-asset: &quot;true&quot;</CodeLine>
-                </div>
-              </div>
-
-              <div className="mt-9 lg:-mr-8">
-                <Image
-                  src="/landing/action-workflow.webp"
-                  alt="Rendered GitHub Actions workflow for markdown_video release rendering"
+              <figure className="p-3 sm:p-4">
+                <video
+                  controls
+                  muted
+                  loop
+                  playsInline
+                  preload="none"
                   width={960}
                   height={720}
-                  className="landing-card aspect-[4/3] w-full rounded-md object-cover"
+                  poster="/landing/mcp-agent-poster.webp"
+                  aria-label="Rendered terminal animation of the Markdown Video MCP workflow"
+                  className="block aspect-[4/3] w-full rounded-[6px] bg-[#fff4ec]"
+                >
+                  <source src="/landing/mcp-agent.mp4" type="video/mp4" />
+                  Your browser does not support the video tag.
+                </video>
+                <ArtifactCaption>
+                  <span>rendered from landing-agent-mcp.video.md</span>
+                  <span>960×720 · terminal artifact</span>
+                </ArtifactCaption>
+              </figure>
+            </article>
+          </Reveal>
+
+          <Reveal delay={0.06}>
+            <article id="action" className="flex h-full scroll-mt-24 flex-col overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/45">
+              <div className="border-b border-[color:var(--landing-line)]/75 p-5 sm:p-6">
+                <Eyebrow>02 · github action</Eyebrow>
+                <h3 className="mt-4 text-[clamp(1.7rem,2.6vw,2.5rem)] font-medium leading-[1] tracking-[-0.045em]">
+                  release videos can render in the release pipeline.
+                </h3>
+                <p className="mt-4 text-[15.5px] leading-[1.52] text-[color:var(--landing-muted)]">
+                  The composite action builds the canonical CLI, renders the document, and can upload the MP4
+                  to the GitHub release that triggered it.
+                </p>
+                <div className="mt-5">
+                  <CodeBlock label="workflow yaml">
+{`- uses: Avik-creator/markdown_video/action@main
+  with:
+    markdown-path: release.md
+    output-name: release-demo.mp4
+    upload-release-asset: "true"`}
+                  </CodeBlock>
+                </div>
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                  <TextLink href={actionDocsUrl}>Action inputs, outputs, and pinning guidance</TextLink>
+                </div>
+              </div>
+              <figure className="p-3 sm:p-4">
+                <Image
+                  src="/landing/action-workflow.webp"
+                  alt="Rendered frame showing a GitHub Actions workflow that renders and uploads a release video"
+                  width={960}
+                  height={720}
+                  sizes="(min-width: 1280px) 42vw, (min-width: 768px) 80vw, 92vw"
+                  className="aspect-[4/3] w-full rounded-[6px] object-cover"
                 />
                 <ArtifactCaption>
-                  <span>workflow artifact</span>
-                  <span>release → mp4 asset</span>
+                  <span>direct preview capture from landing-action.video.md</span>
+                  <span>pin a full sha for production use</span>
                 </ArtifactCaption>
-              </div>
+              </figure>
             </article>
           </Reveal>
 
-          <Reveal className="lg:col-span-5 lg:pt-10">
-            <article id="captions" className="scroll-mt-28">
-              <div>
-                <Eyebrow>sound and words stay together</Eyebrow>
-                <h3 className="mt-5 text-[clamp(2.2rem,3.4vw,3.8rem)] font-medium leading-[0.96] tracking-[-0.052em]">
-                  music is a directive. captions are artifacts.
+          <Reveal>
+            <article id="captions" className="flex h-full scroll-mt-24 flex-col overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/45">
+              <div className="border-b border-[color:var(--landing-line)]/75 p-5 sm:p-6">
+                <Eyebrow>03 · music + captions</Eyebrow>
+                <h3 className="mt-4 text-[clamp(1.7rem,2.6vw,2.5rem)] font-medium leading-[1] tracking-[-0.045em]">
+                  sound belongs to the document. captions leave as artifacts.
                 </h3>
-                <p className="mt-5 text-[17px] leading-[1.5] text-[color:var(--landing-muted)]">
-                  Add document-level audio with volume, fade, and loop controls. Text scenes generate SRT and VTT
-                  sidecars, with optional burn-in for players that need captions baked into the pixels — composited
-                  into the frames at render time, so any ffmpeg build works and every script your fonts
-                  cover renders correctly.
+                <p className="mt-4 text-[15.5px] leading-[1.52] text-[color:var(--landing-muted)]">
+                  Declare document-level audio once. Text scenes generate SRT and VTT sidecars on the same
+                  timeline, and burn-in is composited in the renderer when a player needs pixels instead of a
+                  sidecar.
                 </p>
-                <div className="mt-6">
-                  <CodeLine>!music ./assets/theme.mp3 volume:0.32 fade:0.7s loop:true</CodeLine>
+                <div className="mt-5 space-y-2">
+                  <CodeBlock label="document directive">
+{`!music ./assets/landing-theme.mp3 volume:0.32 fade:0.7s loop:true`}
+                  </CodeBlock>
+                  <CodeBlock label="optional burn-in">
+{`markdown-video render video.md -o captioned.mp4 --burn-captions`}
+                  </CodeBlock>
                 </div>
-              </div>
-
-              <div className="mt-9">
-                <div className="landing-card overflow-hidden rounded-md p-2 sm:p-3">
-                  <video
-                    controls
-                    width={960}
-                    height={720}
-                    preload="none"
-                    poster="/landing/captions-burned-frame.webp"
-                    aria-label="music and captions demo rendered by markdown_video"
-                    className="block aspect-[4/3] w-full rounded-[13px] bg-[#f4f0e6] object-cover"
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2">
+                  <TextLink href={cliMusicDocsUrl}>music directive documentation</TextLink>
+                  <TextLink href={cliCaptionsDocsUrl}>caption sidecar documentation</TextLink>
+                  <a
+                    href="/landing/captions-demo.vtt"
+                    className="inline-flex min-h-8 items-center text-[14px] font-medium text-[color:var(--landing-ink)] underline decoration-[color:var(--landing-line)] underline-offset-[3px] hover:decoration-[color:var(--landing-accent)]"
                   >
-                    <source src="/landing/captions-demo.mp4" type="video/mp4" />
-                    <track kind="captions" src="/landing/captions-demo.vtt" srcLang="en" label="English" default />
-                    Your browser does not support the video tag.
-                  </video>
+                    open the generated VTT
+                  </a>
                 </div>
-                <ArtifactCaption>
-                  <span>playable demo · real AAC audio + generated VTT</span>
-                  <span>poster: real burn-in frame</span>
-                </ArtifactCaption>
               </div>
+              <figure className="p-3 sm:p-4">
+                <video
+                  controls
+                  playsInline
+                  preload="none"
+                  width={960}
+                  height={720}
+                  poster="/landing/captions-burned-frame.webp"
+                  aria-label="Music and captions demo rendered by Markdown Video"
+                  className="block aspect-[4/3] w-full rounded-[6px] bg-[#fff4ec]"
+                >
+                  <source src="/landing/captions-demo.mp4" type="video/mp4" />
+                  <track kind="captions" src="/landing/captions-demo.vtt" srcLang="en" label="English" default />
+                  Your browser does not support the video tag.
+                </video>
+                <ArtifactCaption>
+                  <span>real AAC audio + generated sidecars</span>
+                  <span>poster extracted from burn-in render</span>
+                </ArtifactCaption>
+              </figure>
             </article>
           </Reveal>
 
-          <Reveal delay={0.08} className="lg:col-span-7">
-            <article id="i18n" className="scroll-mt-28">
-              <div className="max-w-[640px] lg:ml-auto">
-                <Eyebrow>one source, every locale</Eyebrow>
-                <h3 className="mt-5 text-[clamp(2.35rem,4vw,4.35rem)] font-medium leading-[0.94] tracking-[-0.055em]">
+          <Reveal delay={0.06}>
+            <article id="i18n" className="flex h-full scroll-mt-24 flex-col overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/45">
+              <div className="border-b border-[color:var(--landing-line)]/75 p-5 sm:p-6">
+                <Eyebrow>04 · multi-locale renders</Eyebrow>
+                <h3 className="mt-4 text-[clamp(1.7rem,2.6vw,2.5rem)] font-medium leading-[1] tracking-[-0.045em]">
                   translate strings once. render the market you need.
                 </h3>
-                <p className="mt-5 text-[17px] leading-[1.5] text-[color:var(--landing-muted)]">
-                  Declare locales, attach translations with <code>!strings</code>, reference them with{" "}
-                  <code>!text i18n:key</code>, and render a specific language using the CLI&apos;s <code>--locale</code>{" "}
-                  flag.
+                <p className="mt-4 text-[15.5px] leading-[1.52] text-[color:var(--landing-muted)]">
+                  Declare locales and strings in the document, reference them as <code>i18n:keys</code>, then
+                  select the output language with the CLI&apos;s locale flag.
                 </p>
-                <div className="mt-6">
-                  <CodeLine>markdown-video render video.md --locale es -o launch-es.mp4</CodeLine>
+                <div className="mt-5 space-y-2">
+                  <CodeBlock label="document fragment">
+{`!locales en es
+!strings
+headline:
+  en: "One source, every locale."
+  es: "Una fuente, cada idioma."`}
+                  </CodeBlock>
+                  <CodeBlock label="render command">
+{`markdown-video render examples/landing-i18n.video.md --locale es -o launch-es.mp4`}
+                  </CodeBlock>
                 </div>
               </div>
-
-              <div className="relative mt-9 grid gap-4 sm:grid-cols-2 lg:pl-10">
-                <figure className="landing-card overflow-hidden rounded-md p-2">
+              <figure className="grid gap-3 p-3 sm:grid-cols-2 sm:p-4">
+                <div>
                   <Image
                     src="/landing/i18n-en.webp"
-                    alt="English frame rendered from the localized markdown source"
+                    alt="English preview frame rendered from the localized markdown source"
                     width={960}
                     height={720}
-                    className="aspect-[4/3] w-full rounded-md object-cover"
+                    sizes="(min-width: 1280px) 21vw, (min-width: 640px) 40vw, 88vw"
+                    className="aspect-[4/3] w-full rounded-[6px] object-cover"
                   />
-                  <figcaption className="px-2 pb-1 pt-3 font-mono text-[11px] text-[color:var(--landing-muted)]">
-                    --locale en
-                  </figcaption>
-                </figure>
-                <figure className="landing-card overflow-hidden rounded-md p-2 sm:translate-y-8">
+                  <ArtifactCaption>
+                    <span>--locale en</span>
+                  </ArtifactCaption>
+                </div>
+                <div>
                   <Image
                     src="/landing/i18n-es.webp"
-                    alt="Spanish frame rendered from the same localized markdown source"
+                    alt="Spanish preview frame rendered from the same localized markdown source"
                     width={960}
                     height={720}
-                    className="aspect-[4/3] w-full rounded-md object-cover"
+                    sizes="(min-width: 1280px) 21vw, (min-width: 640px) 40vw, 88vw"
+                    className="aspect-[4/3] w-full rounded-[6px] object-cover"
                   />
-                  <figcaption className="px-2 pb-1 pt-3 font-mono text-[11px] text-[color:var(--landing-muted)]">
-                    --locale es
-                  </figcaption>
-                </figure>
-              </div>
+                  <ArtifactCaption>
+                    <span>--locale es</span>
+                  </ArtifactCaption>
+                </div>
+              </figure>
             </article>
           </Reveal>
         </div>

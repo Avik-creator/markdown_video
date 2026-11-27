@@ -6,7 +6,7 @@ export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-[color:var(--landing-line)]/60 bg-[color:var(--landing-paper)]/86 backdrop-blur-xl">
       <nav
-        className="mx-auto flex h-16 max-w-[1520px] items-center justify-between px-5 md:px-10"
+        className="mx-auto flex h-16 max-w-[1520px] items-center justify-between px-4 md:px-10"
         aria-label="Main navigation"
       >
         <Link
@@ -20,17 +20,17 @@ export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
         </Link>
 
         <div className="hidden items-center gap-7 text-[13px] font-medium text-[color:var(--landing-muted)] lg:flex">
-          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#mcp">
-            agents
+          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#provenance">
+            provenance
           </a>
-          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#action">
-            ci
+          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#workflows">
+            workflows
           </a>
-          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#captions">
-            sound + captions
+          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#pipeline">
+            pipeline
           </a>
-          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#i18n">
-            i18n
+          <a className="transition-colors hover:text-[color:var(--landing-ink)]" href="#capabilities">
+            capabilities
           </a>
         </div>
 
@@ -41,9 +41,10 @@ export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
           <LandingThemeToggle />
           <Link
             href="/editor"
-            className="tool-button tool-button-primary h-8 px-3 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+            className="tool-button tool-button-primary h-8 whitespace-nowrap px-3 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
           >
-            open editor
+            <span className="min-[380px]:hidden">Editor</span>
+            <span className="hidden min-[380px]:inline">Open editor</span>
           </Link>
         </div>
       </nav>

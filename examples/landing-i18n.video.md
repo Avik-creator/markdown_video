@@ -9,9 +9,9 @@ subhead:
 
 !scene
 !duration 2
-!background #f4f0e6
+!background #fff4ec
 !text i18n:headline
 size: 2xl
-color: #181614
+color: #2b1030
 fontFamily: display
 animation: none
