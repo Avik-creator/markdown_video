@@ -42,7 +42,7 @@ export function sandboxBundleDirectoryCandidates(cwd = process.cwd()) {
 async function existingBundleDirectory(cwd = process.cwd()) {
   const candidates = sandboxBundleDirectoryCandidates(cwd);
   for (const candidate of candidates) {
-    const info = await stat(candidate).catch(() => null);
+    const info = await stat(/* turbopackIgnore: true */ candidate).catch(() => null);
     if (info?.isDirectory()) return candidate;
   }
   throw new RenderSandboxBundleError(
@@ -60,7 +60,9 @@ async function validateBundleLayout(bundleDir: string) {
     path.join("node_modules", "playwright-core", "lib", "coreBundle.js"),
   ];
   for (const relative of required) {
-    const info = await stat(path.join(bundleDir, relative)).catch(() => null);
+    const info = await stat(
+      /* turbopackIgnore: true */ path.join(/* turbopackIgnore: true */ bundleDir, relative)
+    ).catch(() => null);
     if (!info?.isFile()) {
       throw new RenderSandboxBundleError(
         `The Vercel Sandbox CLI bundle at ${bundleDir} is incomplete (missing ${relative}). Regenerate it with the stage:render-sandbox-cli script.`
@@ -70,7 +72,7 @@ async function validateBundleLayout(bundleDir: string) {
 }
 
 async function collectFiles(root: string, directory = root): Promise<string[]> {
-  const entries = await readdir(directory, { withFileTypes: true });
+  const entries = await readdir(/* turbopackIgnore: true */ directory, { withFileTypes: true });
   const files: string[] = [];
   for (const entry of entries) {
     const absolute = path.join(directory, entry.name);
@@ -97,7 +99,11 @@ export async function loadSandboxCliBundle(
   let totalBytes = 0;
 
   for (const relativePath of relativePaths) {
-    const content = new Uint8Array(await readFile(path.join(bundleDir, relativePath)));
+    const content = new Uint8Array(
+      await readFile(
+        /* turbopackIgnore: true */ path.join(/* turbopackIgnore: true */ bundleDir, relativePath)
+      )
+    );
     totalBytes += content.byteLength;
     if (totalBytes > MAX_BUNDLE_BYTES) {
       throw new RenderSandboxBundleError(
