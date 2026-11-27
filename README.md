@@ -73,7 +73,8 @@ flowchart LR
     FF["@ffmpeg/ffmpeg<br/>wasm, in the browser"]
     MP4["MP4 or GIF download"]
     DB[("Postgres or Redis<br/>shares, rate limits,<br/>temporary mp4 artifacts")]
-    WORKER["render-worker container<br/>Chromium + native ffmpeg"]
+    WORKER["render-worker container<br/>Chromium + native ffmpeg<br/>(self-hosted)"]
+    SANDBOX["Vercel Sandbox<br/>fork-per-render, no network<br/>(zero-infra on Vercel)"]
 
     MD --> ED
     ED --> PARSE
@@ -87,6 +88,7 @@ flowchart LR
     AGENT --> MCP
     MCP --> PARSE
     MCP --> WORKER
+    MCP --> SANDBOX
     MCP --> DB
 ```
 
@@ -159,15 +161,28 @@ markdown-video render video.md -o video.mp4
 
 See [`apps/cli/README.md`](apps/cli/README.md) for npx usage, all render flags, music/captions, safety semantics, and ffmpeg installation guidance.
 
+The [`examples/`](examples/) folder holds the exact sources for every video on the [landing page](https://markdownvideo.avikmukherjee.com) — including [`examples/launch.video.md`](examples/launch.video.md), the 2 kb document that renders the project's own launch video. Re-render any of them yourself:
+
+```bash
+markdown-video render examples/launch.video.md -o launch.mp4
+```
+
 ## ☁️ Deploying MCP rendering
 
-The normal editor needs only the existing web deployment. Enabling `render_preview`/`render_video` additionally requires:
+The normal editor needs only the existing web deployment. `render_preview`/`render_video` additionally need one of two backends — plus storage (`NEON_DATABASE_URL` or `DATABASE_URL` for Postgres, self-bootstrapping; Upstash/KV Redis remains a fallback for existing self-hosted deploys) and `NEXT_PUBLIC_SITE_URL` set to the canonical origin:
 
-1. Deploy the worker image with the repository root as Docker context:
-   `docker build -t markdown-video-render-worker -f apps/render-worker/Dockerfile .`
-   Run it with `RENDER_WORKER_SHARED_SECRET` (at least 32 random characters). Optional worker limits are `PORT`, `HOST`, `RENDER_WORKER_CONCURRENCY` (default `1`, max `4`), and `RENDER_WORKER_QUEUE_LIMIT` (default `8`). Prefer a private network; if public, always use HTTPS at the platform/load balancer. Restrict container egress where your host supports it—the browser already blocks non-loopback scene image requests, but network policy is still useful defense in depth.
-2. Configure the web app with the same `RENDER_WORKER_SHARED_SECRET` and `RENDER_WORKER_URL`, plus storage: `NEON_DATABASE_URL` (or `DATABASE_URL`) for Postgres — the primary backend, self-bootstrapping on first use — or, for existing self-hosted deployments, `UPSTASH_REDIS_REST_URL`/`UPSTASH_REDIS_REST_TOKEN` or `KV_REST_API_URL`/`KV_REST_API_TOKEN` for Redis. Set `NEXT_PUBLIC_SITE_URL` to the canonical public web origin so returned render URLs are not host-header derived.
-3. Rendered MP4s use IDs containing 128 bits of cryptographic randomness, expire after **1 hour**, and are capped at **6 MiB** before base64 encoding (8 MiB stored, originally chosen below Upstash's common 10 MB request ceiling and kept backend-independent). `render_preview` allows **10 requests/IP/hour**, `render_video` **5/IP/hour**, and video reads **120/IP/minute**; these policies are fail-closed because rendering is expensive.
+**Option A — Vercel Sandbox (zero infrastructure on Vercel).** Each render forks a warm `mdv-render-template` sandbox snapshot (Node + Chromium + ffmpeg + the CLI bundle), executes with networking disabled, and is deleted afterwards. One-time provisioning from a repo checkout after `pnpm build`:
+
+```bash
+node scripts/provision-render-sandbox.mts
+```
+
+Selected automatically when no worker is configured and Vercel sandbox credentials are available. See [`docs/sandbox-rendering.md`](docs/sandbox-rendering.md).
+
+**Option B — dedicated render worker (preferred for self-hosted production).** Deploy the worker image with the repository root as Docker context and configure the web app with the same `RENDER_WORKER_SHARED_SECRET` and `RENDER_WORKER_URL`:
+
+`docker build -t markdown-video-render-worker -f apps/render-worker/Dockerfile .` — run it with `RENDER_WORKER_SHARED_SECRET` (at least 32 random characters). Optional worker limits are `PORT`, `HOST`, `RENDER_WORKER_CONCURRENCY` (default `1`, max `4`), and `RENDER_WORKER_QUEUE_LIMIT` (default `8`). Prefer a private network; if public, always use HTTPS at the platform/load balancer. Restrict container egress where your host supports it—the browser already blocks non-loopback scene image requests, but network policy is still useful defense in depth.
+Rendered MP4s use IDs containing 128 bits of cryptographic randomness, expire after **1 hour**, and are capped at **6 MiB** before base64 encoding (8 MiB stored, originally chosen below Upstash's common 10 MB request ceiling and kept backend-independent). `render_preview` allows **10 requests/IP/hour**, `render_video` **5/IP/hour**, and video reads **120/IP/minute**; these policies are fail-closed because rendering is expensive.
 
 The tools are absent only in the sense that they return configuration tool errors when these variables are missing; read-only authoring MCP tools continue to work.
 
@@ -225,7 +240,7 @@ The tools are absent only in the sense that they return configuration tool error
 
 ## 📦 Available Scripts
 
-Run these from the repository root (they delegate to workspace packages through Turborepo; `apps/web` is currently the only application package):
+Run these from the repository root (they delegate to workspace packages through Turborepo):
 
 - `pnpm dev` - Start the development server with hot reload
 - `pnpm build` - Build the application for production
