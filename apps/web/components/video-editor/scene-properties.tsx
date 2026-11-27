@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   BarChart3,
   Clock,
@@ -217,11 +217,41 @@ function ValueControl({
       onCommit(directive, inspection.name, value, inspection.kind),
     [directive, inspection.kind, inspection.name, onCommit]
   );
+
+  // Text and number fields feel live, but they must not create one undo entry
+  // per keystroke. Coalesce in-progress scalar typing briefly; blur/reset are
+  // discrete action boundaries and flush the latest value synchronously.
+  const commitTimerRef = useRef<number | null>(null);
+  const cancelScheduledCommit = useCallback(() => {
+    if (commitTimerRef.current !== null) {
+      window.clearTimeout(commitTimerRef.current);
+      commitTimerRef.current = null;
+    }
+  }, []);
+  useEffect(() => cancelScheduledCommit, [cancelScheduledCommit]);
+  const scheduleCommit = useCallback(
+    (value: DirectiveEditableScalar | null) => {
+      cancelScheduledCommit();
+      commitTimerRef.current = window.setTimeout(() => {
+        commitTimerRef.current = null;
+        commit(value);
+      }, 350);
+    },
+    [cancelScheduledCommit, commit]
+  );
+  const flushCommit = useCallback(
+    (value: DirectiveEditableScalar | null) => {
+      cancelScheduledCommit();
+      commit(value);
+    },
+    [cancelScheduledCommit, commit]
+  );
+
   const clear = useCallback(() => {
     setDraft("");
     setDraftError(null);
-    commit(null);
-  }, [commit]);
+    flushCommit(null);
+  }, [flushCommit]);
 
   const disabled = Boolean(disabledReason);
   const inputClass = cn(
@@ -333,15 +363,28 @@ function ValueControl({
               setDraftError(null);
             }}
             onBlur={() => {
-              if (!disabled && draft.trim() === "" && !schema.required) {
-                commit(null);
+              if (!disabled) {
+                if (draft.trim() === "" && !schema.required) {
+                  flushCommit(null);
+                } else {
+                  const parsed = validateNumberDraft(draft, schema);
+                  if (!parsed.error && parsed.value !== undefined) {
+                    flushCommit(parsed.value);
+                  }
+                }
               }
               setFocused(false);
               setDraftError(null);
             }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.currentTarget.blur();
+              }
+            }}
             onChange={(event) => {
               const next = event.target.value;
               setDraft(next);
+              cancelScheduledCommit();
               if (disabled || next.trim() === "") {
                 setDraftError(null);
                 return;
@@ -352,7 +395,7 @@ function ValueControl({
                 return;
               }
               setDraftError(null);
-              commit(parsed.value);
+              scheduleCommit(parsed.value);
             }}
             className={cn(inputClass, schema.unit === "seconds" && "pr-8")}
           />
@@ -408,15 +451,25 @@ function ValueControl({
             setDraftError(null);
           }}
           onBlur={() => {
-            if (!disabled && shown.trim() === "" && !schema.required) {
-              commit(null);
+            if (!disabled) {
+              if (draft.trim() === "" && !schema.required) {
+                flushCommit(null);
+              } else if (!/[\r\n]/.test(draft) && draft.trim() !== "") {
+                flushCommit(draft);
+              }
             }
             setFocused(false);
             setDraftError(null);
           }}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.currentTarget.blur();
+            }
+          }}
           onChange={(event) => {
             const next = event.target.value;
             setDraft(next);
+            cancelScheduledCommit();
             if (disabled) return;
             if (next.trim() === "") {
               setDraftError(null);
@@ -427,7 +480,7 @@ function ValueControl({
               return;
             }
             setDraftError(null);
-            commit(next);
+            scheduleCommit(next);
           }}
           className={inputClass}
         />

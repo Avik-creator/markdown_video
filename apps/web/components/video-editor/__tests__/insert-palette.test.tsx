@@ -39,7 +39,7 @@ describe("InsertPalette", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(onInsert).toHaveBeenCalledOnce();
-    expect(onInsert.mock.calls[0][0].id).toBe("text");
+    expect((onInsert.mock.calls[0] as unknown as [{ id: string }])[0].id).toBe("text");
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 

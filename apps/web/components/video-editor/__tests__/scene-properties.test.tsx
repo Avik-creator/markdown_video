@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SceneProperties } from "../scene-properties";
 import { useVideoStore } from "@/lib/use-video-store";
@@ -57,9 +57,25 @@ describe("SceneProperties schema-driven editing", () => {
 
     fireEvent.focus(input);
     fireEvent.change(input, { target: { value: "5" } });
+    fireEvent.blur(input);
 
     expect(useVideoStore.getState().markdown).toContain("!duration 5s");
     expect(useVideoStore.getState().scenes[0].duration).toBe(5);
+  });
+
+  it("coalesces rapid numeric typing into one undoable markdown edit", () => {
+    render(<SceneProperties />);
+    const input = screen.getByLabelText("Duration Seconds");
+
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: "4" } });
+    fireEvent.change(input, { target: { value: "45" } });
+    fireEvent.blur(input);
+
+    expect(useVideoStore.getState().markdown).toContain("!duration 45s");
+    expect(useVideoStore.getState().history.past).toHaveLength(1);
+    act(() => useVideoStore.getState().undo());
+    expect(useVideoStore.getState().markdown).toContain("!duration 3s");
   });
 
   it("rejects an invalid duration without mutating markdown", () => {
