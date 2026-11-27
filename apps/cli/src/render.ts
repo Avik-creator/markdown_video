@@ -596,34 +596,44 @@ function defaultPreviewTimes(totalDuration: number) {
   )
 }
 
-function validatePreviewTimes(times: number[] | undefined) {
+function validateFrameTimes(
+  times: number[] | undefined,
+  {
+    noun,
+    maxFrameCount,
+  }: {
+    noun: string
+    maxFrameCount?: number | undefined
+  },
+) {
   if (times === undefined) return
   if (!Array.isArray(times) || times.length === 0) {
-    throw new UsageError("At least one preview frame time is required.")
+    throw new UsageError(`At least one ${noun} frame time is required.`)
   }
-  if (times.length > MAX_PREVIEW_FRAME_COUNT) {
+  if (maxFrameCount !== undefined && times.length > maxFrameCount) {
     throw new UsageError(
-      `At most ${MAX_PREVIEW_FRAME_COUNT} preview frames can be rendered per request.`,
+      `At most ${maxFrameCount} ${noun} frames can be rendered per request.`,
     )
   }
   for (const time of times) {
     if (!Number.isFinite(time) || time < 0) {
-      throw new UsageError("Preview frame times must be finite non-negative numbers.")
+      throw new UsageError(`${noun} frame times must be finite non-negative numbers.`)
     }
   }
 }
 
 /**
- * Capture lossless PNG screenshots at exact timeline times. This deliberately
- * does not extract frames from a rendered mp4: direct screenshots avoid a lossy
- * encode/decode round trip and cost only the requested frames.
+ * Capture lossless PNG screenshots at explicit exact timeline times without
+ * applying the user-facing preview batch-size cap. This is shared by the diff
+ * command, which still uses one browser/server session for the whole batch.
+ * It is intentionally not re-exported from the package's public index.
  */
-export async function renderFrames(
+export async function renderExactFrames(
   options: RenderFramesOptions,
 ): Promise<RenderFramesResult> {
   const started = performance.now()
   validateMarkdown(options.markdown)
-  validatePreviewTimes(options.times)
+  validateFrameTimes(options.times, { noun: "Exact" })
 
   const settings = resolveRenderSettings({
     resolution: options.resolution,
@@ -699,4 +709,21 @@ export async function renderFrames(
   } finally {
     if (session) await closeSilently(() => session!.close())
   }
+}
+
+/**
+ * Capture lossless PNG screenshots at exact timeline times. This deliberately
+ * does not extract frames from a rendered mp4: direct screenshots avoid a lossy
+ * encode/decode round trip and cost only the requested frames. The public
+ * preview command is intentionally capped because JSON/base64 output grows
+ * quickly; larger internal batches use renderExactFrames above.
+ */
+export async function renderFrames(
+  options: RenderFramesOptions,
+): Promise<RenderFramesResult> {
+  validateFrameTimes(options.times, {
+    noun: "Preview",
+    maxFrameCount: MAX_PREVIEW_FRAME_COUNT,
+  })
+  return renderExactFrames(options)
 }
