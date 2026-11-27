@@ -166,7 +166,7 @@ function ControlShell({
   return (
     <div className="space-y-1.5" data-property-control={label}>
       <div className="flex items-center gap-1.5">
-        <Label className="flex-1 text-xs font-medium text-gray-600 dark:text-neutral-400">
+        <Label className="flex-1 text-xs font-medium text-muted-foreground dark:text-muted-foreground">
           {label}
         </Label>
         {inspection.line && (
@@ -175,7 +175,7 @@ function ControlShell({
             aria-label={`Jump to ${accessibilityLabel} in markdown source`}
             title={`Jump to line ${inspection.line}`}
             onClick={() => onJump(inspection.line)}
-            className="rounded p-1 text-gray-400 transition-colors hover:bg-pink-50 hover:text-pink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-pink-950/40 dark:hover:text-pink-400"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-pink-50 hover:text-pink-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-pink-950/40 dark:hover:text-pink-400"
           >
             <MousePointerClick className="h-3.5 w-3.5" />
           </button>
@@ -186,7 +186,7 @@ function ControlShell({
             aria-label={`Reset ${accessibilityLabel} to default`}
             title="Remove the explicit value"
             onClick={onClear}
-            className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-gray-100 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </button>
@@ -194,9 +194,9 @@ function ControlShell({
       </div>
       {children}
       {error ? (
-        <p className="text-xs text-red-600 dark:text-red-400">{error}</p>
+        <p className="text-xs text-destructive dark:text-destructive">{error}</p>
       ) : hint ? (
-        <p className="text-xs text-gray-400 dark:text-neutral-500">{hint}</p>
+        <p className="text-xs text-muted-foreground dark:text-muted-foreground">{hint}</p>
       ) : null}
     </div>
   );
@@ -276,16 +276,16 @@ function ValueControl({
     (inspection.kind === "positional" && REMOVABLE_REQUIRED_POSITIONAL_DIRECTIVES.has(directive));
   const disabled = Boolean(disabledReason);
   const inputClass = cn(
-    "w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-sm outline-none transition-colors",
+    "w-full rounded-md border border-border bg-panel px-2.5 py-1.5 text-sm text-foreground shadow-sm outline-none transition-colors",
     "placeholder:text-gray-400 focus:border-pink-400 focus:ring-2 focus:ring-pink-100",
-    "dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:border-pink-700 dark:focus:ring-pink-950/60",
+    "dark:border-border dark:bg-surface dark:text-foreground dark:placeholder:text-neutral-500 dark:focus:border-pink-700 dark:focus:ring-pink-950/60",
     disabled && "cursor-not-allowed opacity-55"
   );
 
   if (schema.type === "array" || schema.type === "object") {
     return (
       <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump}>
-        <div className="rounded-md border border-dashed border-gray-200 px-2.5 py-2 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+        <div className="rounded-md border border-dashed border-border px-2.5 py-2 text-xs text-muted-foreground dark:border-border dark:text-muted-foreground">
           Structured value — edit in markdown
         </div>
       </ControlShell>
@@ -320,7 +320,7 @@ function ValueControl({
             <option value={raw}>{raw} (invalid)</option>
           )}
         </select>
-        {disabledReason && <p className="mt-1 text-xs text-gray-400 dark:text-neutral-500">{disabledReason}</p>}
+        {disabledReason && <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">{disabledReason}</p>}
       </ControlShell>
     );
   }
@@ -334,11 +334,11 @@ function ValueControl({
           : false;
     return (
       <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={canClear ? clear : undefined}>
-        <label className="flex min-h-9 cursor-pointer items-center justify-between rounded-md border border-gray-200 bg-white px-2.5 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
-          <span className="text-sm text-gray-700 dark:text-neutral-300">
+        <label className="flex min-h-9 cursor-pointer items-center justify-between rounded-md border border-border bg-panel px-2.5 py-1.5 dark:border-border dark:bg-surface">
+          <span className="text-sm text-foreground dark:text-foreground">
             {effective ? "Enabled" : "Disabled"}
             {!inspection.present && (
-              <span className="ml-2 text-xs text-gray-400 dark:text-neutral-500">default</span>
+              <span className="ml-2 text-xs text-muted-foreground dark:text-muted-foreground">default</span>
             )}
           </span>
           <input
@@ -347,7 +347,7 @@ function ValueControl({
             checked={effective}
             disabled={disabled}
             onChange={(event) => commit(event.target.checked)}
-            className="h-4 w-4 accent-pink-500"
+            className="h-4 w-4 accent-accent"
           />
         </label>
       </ControlShell>
@@ -421,12 +421,12 @@ function ValueControl({
             className={cn(inputClass, schema.unit === "seconds" && "pr-8")}
           />
           {schema.unit === "seconds" && (
-            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-gray-400 dark:text-neutral-500">
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground dark:text-muted-foreground">
               s
             </span>
           )}
         </div>
-        {disabledReason && <p className="mt-1 text-xs text-gray-400 dark:text-neutral-500">{disabledReason}</p>}
+        {disabledReason && <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">{disabledReason}</p>}
       </ControlShell>
     );
   }
@@ -457,7 +457,7 @@ function ValueControl({
               setDraft(event.target.value);
               commit(event.target.value);
             }}
-            className="h-9 w-10 shrink-0 cursor-pointer rounded-md border border-gray-200 bg-white p-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-neutral-800 dark:bg-neutral-900"
+            className="h-9 w-10 shrink-0 cursor-pointer rounded-md border border-border bg-panel p-1 disabled:cursor-not-allowed disabled:opacity-40 dark:border-border dark:bg-surface"
           />
         )}
         <input
@@ -506,7 +506,7 @@ function ValueControl({
           className={inputClass}
         />
       </div>
-      {disabledReason && <p className="mt-1 text-xs text-gray-400 dark:text-neutral-500">{disabledReason}</p>}
+      {disabledReason && <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">{disabledReason}</p>}
     </ControlShell>
   );
 }
@@ -627,24 +627,24 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
   );
 
   return (
-    <aside className="flex h-full w-80 flex-col border-l border-gray-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-      <div className="shrink-0 border-b border-gray-200 p-4 dark:border-neutral-800">
-        <h3 className="text-sm font-medium text-gray-900 dark:text-neutral-100">Scene Properties</h3>
-        <p className="mt-1 flex items-center gap-1 text-xs text-gray-500 dark:text-neutral-400">
-          <MousePointerClick className="h-3 w-3 text-pink-500 dark:text-pink-400" />
+    <aside className="flex h-full w-80 flex-col border-l border-border bg-panel dark:border-border dark:bg-panel">
+      <div className="shrink-0 border-b border-border p-4 dark:border-border">
+        <h3 className="text-sm font-medium text-foreground dark:text-foreground">Scene Properties</h3>
+        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground dark:text-muted-foreground">
+          <MousePointerClick className="h-3 w-3 text-accent dark:text-accent" />
           Edits write markdown directly
         </p>
       </div>
 
       <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-4">
         <section className="space-y-4">
-          <div className="flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 p-2.5 dark:border-neutral-800 dark:bg-neutral-900/70">
-            <TypeIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+          <div className="flex items-center gap-2 rounded-lg border border-border bg-surface p-2.5 dark:border-border dark:bg-surface">
+            <TypeIcon className="h-4 w-4 text-info dark:text-info" />
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium capitalize text-gray-900 dark:text-neutral-100">
+              <div className="text-sm font-medium capitalize text-foreground dark:text-foreground">
                 {scene.type} scene
               </div>
-              <div className="text-xs text-gray-500 dark:text-neutral-400">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Scene {sceneIndex + 1} of {scenes.length}
               </div>
             </div>
@@ -654,7 +654,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
                 aria-label="Duplicate scene"
                 title="Duplicate scene (undoable)"
                 onClick={() => applySceneOperation("duplicate")}
-                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
               >
                 <Copy className="h-3.5 w-3.5" />
               </button>
@@ -663,7 +663,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
                 aria-label="Delete scene"
                 title="Delete scene (undoable)"
                 onClick={() => applySceneOperation("delete")}
-                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+                className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-muted-foreground dark:hover:bg-red-950/30 dark:hover:text-red-400"
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -671,7 +671,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-400">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
               <Clock className="h-3.5 w-3.5" /> Scene
             </div>
             {inspectionValue(inspections.duration, "positional", "seconds") && (
@@ -727,8 +727,8 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
         </section>
 
         {contentSchema && (
-          <section className="space-y-4 border-t border-gray-200 pt-4 dark:border-neutral-800">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-400">
+          <section className="space-y-4 border-t border-border pt-4 dark:border-border">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
               <Palette className="h-3.5 w-3.5" /> {titleCase(contentSchema.directiveName)} settings
             </div>
             {contentSchema.positional.map((inspection) => (
@@ -750,7 +750,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
               />
             ))}
             {scene.type === "split" && (
-              <p className="rounded-md bg-blue-50 px-2.5 py-2 text-xs text-blue-700 dark:bg-blue-950/30 dark:text-blue-300">
+              <p className="rounded-md bg-info-soft px-2.5 py-2 text-xs text-blue-700 dark:bg-info-soft dark:text-info">
                 Nested split-panel content remains markdown-edited; scene-level layout properties are editable here.
               </p>
             )}
@@ -758,13 +758,13 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
         )}
 
         {effectInspections.length > 0 && (
-          <section className="space-y-4 border-t border-gray-200 pt-4 dark:border-neutral-800">
-            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-400">
+          <section className="space-y-4 border-t border-border pt-4 dark:border-border">
+            <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
               <Sparkles className="h-3.5 w-3.5" /> Effects
             </div>
             {effectInspections.map((effect) => (
-              <div key={effect.directiveName} className="space-y-4 rounded-lg border border-gray-100 p-3 dark:border-neutral-900">
-                <div className="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-neutral-500">
+              <div key={effect.directiveName} className="space-y-4 rounded-lg border border-hairline p-3 dark:border-neutral-900">
+                <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">
                   {titleCase(effect.directiveName)}
                 </div>
                 {effect.positional.map((inspection) => (
@@ -788,7 +788,7 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
               </div>
             ))}
             {scene.camera && (
-              <p className="rounded-md border border-dashed border-gray-200 px-2.5 py-2 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+              <p className="rounded-md border border-dashed border-border px-2.5 py-2 text-xs text-muted-foreground dark:border-border dark:text-muted-foreground">
                 Camera keyframes are shown in markdown; simple camera editing is not enabled yet.
               </p>
             )}
@@ -796,8 +796,8 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
         )}
       </div>
 
-      <div className="shrink-0 border-t border-gray-200 p-4 dark:border-neutral-800">
-        <p className="text-xs text-gray-500 dark:text-neutral-400">
+      <div className="shrink-0 border-t border-border p-4 dark:border-border">
+        <p className="text-xs text-muted-foreground dark:text-muted-foreground">
           {scenes.length} scene{scenes.length !== 1 ? "s" : ""} total · markdown remains the source of truth
         </p>
       </div>
@@ -810,11 +810,11 @@ export function SceneProperties() {
 
   if (!scene) {
     return (
-      <aside className="w-80 border-l border-gray-200 bg-white p-4 dark:border-neutral-800 dark:bg-neutral-950">
-        <h3 className="mb-4 text-sm font-medium text-gray-900 dark:text-neutral-100">
+      <aside className="w-80 border-l border-border bg-panel p-4 dark:border-border dark:bg-panel">
+        <h3 className="mb-4 text-sm font-medium text-foreground dark:text-foreground">
           Scene Properties
         </h3>
-        <p className="text-sm text-gray-500 dark:text-neutral-400">No scene selected</p>
+        <p className="text-sm text-muted-foreground dark:text-muted-foreground">No scene selected</p>
       </aside>
     );
   }

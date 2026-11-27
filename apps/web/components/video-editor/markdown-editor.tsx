@@ -465,42 +465,42 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
   );
 
   return (
-    <div className="w-80 bg-white dark:bg-neutral-950 border-r border-gray-200 dark:border-neutral-800 flex flex-col h-full overflow-hidden">
+    <div className="w-80 bg-panel dark:bg-panel border-r border-border dark:border-border flex flex-col h-full overflow-hidden">
       <style>{MARKDOWN_EDITOR_CSS_VARS}</style>
       {/* Header */}
-      <div className="p-3 border-b border-gray-200 dark:border-neutral-800 flex items-center justify-between shrink-0">
+      <div className="p-3 border-b border-border dark:border-border flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">
-          <FileText className="w-4 h-4 text-gray-600 dark:text-neutral-400" />
-          <h2 className="text-sm font-medium text-gray-900 dark:text-neutral-100">
+          <FileText className="w-4 h-4 text-muted-foreground dark:text-muted-foreground" />
+          <h2 className="text-sm font-medium text-foreground dark:text-foreground">
             Editor
           </h2>
           {highlightRange && (
             <button
               onClick={clearHighlight}
-              className="flex items-center gap-1 text-xs text-pink-500 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/30 px-2 py-0.5 rounded-full border border-pink-200 dark:border-pink-900/50 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors"
+              className="flex items-center gap-1 text-xs text-accent dark:text-accent bg-accent-soft dark:bg-accent-soft px-2 py-0.5 rounded-full border border-accent/40 dark:border-accent/40 hover:bg-pink-100 dark:hover:bg-pink-900/30 transition-colors"
             >
               <MousePointerClick className="w-3 h-3" />
               Line {highlightRange.startLine}
               {highlightRange.endLine !== highlightRange.startLine && `-${highlightRange.endLine}`}
-              <span className="text-pink-400 dark:text-pink-500">×</span>
+              <span className="text-accent dark:text-accent">×</span>
             </button>
           )}
         </div>
-        <span className="text-xs text-gray-500 dark:text-neutral-500 bg-gray-50 dark:bg-neutral-900 px-2 py-0.5 rounded">
+        <span className="text-xs text-muted-foreground dark:text-muted-foreground bg-surface dark:bg-surface px-2 py-0.5 rounded">
           {lineCount} lines
         </span>
       </div>
 
       {/* Scene insertion entry point */}
-      <div className="p-2 border-b border-gray-200 dark:border-neutral-800 shrink-0 bg-gray-50/50 dark:bg-neutral-900/50">
+      <div className="p-2 border-b border-border dark:border-border shrink-0 bg-surface dark:bg-surface">
         <button
           type="button"
           onClick={onOpenInsertPalette}
-          className="flex w-full items-center justify-center gap-2 rounded-md border border-pink-200 bg-white px-3 py-2 text-sm font-medium text-pink-600 shadow-sm transition-colors hover:bg-pink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:border-pink-900/60 dark:bg-neutral-950 dark:text-pink-400 dark:hover:bg-pink-950/25"
+          className="flex w-full items-center justify-center gap-2 rounded-md border border-accent/40 bg-panel px-3 py-2 text-sm font-medium text-accent shadow-sm transition-colors hover:bg-pink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:border-accent/40 dark:bg-panel dark:text-accent dark:hover:bg-pink-950/25"
         >
           <Plus className="h-4 w-4" />
           Insert scene or directive
-          <kbd className="ml-auto whitespace-nowrap rounded border border-pink-200 bg-pink-50 px-1.5 py-0.5 text-[10px] dark:border-pink-900/60 dark:bg-pink-950/25">
+          <kbd className="ml-auto whitespace-nowrap rounded border border-accent/40 bg-accent-soft px-1.5 py-0.5 text-[10px] dark:border-accent/40 dark:bg-accent-soft">
             ⌘/Ctrl I
           </kbd>
         </button>
@@ -527,14 +527,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         />
       ) : (
         /* Footer hint */
-        <div className="p-3 border-t border-gray-200 dark:border-neutral-800 bg-linear-to-r from-pink-50 to-purple-50 dark:from-pink-950/20 dark:to-purple-950/20 shrink-0">
-          <p className="text-xs text-gray-600 dark:text-neutral-400 text-center">
+        <div className="p-3 border-t border-border dark:border-border bg-linear-to-r from-transparent to-transparent dark:from-transparent dark:to-transparent shrink-0">
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground text-center">
             Press{" "}
-            <kbd className="bg-white dark:bg-neutral-800 px-2 py-1 rounded text-xs font-mono text-pink-600 dark:text-pink-400 border border-pink-200 dark:border-pink-900 shadow-sm mx-1">
+            <kbd className="bg-panel dark:bg-surface px-2 py-1 rounded text-xs font-mono text-accent dark:text-accent border border-accent/40 dark:border-accent/40 shadow-sm mx-1">
               ?
             </kbd>{" "}
             or click{" "}
-            <span className="text-pink-600 dark:text-pink-400 font-medium">
+            <span className="text-accent dark:text-accent font-medium">
               Guide
             </span>{" "}
             in header for syntax help
@@ -565,56 +565,56 @@ function ProblemsPanel({
   const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
   return (
-    <div className="border-t border-gray-200 dark:border-neutral-800 shrink-0 bg-gray-50 dark:bg-neutral-900">
+    <div className="border-t border-border dark:border-border shrink-0 bg-surface dark:bg-surface">
       <button
         onClick={onToggle}
         aria-expanded={open}
-        className="w-full flex items-center gap-3 px-3 py-2 text-xs text-gray-700 dark:text-neutral-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
+        className="w-full flex items-center gap-3 px-3 py-2 text-xs text-foreground dark:text-foreground hover:bg-gray-100 dark:hover:bg-neutral-800"
       >
         {errorCount > 0 && (
-          <span className="flex items-center gap-1 text-red-600 dark:text-red-400">
+          <span className="flex items-center gap-1 text-destructive dark:text-destructive">
             <CircleX className="w-3.5 h-3.5" />
             {plural(errorCount, "error")}
           </span>
         )}
         {warningCount > 0 && (
-          <span className="flex items-center gap-1 text-amber-600 dark:text-amber-400">
+          <span className="flex items-center gap-1 text-warning dark:text-warning">
             <AlertTriangle className="w-3.5 h-3.5" />
             {plural(warningCount, "warning")}
           </span>
         )}
-        <span className="ml-auto text-gray-400 dark:text-neutral-500">
+        <span className="ml-auto text-muted-foreground dark:text-muted-foreground">
           {open ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronUp className="w-3.5 h-3.5" />}
         </span>
       </button>
 
       {open && (
-        <ul className="max-h-40 overflow-auto border-t border-gray-200 dark:border-neutral-800">
+        <ul className="max-h-40 overflow-auto border-t border-border dark:border-border">
           {diagnostics.map((d, i) => (
             <li
               key={`${d.line ?? "doc"}-${i}`}
-              className="flex items-start gap-2 px-3 py-1.5 text-xs border-b border-gray-100 dark:border-neutral-800/60 last:border-b-0"
+              className="flex items-start gap-2 px-3 py-1.5 text-xs border-b border-hairline dark:border-neutral-800/60 last:border-b-0"
             >
               {d.severity === "error" ? (
-                <CircleX className="w-3.5 h-3.5 mt-0.5 shrink-0 text-red-500" />
+                <CircleX className="w-3.5 h-3.5 mt-0.5 shrink-0 text-destructive" />
               ) : (
-                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-amber-500" />
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0 text-warning" />
               )}
               <button
                 onClick={() => d.line && onJump(d.line)}
                 disabled={!d.line}
                 className="flex-1 text-left min-w-0 disabled:cursor-default"
               >
-                <span className="text-gray-900 dark:text-neutral-100">
+                <span className="text-foreground dark:text-foreground">
                   {d.line && (
-                    <span className="font-mono text-gray-400 dark:text-neutral-500 mr-1.5">
+                    <span className="font-mono text-muted-foreground dark:text-muted-foreground mr-1.5">
                       Ln {d.line}
                     </span>
                   )}
                   {d.message}
                 </span>
                 {d.suggestion && !d.fix && (
-                  <span className="block text-gray-500 dark:text-neutral-500 truncate" title={d.suggestion}>
+                  <span className="block text-muted-foreground dark:text-muted-foreground truncate" title={d.suggestion}>
                     {d.suggestion}
                   </span>
                 )}
@@ -622,7 +622,7 @@ function ProblemsPanel({
               {d.fix && (
                 <button
                   onClick={() => onFix(d)}
-                  className="shrink-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-pink-600 dark:text-pink-400 hover:bg-pink-50 dark:hover:bg-pink-950/40"
+                  className="shrink-0 flex items-center gap-1 rounded px-1.5 py-0.5 text-accent dark:text-accent hover:bg-pink-50 dark:hover:bg-pink-950/40"
                 >
                   <Wand2 className="w-3 h-3" />
                   Fix

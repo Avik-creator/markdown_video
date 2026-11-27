@@ -48,28 +48,28 @@ export function ShareLinkError({ kind, isEmbed = false }: ShareLinkErrorProps) {
   const content = ERROR_CONTENT[kind]
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white p-4 text-gray-900 dark:bg-neutral-950 dark:text-neutral-100">
+    <main className="flex min-h-screen items-center justify-center bg-panel p-4 text-foreground dark:bg-panel dark:text-foreground">
       <div
         role="alert"
         aria-labelledby="share-link-error-title"
-        className={`w-full rounded-xl border border-gray-200 bg-gray-50 text-center shadow-sm dark:border-neutral-800 dark:bg-neutral-900/60 ${
+        className={`w-full rounded-xl border border-border bg-surface text-center shadow-sm dark:border-border dark:bg-surface ${
           isEmbed ? "max-w-sm p-5" : "max-w-md p-8"
         }`}
       >
-        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-amber-300">
+        <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-amber-100 text-amber-700 dark:bg-amber-950/70 dark:text-warning">
           <AlertTriangle className="h-5 w-5" aria-hidden="true" />
         </div>
         <h1 id="share-link-error-title" className="mt-4 font-serif text-xl font-semibold">
           {content.title}
         </h1>
-        <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-neutral-400">{content.description}</p>
-        <p className="mt-3 text-sm font-medium text-gray-700 dark:text-neutral-300">
+        <p className="mt-2 text-sm leading-6 text-muted-foreground dark:text-muted-foreground">{content.description}</p>
+        <p className="mt-3 text-sm font-medium text-foreground dark:text-foreground">
           Your local project was not changed.
         </p>
         <div className="mt-6 flex flex-col justify-center gap-2 sm:flex-row">
           <Button
             asChild
-            className="border-0 bg-gray-900 text-white hover:bg-gray-800 dark:bg-neutral-100 dark:text-gray-900 dark:hover:bg-neutral-200"
+            className="border-0 bg-foreground text-white hover:bg-gray-800 dark:bg-foreground dark:text-gray-900 dark:hover:bg-neutral-200"
           >
             <Link href="/editor" target={isEmbed ? "_blank" : undefined} rel={isEmbed ? "noreferrer" : undefined}>
               Open your editor
@@ -79,7 +79,7 @@ export function ShareLinkError({ kind, isEmbed = false }: ShareLinkErrorProps) {
             <Button
               asChild
               variant="outline"
-              className="border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="border-border bg-panel text-foreground hover:bg-gray-50 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-neutral-800"
             >
               <Link href="/">Back to home</Link>
             </Button>

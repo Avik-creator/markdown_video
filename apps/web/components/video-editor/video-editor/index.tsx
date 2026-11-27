@@ -164,7 +164,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
 
   if (isEmbed) {
     return (
-      <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-gray-900 dark:text-neutral-100 overflow-hidden">
+      <div className="h-screen flex flex-col bg-panel dark:bg-panel text-foreground dark:text-foreground overflow-hidden">
         <div className="flex-1 flex overflow-hidden min-h-0 relative">
           <div className="flex-1 flex flex-col min-w-0 overflow-auto">
             <ScenePreview />
@@ -176,7 +176,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
   }
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-gray-900 dark:text-neutral-100 overflow-hidden">
+    <div className="h-screen flex flex-col bg-panel dark:bg-panel text-foreground dark:text-foreground overflow-hidden">
       <EditorHeader
         undo={undoWithFlush}
         redo={redoWithFlush}

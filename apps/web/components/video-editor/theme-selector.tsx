@@ -64,17 +64,17 @@ export function ThemeSelector() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="sm" className="h-8 gap-2 text-zinc-400 hover:text-white hover:bg-zinc-800">
+        <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground hover:text-white hover:bg-zinc-800">
           <Palette className="w-4 h-4" />
           <span className="text-xs">{currentTheme.name}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-zinc-900 border-zinc-800 w-48">
+      <DropdownMenuContent className="bg-panel border-border w-48">
         {Object.entries(THEME_PRESETS).map(([key, preset]) => (
           <DropdownMenuItem
             key={key}
             onClick={() => setTheme(key as ThemePreset)}
-            className={`flex items-center justify-between ${theme === key ? "text-pink-400" : "text-zinc-300"}`}
+            className={`flex items-center justify-between ${theme === key ? "text-accent" : "text-foreground"}`}
           >
             <div className="flex items-center gap-2">
               <div className="flex gap-0.5">

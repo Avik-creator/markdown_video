@@ -77,21 +77,21 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
 
   return (
     <Dialog open={open} onOpenChange={closeAndReset}>
-      <DialogContent className="max-w-3xl overflow-hidden border-gray-200 bg-white p-0 text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
-        <DialogHeader className="border-b border-gray-200 px-5 py-4 dark:border-neutral-800">
+      <DialogContent className="max-w-3xl overflow-hidden border-border bg-panel p-0 text-foreground dark:border-border dark:bg-panel dark:text-foreground">
+        <DialogHeader className="border-b border-border px-5 py-4 dark:border-border">
           <DialogTitle className="flex items-center gap-2 text-base">
-            <FilePlus2 className="h-4 w-4 text-pink-500 dark:text-pink-400" />
+            <FilePlus2 className="h-4 w-4 text-accent dark:text-accent" />
             Insert scene or directive
           </DialogTitle>
-          <DialogDescription className="text-gray-500 dark:text-neutral-400">
+          <DialogDescription className="text-muted-foreground dark:text-muted-foreground">
             Search scene scaffolds and common directives. Scenes insert after the cursor scene; directives insert inside it.
           </DialogDescription>
         </DialogHeader>
 
         <div className="grid max-h-[70vh] grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.8fr)]">
-          <div className="flex min-h-0 flex-col border-b border-gray-200 md:border-b-0 md:border-r dark:border-neutral-800">
-            <div className="flex items-center gap-2 border-b border-gray-200 px-4 py-3 dark:border-neutral-800">
-              <Search className="h-4 w-4 shrink-0 text-gray-400 dark:text-neutral-500" />
+          <div className="flex min-h-0 flex-col border-b border-border md:border-b-0 md:border-r dark:border-border">
+            <div className="flex items-center gap-2 border-b border-border px-4 py-3 dark:border-border">
+              <Search className="h-4 w-4 shrink-0 text-muted-foreground dark:text-muted-foreground" />
               <input
                 autoFocus
                 role="combobox"
@@ -119,7 +119,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                 }}
                 className="w-full bg-transparent text-sm outline-none placeholder:text-gray-400 dark:placeholder:text-neutral-500"
               />
-              <kbd className="whitespace-nowrap rounded border border-gray-200 bg-gray-50 px-1.5 py-0.5 text-[10px] font-medium text-gray-500 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-400">
+              <kbd className="whitespace-nowrap rounded border border-border bg-surface px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground dark:border-border dark:bg-surface dark:text-muted-foreground">
                 ⌘/Ctrl I
               </kbd>
             </div>
@@ -144,17 +144,17 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                       className={cn(
                         "w-full rounded-lg px-3 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500",
                         selected
-                          ? "bg-pink-50 text-gray-900 dark:bg-pink-950/25 dark:text-neutral-100"
-                          : "text-gray-700 hover:bg-gray-50 dark:text-neutral-300 dark:hover:bg-neutral-900"
+                          ? "bg-accent-soft text-foreground dark:bg-accent-soft dark:text-foreground"
+                          : "text-foreground hover:bg-gray-50 dark:text-foreground dark:hover:bg-neutral-900"
                       )}
                     >
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-sm font-medium">{snippet.name}</span>
-                        <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-400 dark:border-neutral-800 dark:text-neutral-500">
+                        <span className="rounded-full border border-border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground dark:border-border dark:text-muted-foreground">
                           {"kind" in snippet ? "Directive" : "Scene"}
                         </span>
                       </div>
-                      <p className="mt-1 text-xs text-gray-500 dark:text-neutral-400">
+                      <p className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
                         {snippet.description}
                       </p>
                     </button>
@@ -162,7 +162,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                 );
               })}
               {filtered.length === 0 && (
-                <li className="px-3 py-10 text-center text-sm text-gray-500 dark:text-neutral-400">
+                <li className="px-3 py-10 text-center text-sm text-muted-foreground dark:text-muted-foreground">
                   No snippets match “{query}”
                 </li>
               )}
@@ -170,13 +170,13 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
           </div>
 
           <div className="flex min-h-0 flex-col bg-gray-50/70 dark:bg-neutral-900/40">
-            <div className="border-b border-gray-200 px-4 py-3 text-xs font-medium uppercase tracking-wide text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+            <div className="border-b border-border px-4 py-3 text-xs font-medium uppercase tracking-wide text-muted-foreground dark:border-border dark:text-muted-foreground">
               Markdown preview
             </div>
-            <pre className="min-h-48 flex-1 overflow-auto p-4 font-mono text-xs leading-5 text-gray-700 dark:text-neutral-300">
+            <pre className="min-h-48 flex-1 overflow-auto p-4 font-mono text-xs leading-5 text-foreground dark:text-foreground">
               {active?.markdown ?? "Select a snippet to preview its markdown."}
             </pre>
-            <div className="border-t border-gray-200 px-4 py-3 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-400">
+            <div className="border-t border-border px-4 py-3 text-xs text-muted-foreground dark:border-border dark:text-muted-foreground">
               ↑↓ navigate · Enter insert · Esc close
             </div>
           </div>

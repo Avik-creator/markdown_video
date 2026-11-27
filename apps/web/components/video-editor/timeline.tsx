@@ -107,7 +107,7 @@ function TimelineSegment({
       className={cn(
         "relative h-full flex items-center justify-center text-white text-sm font-medium border-r border-black/20 last:border-r-0 transition-all cursor-grab active:cursor-grabbing select-none group",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-900 dark:focus-visible:ring-neutral-100 focus-visible:ring-inset",
-        isActive && "ring-1 ring-gray-900 dark:ring-neutral-100 ring-inset",
+        isActive && "ring-1 ring-accent dark:ring-neutral-100 ring-inset",
       )}
       style={{
         width: `${widthPercent}%`,
@@ -395,7 +395,7 @@ export function Timeline() {
   const playheadPosition = positionPercentForTime(currentTime, totalDuration)
 
   return (
-    <div className="w-full bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800 p-4">
+    <div className="w-full bg-panel dark:bg-panel border-t border-border dark:border-border p-4">
       <span id="timeline-reorder-instructions" className="sr-only">
         Press Enter or Space to seek to this scene. Press Control or Command plus Left Arrow to move it earlier, or plus Right Arrow to move it later.
       </span>
@@ -426,7 +426,7 @@ export function Timeline() {
         {timeMarkers.map((time) => (
           <div
             key={time}
-            className="absolute text-xs text-gray-500 dark:text-neutral-500 font-mono pointer-events-none"
+            className="absolute text-xs text-muted-foreground dark:text-muted-foreground font-mono pointer-events-none"
             style={{ left: `${positionPercentForTime(time, totalDuration)}%` }}
           >
             {time}s
@@ -443,8 +443,8 @@ export function Timeline() {
             style={{ left: `${positionPercentForTime(segment.startTime, totalDuration)}%` }}
             onClick={() => seekTo(segment.startTime)}
           >
-            <Bookmark className="w-3 h-3 text-gray-600 dark:text-neutral-400 group-hover:text-gray-900 dark:group-hover:text-neutral-100" />
-            <span className="text-xs text-gray-600 dark:text-neutral-400 group-hover:text-gray-900 dark:group-hover:text-neutral-100 hidden group-hover:inline group-focus-visible:inline bg-white dark:bg-neutral-900 px-1 rounded border border-gray-200 dark:border-neutral-800">
+            <Bookmark className="w-3 h-3 text-muted-foreground dark:text-muted-foreground group-hover:text-gray-900 dark:group-hover:text-neutral-100" />
+            <span className="text-xs text-muted-foreground dark:text-muted-foreground group-hover:text-gray-900 dark:group-hover:text-neutral-100 hidden group-hover:inline group-focus-visible:inline bg-panel dark:bg-surface px-1 rounded border border-border dark:border-border">
               {segment.chapter}
             </span>
           </button>
@@ -465,8 +465,8 @@ export function Timeline() {
             >
               <div className="w-2 h-2 rounded-full bg-gray-600 dark:bg-neutral-400 group-hover:scale-125 transition-transform" />
             </button>
-            <div className="hidden group-hover:flex group-focus-within:flex items-center gap-1 ml-1 bg-white dark:bg-neutral-900 rounded px-2 py-0.5 border border-gray-200 dark:border-neutral-800">
-              <span className="text-xs text-gray-700 dark:text-neutral-300">{marker.label}</span>
+            <div className="hidden group-hover:flex group-focus-within:flex items-center gap-1 ml-1 bg-panel dark:bg-surface rounded px-2 py-0.5 border border-border dark:border-border">
+              <span className="text-xs text-foreground dark:text-foreground">{marker.label}</span>
               <button
                 type="button"
                 aria-label={`Delete marker ${marker.label}`}
@@ -474,7 +474,7 @@ export function Timeline() {
                   e.stopPropagation()
                   removeMarker(marker.id)
                 }}
-                className="text-gray-500 dark:text-neutral-500 hover:text-gray-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-neutral-500 rounded-sm"
+                className="text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 dark:focus-visible:ring-neutral-500 rounded-sm"
               >
                 <Trash2 className="w-3 h-3" />
               </button>
@@ -486,7 +486,7 @@ export function Timeline() {
       {/* Timeline track */}
       <div
         ref={timelineRef}
-        className="relative h-16 bg-gray-100 dark:bg-neutral-900 rounded-lg overflow-hidden cursor-pointer border border-gray-200 dark:border-neutral-800 select-none"
+        className="relative h-16 bg-surface dark:bg-surface rounded-lg overflow-hidden cursor-pointer border border-border dark:border-border select-none"
         onPointerDown={handleTrackPointerDown}
         onClick={handleTrackClick}
       >
@@ -524,16 +524,16 @@ export function Timeline() {
 
         {/* Playhead */}
         <div
-          className="absolute top-0 bottom-0 w-0.5 bg-gray-900 dark:bg-neutral-100 z-20 pointer-events-none transition-none"
+          className="absolute top-0 bottom-0 w-0.5 bg-foreground dark:bg-foreground z-20 pointer-events-none transition-none"
           style={{ left: `${playheadPosition}%`, willChange: "left" }}
         >
-          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-gray-900 dark:bg-neutral-100 rounded-full" />
-          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-900 dark:bg-neutral-100 rounded-full" />
+          <div className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3 bg-foreground dark:bg-foreground rounded-full" />
+          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-foreground dark:bg-foreground rounded-full" />
         </div>
       </div>
 
       {/* Timeline info */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2 text-xs text-gray-500 dark:text-neutral-500">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mt-2 text-xs text-muted-foreground dark:text-muted-foreground">
         <span>
           {scenes.length} scene{scenes.length !== 1 ? "s" : ""} | {markers.length} marker
           {markers.length !== 1 ? "s" : ""}

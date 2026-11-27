@@ -113,24 +113,24 @@ function AssetRow({
   return (
     <div
       data-asset-row={asset.filename}
-      className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-3"
+      className="rounded-lg border border-border dark:border-border bg-surface dark:bg-surface p-3"
     >
       <div className="flex items-start gap-3 min-w-0">
         <div
           className={cn(
             "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-md",
             kind === "audio"
-              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-              : "bg-sky-500/10 text-sky-600 dark:text-sky-400"
+              ? "bg-info-soft text-live dark:text-live"
+              : "bg-info-soft text-info dark:text-info"
           )}
         >
           <Icon className="h-4 w-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium text-gray-900 dark:text-neutral-100" title={asset.filename}>
+          <p className="truncate text-sm font-medium text-foreground dark:text-foreground" title={asset.filename}>
             {asset.filename}
           </p>
-          <p className="mt-0.5 text-xs text-gray-500 dark:text-neutral-400">
+          <p className="mt-0.5 text-xs text-muted-foreground dark:text-muted-foreground">
             {kind === "audio" ? "Audio" : "Image"} · {formatBytes(asset.size)}
             {formattedDuration ? ` · ${formattedDuration}` : ""}
           </p>
@@ -142,7 +142,7 @@ function AssetRow({
           size="sm"
           variant="ghost"
           onClick={onInsert}
-          className="h-8 border border-gray-300 bg-white px-2 text-xs text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10"
+          className="h-8 border border-border bg-panel px-2 text-xs text-foreground hover:bg-gray-100 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-white/10"
           aria-label={`Insert reference to ${asset.filename}`}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -152,7 +152,7 @@ function AssetRow({
           size="sm"
           variant="ghost"
           onClick={onCopy}
-          className="h-8 border border-gray-300 bg-white px-2 text-xs text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10"
+          className="h-8 border border-border bg-panel px-2 text-xs text-foreground hover:bg-gray-100 dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-white/10"
           aria-label={`Copy reference to ${asset.filename}`}
         >
           <Copy className="h-3.5 w-3.5" />
@@ -162,7 +162,7 @@ function AssetRow({
           size="sm"
           variant="ghost"
           onClick={onDelete}
-          className="h-8 border border-gray-300 bg-white px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-white/10 dark:bg-white/5 dark:text-red-400 dark:hover:bg-white/10 dark:hover:text-red-300"
+          className="h-8 border border-border bg-panel px-2 text-xs text-destructive hover:bg-red-50 hover:text-red-700 dark:border-border dark:bg-surface dark:text-destructive dark:hover:bg-white/10 dark:hover:text-red-300"
           aria-label={`Delete ${asset.filename}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
@@ -309,8 +309,8 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
   return (
     <div
       className={cn(
-        "relative flex h-full w-96 flex-col border-l border-gray-200 bg-white dark:border-white/10 dark:bg-[#0f0f14]",
-        isDragging && "ring-2 ring-inset ring-sky-500"
+        "relative flex h-full w-96 flex-col border-l border-border bg-panel dark:border-border dark:bg-[#0f0f14]",
+        isDragging && "ring-2 ring-inset ring-info"
       )}
       onDragEnter={(event) => {
         if (!hasFiles(event)) return
@@ -343,55 +343,55 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
         }}
       />
 
-      <div className="flex shrink-0 items-center justify-between border-b border-gray-200 p-4 dark:border-white/10">
+      <div className="flex shrink-0 items-center justify-between border-b border-border p-4 dark:border-border">
         <div className="flex items-center gap-2">
-          <Upload className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-          <h2 className="font-semibold text-gray-900 dark:text-white">Assets</h2>
+          <Upload className="h-4 w-4 text-info dark:text-info" />
+          <h2 className="font-semibold text-foreground dark:text-foreground">Assets</h2>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onClose}
-          className="h-8 w-8 text-gray-500 hover:text-gray-900 dark:text-neutral-400 dark:hover:text-white"
+          className="h-8 w-8 text-muted-foreground hover:text-gray-900 dark:text-muted-foreground dark:hover:text-white"
           aria-label="Close assets panel"
         >
           <X className="h-4 w-4" />
         </Button>
       </div>
 
-      <div className="shrink-0 border-b border-gray-200 p-4 dark:border-white/10">
+      <div className="shrink-0 border-b border-border p-4 dark:border-border">
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={isUploading}
-          className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center transition-colors hover:border-sky-500 hover:bg-sky-50 disabled:opacity-60 dark:border-white/15 dark:bg-white/[0.03] dark:hover:border-sky-400 dark:hover:bg-sky-500/10"
+          className="flex w-full flex-col items-center justify-center rounded-lg border border-dashed border-border bg-surface px-4 py-5 text-center transition-colors hover:border-sky-500 hover:bg-sky-50 disabled:opacity-60 dark:border-border dark:bg-surface dark:hover:border-sky-400 dark:hover:bg-sky-500/10"
         >
-          <Upload className="mb-2 h-5 w-5 text-sky-600 dark:text-sky-400" />
-          <span className="text-sm font-medium text-gray-900 dark:text-neutral-100">
+          <Upload className="mb-2 h-5 w-5 text-info dark:text-info" />
+          <span className="text-sm font-medium text-foreground dark:text-foreground">
             {isUploading ? "Uploading…" : "Upload music or images"}
           </span>
-          <span className="mt-1 text-xs text-gray-500 dark:text-neutral-400">
+          <span className="mt-1 text-xs text-muted-foreground dark:text-muted-foreground">
             Click to browse or drop files anywhere in this panel
           </span>
         </button>
-        <p className="mt-3 text-xs leading-relaxed text-gray-500 dark:text-neutral-400">
+        <p className="mt-3 text-xs leading-relaxed text-muted-foreground dark:text-muted-foreground">
           Assets are stored only in this browser with IndexedDB. They are not uploaded to a server
           and are not included in share links or exported markdown files.
         </p>
       </div>
 
       {notices.length > 0 && (
-        <div className="shrink-0 space-y-2 border-b border-gray-200 p-3 dark:border-white/10">
+        <div className="shrink-0 space-y-2 border-b border-border p-3 dark:border-border">
           {notices.map((notice) => (
             <div
               key={notice.id}
               className={cn(
                 "flex items-start gap-2 rounded-md border px-3 py-2 text-xs",
                 notice.tone === "error"
-                  ? "border-red-200 bg-red-50 text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300"
+                  ? "border-destructive/40 bg-destructive-soft text-destructive dark:border-destructive/40 dark:bg-destructive-soft dark:text-destructive"
                   : notice.tone === "warning"
-                    ? "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300"
-                    : "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-sky-300"
+                    ? "border-warning/40 bg-warning-soft text-warning dark:border-warning/40 dark:bg-warning-soft dark:text-warning"
+                    : "border-sky-200 bg-info-soft text-sky-800 dark:border-sky-500/30 dark:bg-sky-500/10 dark:text-info"
               )}
             >
               <FileWarning className="mt-0.5 h-3.5 w-3.5 shrink-0" />
@@ -411,13 +411,13 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
         {missingReferences.length > 0 && (
-          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
-            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+          <div className="mb-4 rounded-lg border border-warning/40 bg-warning-soft p-3 dark:border-warning/40 dark:bg-warning-soft">
+            <p className="text-xs font-semibold uppercase tracking-wide text-warning dark:text-warning">
               Missing references
             </p>
             <div className="mt-2 space-y-1.5">
               {missingReferences.map((reference) => (
-                <p key={`${reference.kind}:${reference.filename}:${reference.lineNumber}`} className="text-xs text-amber-800 dark:text-amber-200">
+                <p key={`${reference.kind}:${reference.filename}:${reference.lineNumber}`} className="text-xs text-warning dark:text-warning">
                   Line {reference.lineNumber}: <code>./{reference.filename}</code> is not in browser assets or public static files.
                 </p>
               ))}
@@ -425,7 +425,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
           </div>
         )}
         {status === "error" ? (
-          <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
+          <div className="rounded-lg border border-destructive/40 bg-destructive-soft p-4 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive-soft dark:text-destructive">
             <p className="font-medium">Browser asset storage is unavailable.</p>
             <p className="mt-1 text-xs">{storageError}</p>
             <Button
@@ -439,17 +439,17 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
             </Button>
           </div>
         ) : assets.length === 0 ? (
-          <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-gray-200 p-6 text-center dark:border-white/10">
-            <div className="mb-3 flex gap-2 text-gray-400 dark:text-neutral-500">
+          <div className="flex h-full flex-col items-center justify-center rounded-lg border border-dashed border-border p-6 text-center dark:border-border">
+            <div className="mb-3 flex gap-2 text-muted-foreground dark:text-muted-foreground">
               <Music className="h-5 w-5" />
               <ImageIcon className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-gray-900 dark:text-neutral-100">
+            <p className="text-sm font-medium text-foreground dark:text-foreground">
               No browser-local assets yet
             </p>
-            <p className="mt-2 max-w-64 text-xs leading-relaxed text-gray-500 dark:text-neutral-400">
+            <p className="mt-2 max-w-64 text-xs leading-relaxed text-muted-foreground dark:text-muted-foreground">
               Upload an MP3, PNG, or other media file, then insert a reference such as
-              <code className="mx-1 rounded bg-gray-100 px-1 dark:bg-white/10">./theme.mp3</code>
+              <code className="mx-1 rounded bg-surface px-1 dark:bg-surface">./theme.mp3</code>
               into your markdown.
             </p>
           </div>
@@ -469,8 +469,8 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
       </div>
 
       {isDragging && (
-        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-sky-500/10 backdrop-blur-[1px]">
-          <div className="rounded-lg border border-sky-400 bg-white px-4 py-3 text-sm font-medium text-sky-700 shadow-lg dark:bg-neutral-950 dark:text-sky-300">
+        <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-info-soft backdrop-blur-[1px]">
+          <div className="rounded-lg border border-info bg-panel px-4 py-3 text-sm font-medium text-sky-700 shadow-lg dark:bg-panel dark:text-info">
             Drop to upload assets
           </div>
         </div>

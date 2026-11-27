@@ -59,13 +59,13 @@ export function EditorHeader({
   const persistenceFailed = useVideoStore((state) => state.persistenceFailed)
 
   return (
-    <header className="flex items-center justify-between px-4 py-2 bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800 shrink-0">
+    <header className="flex items-center justify-between px-4 py-2 bg-panel dark:bg-panel border-b border-border dark:border-border shrink-0">
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 group relative">
          <Image src="/icon.png" alt="Markdown Video Logo" width={64} height={64} />
         </Link>
 
-        <div className="w-px h-4 bg-zinc-700 mx-1" />
+        <div className="w-px h-4 bg-line-strong mx-1" />
 
         <ProjectMenu />
 
@@ -73,7 +73,7 @@ export function EditorHeader({
           <span
             role="alert"
             title="Browser storage is full or unavailable. Your changes are not being saved locally — download a project file copy with Ctrl+S."
-            className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400"
+            className="flex items-center gap-1.5 text-xs text-warning dark:text-warning"
           >
             <CloudOff className="w-3.5 h-3.5" />
             not saving — download a copy
@@ -87,7 +87,7 @@ export function EditorHeader({
           size="icon"
           onClick={undo}
           disabled={!canUndo()}
-          className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           title="Undo (Ctrl+Z)"
           aria-label="Undo"
         >
@@ -98,14 +98,14 @@ export function EditorHeader({
           size="icon"
           onClick={redo}
           disabled={!canRedo()}
-          className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           title="Redo (Ctrl+Shift+Z)"
           aria-label="Redo"
         >
           <Redo2 className="w-4 h-4" />
         </Button>
 
-        <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
+        <div className="w-px h-4 bg-line-strong dark:bg-line-strong mx-2" />
 
         <Button
           variant="ghost"
@@ -115,13 +115,13 @@ export function EditorHeader({
             if (prev) setZoom(prev)
           }}
           disabled={zoom <= 50}
-          className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           title="Zoom out"
           aria-label="Zoom out"
         >
           <ZoomOut className="w-4 h-4" />
         </Button>
-        <span className="text-xs text-gray-600 dark:text-neutral-400 min-w-10 text-center">{zoom}%</span>
+        <span className="text-xs text-muted-foreground dark:text-muted-foreground min-w-10 text-center">{zoom}%</span>
         <Button
           variant="ghost"
           size="icon"
@@ -130,28 +130,28 @@ export function EditorHeader({
             if (next) setZoom(next)
           }}
           disabled={zoom >= 150}
-          className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
+          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 disabled:opacity-30"
           title="Zoom in"
           aria-label="Zoom in"
         >
           <ZoomIn className="w-4 h-4" />
         </Button>
 
-        <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
+        <div className="w-px h-4 bg-line-strong dark:bg-line-strong mx-2" />
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 gap-2 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800">
+            <Button variant="ghost" size="sm" className="h-8 gap-2 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800">
               <Monitor className="w-4 h-4" />
               <span className="text-xs">{aspectRatio}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent className="bg-white dark:bg-neutral-900 border-gray-200 dark:border-neutral-800">
+          <DropdownMenuContent className="bg-panel dark:bg-surface border-border dark:border-border">
             {Object.entries(ASPECT_RATIOS).map(([ratio, { label }]) => (
               <DropdownMenuItem
                 key={ratio}
                 onClick={() => setAspectRatio(ratio as keyof typeof ASPECT_RATIOS)}
-                className={`text-sm ${aspectRatio === ratio ? "text-gray-900 dark:text-neutral-100" : "text-gray-600 dark:text-neutral-400"}`}
+                className={`text-sm ${aspectRatio === ratio ? "text-foreground dark:text-foreground" : "text-muted-foreground dark:text-muted-foreground"}`}
               >
                 {label}
               </DropdownMenuItem>
@@ -161,13 +161,13 @@ export function EditorHeader({
 
         <ThemeSelector />
 
-        <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
+        <div className="w-px h-4 bg-line-strong dark:bg-line-strong mx-2" />
 
         <Button
           variant="ghost"
           size="icon"
           onClick={() => setShowFind(true)}
-          className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
+          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           title="Find (Ctrl+F)"
           aria-label="Find"
         >
@@ -178,7 +178,7 @@ export function EditorHeader({
           variant="ghost"
           size="icon"
           onClick={() => setShowShortcuts(true)}
-          className="h-8 w-8 text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
+          className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800"
           title="Keyboard Shortcuts (K)"
           aria-label="Keyboard shortcuts"
         >
@@ -197,7 +197,7 @@ export function EditorHeader({
           )}
         >
           <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Templates
           </span>
         </button>
@@ -211,7 +211,7 @@ export function EditorHeader({
           )}
         >
           <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Assets
           </span>
         </button>
@@ -226,12 +226,12 @@ export function EditorHeader({
           title="Syntax Guide (Press ?)"
         >
           <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Guide
           </span>
         </button>
 
-        <div className="w-px h-4 bg-gray-300 dark:bg-neutral-700 mx-2" />
+        <div className="w-px h-4 bg-line-strong dark:bg-line-strong mx-2" />
 
         <button
           type="button"
@@ -242,7 +242,7 @@ export function EditorHeader({
           )}
         >
           <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Share
           </span>
         </button>
@@ -255,7 +255,7 @@ export function EditorHeader({
           )}
         >
           <CornerMarkers />
-          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+          <span className="text-lg font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Export
           </span>
         </button>

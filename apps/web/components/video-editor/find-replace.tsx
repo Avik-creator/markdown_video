@@ -250,13 +250,13 @@ export function FindReplace({
     <div
       role="dialog"
       aria-label={showReplaceRow ? "Find and replace" : "Find"}
-      className="absolute top-12 right-4 z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl p-3 w-80"
+      className="absolute top-12 right-4 z-50 bg-panel border border-border rounded-lg shadow-xl p-3 w-80"
     >
       <div className="flex items-center gap-2 mb-2">
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-zinc-400 hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-white"
           onClick={() => setShowReplaceRow(!showReplaceRow)}
           aria-label={showReplaceRow ? "Hide replace controls" : "Show replace controls"}
           aria-expanded={showReplaceRow}
@@ -271,14 +271,14 @@ export function FindReplace({
           onKeyDown={handleFindKeyDown}
           placeholder="Find..."
           aria-label="Find text"
-          className="flex-1 h-8 bg-zinc-800 border-zinc-700 text-sm"
+          className="flex-1 h-8 bg-panel-raised border-border text-sm"
           autoFocus
         />
 
         <span
           aria-live="polite"
           aria-atomic="true"
-          className="text-xs text-zinc-500 min-w-[52px] text-center"
+          className="text-xs text-muted-foreground min-w-[52px] text-center"
         >
           {matchLabel}
         </span>
@@ -286,7 +286,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-zinc-400 hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-white"
           onClick={() => goToMatch("previous")}
           disabled={!hasMatches}
           aria-label="Previous match"
@@ -297,7 +297,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-zinc-400 hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-white"
           onClick={() => goToMatch("next")}
           disabled={!hasMatches}
           aria-label="Next match"
@@ -309,7 +309,7 @@ export function FindReplace({
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-zinc-400 hover:text-white"
+          className="h-6 w-6 text-muted-foreground hover:text-white"
           onClick={onClose}
           aria-label="Close find"
           title="Close find (Escape)"
@@ -327,14 +327,14 @@ export function FindReplace({
             onKeyDown={handleReplaceKeyDown}
             placeholder="Replace with..."
             aria-label="Replace text"
-            className="flex-1 h-8 bg-zinc-800 border-zinc-700 text-sm"
+            className="flex-1 h-8 bg-panel-raised border-border text-sm"
           />
           <Button
             variant="ghost"
             size="sm"
             onClick={handleReplaceOne}
             disabled={!hasMatches}
-            className="h-8 text-xs text-zinc-400 hover:text-white"
+            className="h-8 text-xs text-muted-foreground hover:text-white"
             aria-label="Replace one match"
             title="Replace current match"
           >
@@ -346,7 +346,7 @@ export function FindReplace({
             size="sm"
             onClick={handleReplaceAll}
             disabled={!hasMatches}
-            className="h-8 text-xs text-zinc-400 hover:text-white"
+            className="h-8 text-xs text-muted-foreground hover:text-white"
             aria-label="Replace all matches"
             title="Replace all matches"
           >

@@ -22,10 +22,10 @@ const categoryIcons = {
 }
 
 const categoryColors = {
-  intro: "text-pink-400 bg-pink-500/10",
-  tutorial: "text-emerald-400 bg-emerald-500/10",
-  demo: "text-blue-400 bg-blue-500/10",
-  outro: "text-amber-400 bg-amber-500/10",
+  intro: "text-accent bg-accent-soft",
+  tutorial: "text-emerald-400 bg-info-soft",
+  demo: "text-info bg-blue-500/10",
+  outro: "text-warning bg-warning-soft",
   custom: "text-purple-400 bg-purple-500/10",
 }
 
@@ -34,7 +34,7 @@ function TemplateCard({ template, onSelect }: { template: Template; onSelect: ()
   const colorClass = categoryColors[template.category]
 
   return (
-    <div className="bg-[#1a1a24] rounded-lg border border-white/10 overflow-hidden hover:border-white/20 transition-colors group">
+    <div className="bg-[#1a1a24] rounded-lg border border-border overflow-hidden hover:border-white/20 transition-colors group">
       {/* Preview gradient */}
       <div className="h-20 bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden">
         <div className="absolute inset-0 flex items-center justify-center">
@@ -52,7 +52,7 @@ function TemplateCard({ template, onSelect }: { template: Template; onSelect: ()
         <Button
           size="sm"
           onClick={onSelect}
-          className="w-full gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/10"
+          className="w-full gap-2 bg-white/5 hover:bg-white/10 text-white border border-border"
         >
           <Play className="w-3 h-3" />
           Use Template
@@ -76,10 +76,10 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
   }
 
   return (
-    <div className="w-96 bg-[#0f0f14] border-l border-white/10 flex flex-col h-full">
-      <div className="flex items-center justify-between p-4 border-b border-white/10 shrink-0">
+    <div className="w-96 bg-[#0f0f14] border-l border-border flex flex-col h-full">
+      <div className="flex items-center justify-between p-4 border-b border-border shrink-0">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-4 h-4 text-pink-400" />
+          <Sparkles className="w-4 h-4 text-accent" />
           <h2 className="font-semibold text-white">Templates</h2>
         </div>
         <Button
@@ -93,7 +93,7 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
       </div>
 
       {/* Category filter */}
-      <div className="p-3 border-b border-white/10 flex gap-1 flex-wrap shrink-0">
+      <div className="p-3 border-b border-border flex gap-1 flex-wrap shrink-0">
         {["all", "intro", "tutorial", "demo", "outro", "custom"].map((cat) => (
           <Button
             key={cat}
@@ -102,7 +102,7 @@ export function TemplatesPanel({ onClose }: TemplatesPanelProps) {
             onClick={() => setActiveCategory(cat as Template["category"] | "all")}
             className={cn(
               "text-xs h-7 capitalize",
-              activeCategory === cat ? "bg-white/10 text-white" : "text-muted-foreground hover:text-white",
+              activeCategory === cat ? "bg-surface text-white" : "text-muted-foreground hover:text-white",
             )}
           >
             {cat}
