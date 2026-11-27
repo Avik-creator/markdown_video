@@ -34,6 +34,18 @@ describe("InsertPalette", () => {
     expect(screen.getByRole("option", { name: /^Particles/ })).toBeTruthy();
   });
 
+  it("ranks direct name matches ahead of indirect keyword matches", () => {
+    render(
+      <InsertPalette open onOpenChange={() => {}} onInsert={() => true} />
+    );
+
+    fireEvent.change(screen.getByLabelText("Search scene snippets"), {
+      target: { value: "camera" },
+    });
+
+    expect(screen.getAllByRole("option")[0].textContent).toContain("Camera zoom");
+  });
+
   it("inserts the keyboard-active snippet with Enter and closes", () => {
     const onInsert = vi.fn(() => true);
     const onOpenChange = vi.fn();

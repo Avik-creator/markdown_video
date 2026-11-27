@@ -29,6 +29,16 @@ function matchesQuery(snippet: InsertableSnippet, query: string): boolean {
     .every((part) => haystack.includes(part));
 }
 
+function rankSnippet(snippet: InsertableSnippet, query: string): number {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return 0;
+  if (snippet.name.toLowerCase().includes(normalized)) return 0;
+  if (snippet.id.toLowerCase().includes(normalized)) return 1;
+  if (snippet.keywords.some((keyword) => keyword.toLowerCase().includes(normalized))) return 2;
+  if (snippet.description.toLowerCase().includes(normalized)) return 3;
+  return 4;
+}
+
 /**
  * Searchable insertion surface for the same schema-validated scene snippets
  * used by the editor's quick-insert path. It is intentionally not a second
@@ -40,7 +50,12 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
   const [activeIndex, setActiveIndex] = useState(0);
 
   const filtered = useMemo(
-    () => INSERTABLE_SNIPPETS.filter((snippet) => matchesQuery(snippet, query)),
+    () =>
+      INSERTABLE_SNIPPETS
+        .map((snippet, index) => ({ snippet, index }))
+        .filter(({ snippet }) => matchesQuery(snippet, query))
+        .sort((a, b) => rankSnippet(a.snippet, query) - rankSnippet(b.snippet, query) || a.index - b.index)
+        .map(({ snippet }) => snippet),
     [query]
   );
   const clampedActiveIndex = filtered.length === 0 ? 0 : Math.min(activeIndex, filtered.length - 1);
