@@ -12,6 +12,7 @@ import { ExportModal } from "../export-modal"
 import { KeyboardShortcuts } from "../keyboard-shortcuts"
 import { FindReplace } from "../find-replace"
 import { ShareModal } from "../share-modal"
+import { InsertPalette } from "../insert-palette"
 import { useVideoStore } from "@/lib/use-video-store"
 import { NEW_PROJECT_MARKDOWN } from "@/lib/default-markdown"
 import { EditorHeader } from "./components/EditorHeader"
@@ -26,6 +27,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
   const [showFind, setShowFind] = useState(false)
   const [showFindReplace, setShowFindReplace] = useState(false)
   const [showShareModal, setShowShareModal] = useState(false)
+  const [showInsertPalette, setShowInsertPalette] = useState(false)
   const editorRef = useRef<MarkdownEditorHandle>(null)
 
   const isPlaying = useVideoStore((state) => state.isPlaying)
@@ -100,6 +102,14 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
     input.click()
   }, [flushEditor])
 
+  const openInsertPalette = useCallback(() => {
+    setShowInsertPalette(true)
+  }, [])
+
+  const insertSnippet = useCallback((markdown: string) => {
+    return editorRef.current?.insertSceneTemplate(markdown) ?? false
+  }, [])
+
   const createNewProject = useCallback(() => {
     if (confirm("Create new project? Unsaved changes will be lost.")) {
       flushEditor()
@@ -145,6 +155,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
     saveProject,
     openProject,
     createNewProject,
+    openInsertPalette,
   })
 
   const togglePanel = (panel: RightPanel) => {
@@ -185,7 +196,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
 
       {/* Main content area */}
       <div className="flex-1 flex overflow-hidden min-h-0 relative">
-        <MarkdownEditor ref={editorRef} />
+        <MarkdownEditor ref={editorRef} onOpenInsertPalette={openInsertPalette} />
         <div className="flex-1 flex flex-col min-w-0 relative">
           <ScenePreview />
         </div>
@@ -207,6 +218,11 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
       <ExportModal open={showExportModal} onOpenChange={setShowExportModal} />
       <KeyboardShortcuts open={showShortcuts} onOpenChange={setShowShortcuts} />
       <ShareModal open={showShareModal} onOpenChange={setShowShareModal} />
+      <InsertPalette
+        open={showInsertPalette}
+        onOpenChange={setShowInsertPalette}
+        onInsert={(snippet) => insertSnippet(snippet.markdown)}
+      />
     </div>
   )
 }

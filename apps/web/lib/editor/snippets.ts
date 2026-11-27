@@ -109,3 +109,68 @@ size: ${V.text2xl}
 !background #ec4899
 !transition ${V.transitionFade}`,
 };
+export interface ExampleSnippet {
+  id: keyof typeof EXAMPLE_TEMPLATES;
+  name: string;
+  description: string;
+  keywords: string[];
+  markdown: string;
+}
+
+/**
+ * Presentation metadata for the insertion palette. The markdown itself is
+ * always referenced from EXAMPLE_TEMPLATES rather than duplicated, so schema
+ * validation and quick-insert behavior continue to share one source.
+ */
+export const EXAMPLE_SNIPPETS: ExampleSnippet[] = [
+  {
+    id: "intro",
+    name: "Intro",
+    description: "Bold animated title card with a fade transition",
+    keywords: ["title", "welcome", "opening", "text"],
+    markdown: EXAMPLE_TEMPLATES.intro,
+  },
+  {
+    id: "text",
+    name: "Text",
+    description: "Simple animated message scene",
+    keywords: ["message", "copy", "heading"],
+    markdown: EXAMPLE_TEMPLATES.text,
+  },
+  {
+    id: "code",
+    name: "Code",
+    description: "Syntax-highlighted TypeScript with typing and line focus",
+    keywords: ["typescript", "programming", "typing", "highlight"],
+    markdown: EXAMPLE_TEMPLATES.code,
+  },
+  {
+    id: "terminal",
+    name: "Terminal",
+    description: "Command-line output with a dark shell background",
+    keywords: ["shell", "npm", "cli", "command"],
+    markdown: EXAMPLE_TEMPLATES.terminal,
+  },
+  {
+    id: "chart",
+    name: "Chart",
+    description: "Animated bar chart comparing several values",
+    keywords: ["graph", "data", "bar", "metrics"],
+    markdown: EXAMPLE_TEMPLATES.chart,
+  },
+  {
+    id: "mockup",
+    name: "Device mockup",
+    description: "Phone mockup scene with a presenter overlay",
+    keywords: ["iphone", "mobile", "device", "presenter"],
+    markdown: EXAMPLE_TEMPLATES.mockup,
+  },
+  {
+    id: "particles",
+    name: "Celebration",
+    description: "High-energy text scene with confetti particles",
+    keywords: ["confetti", "celebration", "effects", "fun"],
+    markdown: EXAMPLE_TEMPLATES.particles,
+  },
+];
+

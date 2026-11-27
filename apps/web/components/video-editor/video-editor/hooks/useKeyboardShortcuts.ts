@@ -38,6 +38,7 @@ interface UseKeyboardShortcutsOptions {
   saveProject: () => void
   openProject: () => void
   createNewProject: () => void
+  openInsertPalette: () => void
 }
 
 export function useKeyboardShortcuts({
@@ -62,6 +63,7 @@ export function useKeyboardShortcuts({
   saveProject,
   openProject,
   createNewProject,
+  openInsertPalette,
 }: UseKeyboardShortcutsOptions) {
   useEffect(() => {
     const stepOneFrame = (direction: "next" | "previous") => {
@@ -122,6 +124,11 @@ export function useKeyboardShortcuts({
       if (matchesCtrlOrMetaShortcut(e, "e")) {
         e.preventDefault()
         setShowExportModal(true)
+        return
+      }
+      if (matchesCtrlOrMetaShortcut(e, "i")) {
+        e.preventDefault()
+        openInsertPalette()
         return
       }
 
@@ -274,6 +281,7 @@ export function useKeyboardShortcuts({
     saveProject,
     openProject,
     createNewProject,
+    openInsertPalette,
     setRightPanel,
   ])
 }

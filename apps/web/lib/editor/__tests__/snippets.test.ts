@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDirectiveValueOptions } from "@markdown-video/core";
-import { EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
+import { EXAMPLE_SNIPPETS, EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
 
 /**
  * The snippet/schema invariant lives here rather than at module scope: a
@@ -31,4 +31,16 @@ describe("snippet schema bindings", () => {
       ).toBe(true);
     }
   });
+
+  it("keeps palette metadata keyed to the canonical snippet templates", () => {
+    expect(EXAMPLE_SNIPPETS.map((snippet) => snippet.id).sort()).toEqual(
+      Object.keys(EXAMPLE_TEMPLATES).sort()
+    );
+    for (const snippet of EXAMPLE_SNIPPETS) {
+      expect(snippet.markdown).toBe(EXAMPLE_TEMPLATES[snippet.id]);
+      expect(snippet.name.length).toBeGreaterThan(0);
+      expect(snippet.description.length).toBeGreaterThan(0);
+    }
+  });
+
 });
