@@ -26,6 +26,7 @@ import { EXAMPLE_TEMPLATES } from "@/lib/editor/snippets";
 import {
   diagnosticsByLine,
   getDiagnostics,
+  sortDiagnostics,
   type Diagnostic,
 } from "@/lib/editor/diagnostics";
 import { createEditorExtensions } from "@/lib/editor/codemirror/extensions";
@@ -45,6 +46,11 @@ import {
   setEditorMarkersEffect,
   type EditorMarkers,
 } from "@/lib/editor/codemirror/line-marks";
+import { getMissingAssetDiagnostics } from "@/lib/assets/missing-assets";
+import {
+  ensureAssetLibraryLoaded,
+  useAssetLibrary,
+} from "@/lib/assets/asset-library";
 
 export interface MarkdownEditorHandle {
   /** Select a character range and scroll it into view without stealing focus. */
@@ -75,6 +81,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     highlight: null,
     problemsByLine: new Map(),
   });
+  const validationRunRef = useRef(0);
 
   const [diagnostics, setDiagnosticsState] = useState<Diagnostic[]>([]);
   const [problemsOpen, setProblemsOpen] = useState(true);
@@ -102,6 +109,26 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
       yMargin: Math.max(0, view.dom.clientHeight / 3),
     });
   }, []);
+
+  const publishDiagnostics = useCallback(
+    (nextDiagnostics: Diagnostic[]) => {
+      setDiagnosticsState(nextDiagnostics);
+      const liveView = viewRef.current;
+      if (!liveView) return;
+      liveView.dispatch(
+        setDiagnostics(
+          liveView.state,
+          toCmDiagnostics(liveView.state.doc, nextDiagnostics)
+        )
+      );
+      markersRef.current = {
+        highlight: useVideoStore.getState().highlightRange,
+        problemsByLine: diagnosticsByLine(nextDiagnostics),
+      };
+      dispatchMarkers();
+    },
+    [dispatchMarkers]
+  );
 
   // Editor creation. The view is created once per mount and owns the live
   // document; React never mirrors keystrokes.
@@ -138,21 +165,35 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     const sync = new EditorStoreSync({
       view,
       onValidate: (text) => {
-        const nextDiagnostics = getDiagnostics(text);
-        setDiagnosticsState(nextDiagnostics);
-        const liveView = viewRef.current;
-        if (!liveView) return;
-        liveView.dispatch(
-          setDiagnostics(
-            liveView.state,
-            toCmDiagnostics(liveView.state.doc, nextDiagnostics)
+        const validationRun = ++validationRunRef.current;
+        const syntaxDiagnostics = getDiagnostics(text);
+        publishDiagnostics(syntaxDiagnostics);
+
+        // Asset existence is browser-host state (IndexedDB plus same-origin
+        // static files), so it stays outside core syntax validation. Publish
+        // parser diagnostics immediately, then layer in asynchronous media
+        // warnings only if this is still the newest validation of the same
+        // live document.
+        void ensureAssetLibraryLoaded()
+          .then(() =>
+            getMissingAssetDiagnostics(text, {
+              assets: useAssetLibrary.getState().assets,
+            })
           )
-        );
-        markersRef.current = {
-          highlight: useVideoStore.getState().highlightRange,
-          problemsByLine: diagnosticsByLine(nextDiagnostics),
-        };
-        dispatchMarkers();
+          .then((assetDiagnostics) => {
+            const liveView = viewRef.current;
+            if (
+              validationRun !== validationRunRef.current ||
+              !liveView ||
+              liveView.state.doc.toString() !== text
+            ) {
+              return;
+            }
+            publishDiagnostics(sortDiagnostics([...syntaxDiagnostics, ...assetDiagnostics]));
+          })
+          .catch((error) => {
+            console.warn("[markdown-video] Asset validation failed:", error);
+          });
       },
       onUserEdit: () => {
         // Any user edit clears the source-range highlight.
@@ -172,7 +213,17 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
     registerActiveEditorFlush(flush);
     registerActiveEditorView(view);
 
+    // Upload/delete changes asset existence without changing markdown. Force
+    // one validation pass so warnings appear/disappear immediately.
+    void ensureAssetLibraryLoaded();
+    const unsubscribeAssetLibrary = useAssetLibrary.subscribe((state, previous) => {
+      if (state.libraryRevision !== previous.libraryRevision) {
+        syncRef.current?.validateNow();
+      }
+    });
+
     return () => {
+      unsubscribeAssetLibrary();
       registerActiveEditorFlush(null);
       registerActiveEditorView(null);
       sync.destroy();
@@ -180,7 +231,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle>(function Markdown
       viewRef.current = null;
       syncRef.current = null;
     };
-  }, [dispatchMarkers]);
+  }, [dispatchMarkers, publishDiagnostics]);
 
   // Keep marker decorations in sync with highlight-only changes. Validation
   // passes already rebuild the full set; this covers the highlight changing

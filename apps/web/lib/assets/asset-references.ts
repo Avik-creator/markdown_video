@@ -155,6 +155,23 @@ export function assetReferenceSnippet(kind: AssetKind, filename: string): string
     : `!image src:${value} fit:contain`;
 }
 
+/** Text to insert at one collapsed cursor position, with line separation. */
+export function referenceInsertionAt(
+  text: string,
+  position: number,
+  snippet: string
+): { insert: string; cursor: number } {
+  const clamped = Math.max(0, Math.min(position, text.length));
+  const before = text.slice(0, clamped);
+  const after = text.slice(clamped);
+  const needsPrefixNewline = before.length > 0 && !before.endsWith("\n");
+  const needsSuffixNewline = after.length > 0 && !after.startsWith("\n");
+  const insert = `${needsPrefixNewline ? "\n" : ""}${snippet}${
+    needsSuffixNewline ? "\n" : ""
+  }`;
+  return { insert, cursor: clamped + insert.length };
+}
+
 /**
  * Insert markdown at the cursor when possible; otherwise append on a fresh
  * line. Selection replacement is intentionally avoided so users do not lose

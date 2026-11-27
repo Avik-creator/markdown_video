@@ -29,8 +29,8 @@ interface UseKeyboardShortcutsOptions {
   addMarker: (time: number, label: string) => void
   zoom: ZoomLevel
   setZoom: (zoom: ZoomLevel) => void
-  rightPanel: "properties" | "guide" | "templates"
-  setRightPanel: (panel: "properties" | "guide" | "templates") => void
+  rightPanel: "properties" | "guide" | "templates" | "assets"
+  setRightPanel: (panel: "properties" | "guide" | "templates" | "assets") => void
   setShowFind: (show: boolean) => void
   setShowFindReplace: (show: boolean) => void
   setShowExportModal: (show: boolean) => void
