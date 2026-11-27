@@ -627,11 +627,11 @@ export function alignSceneFingerprints(
   }
 
   const statusTieBreak: Record<SceneAlignmentStatus, number> = {
-    "unchanged-content": 0,
-    retimed: 0,
-    modified: 0,
-    removed: 1,
-    added: 2,
+    removed: 0,
+    added: 1,
+    "unchanged-content": 2,
+    retimed: 2,
+    modified: 2,
   }
   rows.sort((a, b) =>
     rowOrderKey(a) - rowOrderKey(b) ||

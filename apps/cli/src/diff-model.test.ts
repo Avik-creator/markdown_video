@@ -98,6 +98,11 @@ describe("alignSceneFingerprints", () => {
       textDocument(["Alpha", "Inserted", "Beta"]),
     )
 
+    expect(rows.map((row) => row.status)).toEqual([
+      "unchanged-content",
+      "added",
+      "retimed",
+    ])
     expect(rows.find((row) => row.new?.type === "text" && row.status === "added")?.new?.index).toBe(1)
     const beta = rows.find((row) => row.old?.index === 1 && row.new?.index === 2)
     expect(beta?.status).toBe("retimed")
@@ -110,6 +115,11 @@ describe("alignSceneFingerprints", () => {
       textDocument(["Alpha", "Beta"]),
     )
 
+    expect(rows.map((row) => row.status)).toEqual([
+      "unchanged-content",
+      "removed",
+      "retimed",
+    ])
     expect(rows.filter((row) => row.status === "removed")).toHaveLength(1)
     expect(rows.find((row) => row.status === "removed")?.old?.index).toBe(1)
     expect(rows.find((row) => row.old?.index === 2 && row.new?.index === 1)?.status).toBe("retimed")
