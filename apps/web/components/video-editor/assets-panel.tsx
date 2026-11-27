@@ -140,9 +140,9 @@ function AssetRow({
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           onClick={onInsert}
-          className="h-8 px-2 text-xs"
+          className="h-8 border border-gray-300 bg-white px-2 text-xs text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10"
           aria-label={`Insert reference to ${asset.filename}`}
         >
           <Plus className="h-3.5 w-3.5" />
@@ -150,9 +150,9 @@ function AssetRow({
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           onClick={onCopy}
-          className="h-8 px-2 text-xs"
+          className="h-8 border border-gray-300 bg-white px-2 text-xs text-gray-700 hover:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:text-neutral-200 dark:hover:bg-white/10"
           aria-label={`Copy reference to ${asset.filename}`}
         >
           <Copy className="h-3.5 w-3.5" />
@@ -160,9 +160,9 @@ function AssetRow({
         </Button>
         <Button
           size="sm"
-          variant="outline"
+          variant="ghost"
           onClick={onDelete}
-          className="h-8 px-2 text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          className="h-8 border border-gray-300 bg-white px-2 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-white/10 dark:bg-white/5 dark:text-red-400 dark:hover:bg-white/10 dark:hover:text-red-300"
           aria-label={`Delete ${asset.filename}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
