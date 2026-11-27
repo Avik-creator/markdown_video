@@ -45,7 +45,7 @@ function MissingAssetExportNotice() {
   if (missing.length === 0) return null;
 
   return (
-    <div className="mb-4 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-200">
+    <div className="mb-4 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning">
       <div className="flex items-center gap-2 font-medium">
         <AlertTriangle className="h-4 w-4" />
         Missing media will not export as uploaded content
@@ -69,13 +69,13 @@ interface ExportModalProps {
 export function ExportModal({ open, onOpenChange }: ExportModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="bg-panel border-border text-foreground max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Film className="w-5 h-5 text-pink-500" />
+            <Film className="w-5 h-5 text-accent" />
             Export Video with FFmpeg
           </DialogTitle>
-          <DialogDescription className="text-zinc-400">
+          <DialogDescription className="text-muted-foreground">
             Configure and export your video using FFmpeg WASM
           </DialogDescription>
         </DialogHeader>

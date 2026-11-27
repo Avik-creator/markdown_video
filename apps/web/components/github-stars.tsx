@@ -11,9 +11,9 @@ type GitHubStarsProps = {
 
 const starVariants = {
   default: {
-    link: "text-gray-700 dark:text-stone-300 decoration-gray-500 dark:decoration-stone-400 hover:text-gray-900 dark:hover:text-stone-200 hover:decoration-gray-700 dark:hover:decoration-stone-200 focus-visible:ring-pink-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-neutral-950",
-    tooltip: "bg-gray-900 dark:bg-neutral-100 text-white dark:text-neutral-900",
-    tooltipArrow: "border-b-gray-900 dark:border-b-neutral-100",
+    link: "text-muted-foreground decoration-line-soft hover:text-accent-deep hover:decoration-accent focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+    tooltip: "bg-foreground text-background",
+    tooltipArrow: "border-b-foreground",
   },
   landing: {
     link: "text-[color:var(--landing-ink)] decoration-[color:var(--landing-line)] hover:text-[color:var(--landing-accent-deep)] hover:decoration-[color:var(--landing-accent)] focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--landing-paper)]",
@@ -77,7 +77,7 @@ export function GitHubStars({ repo, stargazersCount, variant = "default" }: GitH
             height="20"
             className="relative z-10"
             animate={{
-              rotate: isHovered && !shouldReduceMotion ? [0, -12, 12, -8, 0] : 0,
+              rotate: 0,
             }}
             transition={{
               duration: 0.6,
@@ -90,36 +90,13 @@ export function GitHubStars({ repo, stargazersCount, variant = "default" }: GitH
             />
           </motion.svg>
 
-          {/* Star particles on hover */}
-          {isHovered && !shouldReduceMotion && (
-            <>
-              {[...Array(6)].map((_, i) => (
-                <motion.div
-                  key={i}
-                  className="absolute top-1/2 left-1/2 w-1 h-1 bg-yellow-400 rounded-full"
-                  initial={{ scale: 0, x: 0, y: 0, opacity: 1 }}
-                  animate={{
-                    scale: [0, 1, 0],
-                    x: Math.cos((i * Math.PI) / 3) * 20,
-                    y: Math.sin((i * Math.PI) / 3) * 20,
-                    opacity: [1, 1, 0],
-                  }}
-                  transition={{
-                    duration: 0.6,
-                    ease: "easeOut",
-                    delay: i * 0.05,
-                  }}
-                />
-              ))}
-            </>
-          )}
         </div>
 
         {/* Star count with smooth animation */}
         <motion.span
           className="text-sm font-medium tabular-nums relative z-10"
           animate={{
-            scale: isHovered && !shouldReduceMotion ? [1, 1.05, 1] : 1,
+            scale: 1,
           }}
           transition={{
             duration: 0.3,
@@ -139,8 +116,8 @@ export function GitHubStars({ repo, stargazersCount, variant = "default" }: GitH
           animate={
             isHovered && !shouldReduceMotion
               ? {
-                  y: [-2, -6, -2],
-                  rotate: [0, 360],
+                  y: 0,
+                  rotate: 0,
                 }
               : { y: 0, rotate: 0 }
           }
@@ -156,7 +133,7 @@ export function GitHubStars({ repo, stargazersCount, variant = "default" }: GitH
       {/* Tooltip */}
       <motion.div
         aria-hidden="true"
-        className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden sm:block px-3 py-1.5 text-xs rounded-md whitespace-nowrap pointer-events-none shadow-lg z-50 ${variantClasses.tooltip}`}
+        className={`absolute top-full left-1/2 -translate-x-1/2 mt-2 hidden sm:block px-3 py-1.5 text-xs rounded-md whitespace-nowrap pointer-events-none shadow-sm z-50 ${variantClasses.tooltip}`}
         initial={{ opacity: 0, y: -5, scale: 0.9 }}
         animate={
           isHovered

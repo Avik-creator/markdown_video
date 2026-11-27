@@ -34,22 +34,22 @@ export function LocalePicker({ className }: { className?: string }) {
     <div
       data-locale-picker="true"
       className={cn(
-        "flex items-center gap-1.5 rounded-md border border-white/10 bg-black/40 px-2 py-1 text-xs text-neutral-200 shadow-sm backdrop-blur",
+        "flex items-center gap-1.5 rounded-md border border-border bg-preview-canvas/70 px-2 py-1 text-xs text-[#fdebf4] shadow-sm backdrop-blur",
         className
       )}
     >
-      <Languages className="h-3.5 w-3.5 text-neutral-400" aria-hidden="true" />
-      <label htmlFor={selectId} className="text-neutral-400">
+      <Languages className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+      <label htmlFor={selectId} className="text-muted-foreground">
         Locale
       </label>
       <select
         id={selectId}
         value={effectiveLocale ?? ""}
         onChange={(event) => setActiveLocale(event.target.value)}
-        className="cursor-pointer rounded bg-transparent font-medium text-neutral-100 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-pink-500"
+        className="cursor-pointer rounded bg-transparent font-medium text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent"
       >
         {locales.map((locale) => (
-          <option key={locale} value={locale} className="bg-neutral-950 text-neutral-100">
+          <option key={locale} value={locale} className="bg-popover text-popover-foreground">
             {locale}
           </option>
         ))}

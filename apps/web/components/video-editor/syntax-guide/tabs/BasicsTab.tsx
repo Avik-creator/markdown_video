@@ -9,7 +9,7 @@ export function BasicsTab() {
       {/* Overview */}
       <Section title="Overview">
         <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900 rounded-lg p-3 space-y-2">
-          <p className="text-xs text-gray-700 dark:text-neutral-300 leading-relaxed">
+          <p className="text-xs text-foreground dark:text-neutral-300 leading-relaxed">
             Create video scenes using markdown-like syntax. Each scene starts
             with{" "}
             <code className="text-pink-600 dark:text-pink-400 font-mono bg-pink-100 dark:bg-pink-950/30 px-1 py-0.5 rounded">
@@ -25,23 +25,23 @@ export function BasicsTab() {
             </code>
             ) and can contain text, code, terminal, charts, and more.
           </p>
-          <p className="text-xs text-gray-600 dark:text-neutral-400 leading-relaxed">
-            <strong className="text-gray-900 dark:text-white">Tip:</strong>{" "}
+          <p className="text-xs text-muted-foreground dark:text-muted-foreground leading-relaxed">
+            <strong className="text-foreground dark:text-foreground">Tip:</strong>{" "}
             Alternative keywords are available to avoid conflicts with other
             markdown parsers. Use{" "}
-            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+            <code className="text-info dark:text-info font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
               !slide
             </code>{" "}
             instead of{" "}
-            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+            <code className="text-info dark:text-info font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
               !scene
             </code>
             ,{" "}
-            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+            <code className="text-info dark:text-info font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
               !heading
             </code>{" "}
             instead of{" "}
-            <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+            <code className="text-info dark:text-info font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
               !text
             </code>
             , etc.
@@ -272,11 +272,11 @@ function createVideo(markdown) {
         </div>
         <p className="text-xs text-muted-foreground mt-2">
           <strong>Timeline Control:</strong> Use{" "}
-          <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+          <code className="text-info dark:text-info font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
             at:
           </code>{" "}
           and{" "}
-          <code className="text-cyan-600 dark:text-cyan-400 font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
+          <code className="text-info dark:text-info font-mono bg-cyan-100 dark:bg-cyan-950/30 px-1 py-0.5 rounded">
             duration:
           </code>{" "}
           to precisely control when elements appear and disappear within a

@@ -11,7 +11,7 @@ export function CTA() {
       <div className="relative mx-auto max-w-[980px] text-center">
         <Reveal>
           <p className="font-mono text-[12px] text-[color:var(--landing-muted)]">final render</p>
-          <h2 id="cta-heading" className="landing-display-tight mt-6 text-[clamp(4rem,10vw,10rem)] font-medium leading-[0.85] tracking-[-0.065em]">
+          <h2 id="cta-heading" className="landing-display-tight mt-6 text-[clamp(3.45rem,8vw,7rem)] font-medium leading-[0.85] tracking-[-0.065em]">
             write less.
             <br />
             <span className="text-[color:var(--landing-faint)]">render more.</span>
@@ -25,7 +25,7 @@ export function CTA() {
           <div className="mt-10 flex flex-wrap items-center justify-center gap-x-7 gap-y-4">
             <Link
               href="/editor"
-              className="inline-flex h-12 items-center rounded-full bg-[color:var(--landing-ink)] px-6 text-[15px] font-medium text-[color:var(--landing-paper)] landing-action-shadow transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+              className="tool-button tool-button-primary h-9 px-4 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
             >
               open the editor
             </Link>
@@ -33,7 +33,7 @@ export function CTA() {
               href="https://github.com/Avik-creator/markdown_video"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center text-[15px] font-medium underline decoration-[color:var(--landing-line)] underline-offset-8 transition-colors hover:decoration-[color:var(--landing-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+              className="inline-flex min-h-11 items-center text-[15px] font-medium underline decoration-[color:var(--landing-line)] underline-offset-[3px] transition-colors hover:decoration-[color:var(--landing-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
             >
               read the source
             </a>

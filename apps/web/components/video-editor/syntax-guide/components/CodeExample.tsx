@@ -14,19 +14,19 @@ export function CodeExample({ code, title }: { code: string; title: string }) {
   }
 
   return (
-    <div className="rounded-lg bg-gray-50 dark:bg-neutral-900 border border-gray-200 dark:border-neutral-800 overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 bg-white dark:bg-neutral-950 border-b border-gray-200 dark:border-neutral-800">
-        <span className="text-xs font-medium text-gray-600 dark:text-neutral-400">{title}</span>
+    <div className="rounded-lg bg-surface dark:bg-surface border border-border dark:border-border overflow-hidden">
+      <div className="flex items-center justify-between px-3 py-2 bg-panel dark:bg-panel border-b border-border dark:border-border">
+        <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground">{title}</span>
         <Button
           variant="ghost"
           size="icon"
-          className="h-6 w-6 text-gray-500 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-white"
+          className="h-6 w-6 text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground"
           onClick={handleCopy}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
         </Button>
       </div>
-      <pre className="p-3 text-xs font-mono text-gray-900 dark:text-neutral-100 overflow-x-auto bg-gray-50 dark:bg-neutral-900">
+      <pre className="p-3 text-xs font-mono text-foreground dark:text-foreground overflow-x-auto bg-surface dark:bg-surface">
         <code>{code}</code>
       </pre>
     </div>

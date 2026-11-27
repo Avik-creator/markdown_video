@@ -94,7 +94,7 @@ export function KeyboardShortcuts({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-zinc-900 border-zinc-800 text-white max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="bg-panel border-border text-foreground max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-lg font-semibold">
             Keyboard Shortcuts
@@ -104,7 +104,7 @@ export function KeyboardShortcuts({
         <div className="grid grid-cols-2 gap-6 mt-4">
           {shortcuts.map((section) => (
             <div key={section.category}>
-              <h3 className="text-sm font-medium text-pink-400 mb-3">
+              <h3 className="text-sm font-medium text-accent mb-3">
                 {section.category}
               </h3>
               <div className="space-y-2">
@@ -113,17 +113,17 @@ export function KeyboardShortcuts({
                     key={i}
                     className="flex items-center justify-between text-sm"
                   >
-                    <span className="text-zinc-400">
+                    <span className="text-muted-foreground">
                       {shortcut.description}
                     </span>
                     <div className="flex items-center gap-1">
                       {shortcut.keys.map((key, j) => (
                         <span key={j}>
-                          <kbd className="px-1.5 py-0.5 bg-zinc-800 rounded text-xs font-mono text-zinc-300">
+                          <kbd className="px-1.5 py-0.5 bg-panel-raised rounded text-xs font-mono text-foreground">
                             {key === "Ctrl" ? modifierKey : key}
                           </kbd>
                           {j < shortcut.keys.length - 1 && (
-                            <span className="text-zinc-600 mx-0.5">+</span>
+                            <span className="text-muted-foreground mx-0.5">+</span>
                           )}
                         </span>
                       ))}
@@ -135,10 +135,10 @@ export function KeyboardShortcuts({
           ))}
         </div>
 
-        <div className="mt-4 pt-4 border-t border-zinc-800">
-          <p className="text-xs text-zinc-500">
+        <div className="mt-4 pt-4 border-t border-border">
+          <p className="text-xs text-muted-foreground">
             Press{" "}
-            <kbd className="px-1 py-0.5 bg-zinc-800 rounded text-xs font-mono">
+            <kbd className="px-1 py-0.5 bg-panel-raised rounded text-xs font-mono">
               Esc
             </kbd>{" "}
             to close this dialog
