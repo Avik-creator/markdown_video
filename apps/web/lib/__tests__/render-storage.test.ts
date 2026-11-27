@@ -1,14 +1,15 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { get, set, isRedisConfigured } = vi.hoisted(() => ({
-  get: vi.fn(),
-  set: vi.fn(),
-  isRedisConfigured: vi.fn(),
+const { kvGet, kvSet, isKvConfigured } = vi.hoisted(() => ({
+  kvGet: vi.fn(),
+  kvSet: vi.fn(),
+  isKvConfigured: vi.fn(),
 }));
 
-vi.mock("@/lib/redis", () => ({
-  redis: { get, set },
-  isRedisConfigured,
+vi.mock("@/lib/kv", () => ({
+  kvGet,
+  kvSet,
+  isKvConfigured,
 }));
 
 import {
@@ -23,13 +24,13 @@ import {
 
 describe("render video storage", () => {
   beforeEach(() => {
-    get.mockReset();
-    set.mockReset();
-    isRedisConfigured.mockReset();
-    isRedisConfigured.mockReturnValue(true);
+    kvGet.mockReset();
+    kvSet.mockReset();
+    isKvConfigured.mockReset();
+    isKvConfigured.mockReturnValue(true);
   });
 
-  it("stores base64 mp4 data with a one-hour Redis TTL and unguessable id", async () => {
+  it("stores base64 mp4 data with a one-hour TTL and unguessable id", async () => {
     const mp4 = Buffer.from("fake mp4 bytes");
     const metadata = await storeRenderVideo({
       mp4,
@@ -42,17 +43,19 @@ describe("render video storage", () => {
 
     expect(isRenderVideoId(metadata.id)).toBe(true);
     expect(metadata.ttlSeconds).toBe(RENDER_VIDEO_TTL_SECONDS);
-    expect(set).toHaveBeenCalledWith(
+    expect(kvSet).toHaveBeenCalledWith(
       `markdown-video:render:video:${metadata.id}`,
-      expect.objectContaining({
-        v: 1,
-        encoding: "base64",
-        contentType: "video/mp4",
-        data: mp4.toString("base64"),
-        sizeBytes: mp4.byteLength,
-      }),
-      { ex: RENDER_VIDEO_TTL_SECONDS }
+      expect.any(String),
+      RENDER_VIDEO_TTL_SECONDS
     );
+    const storedPayload = JSON.parse(kvSet.mock.calls[0]![1] as string);
+    expect(storedPayload).toMatchObject({
+      v: 1,
+      encoding: "base64",
+      contentType: "video/mp4",
+      data: mp4.toString("base64"),
+      sizeBytes: mp4.byteLength,
+    });
   });
 
   it("round-trips a stored video object", async () => {
@@ -65,7 +68,7 @@ describe("render video storage", () => {
       fps: 12,
       totalFrames: 12,
     });
-    get.mockResolvedValueOnce(set.mock.calls[0]![1]);
+    kvGet.mockResolvedValueOnce(kvSet.mock.calls[0]![1]);
 
     const asset = await readRenderVideo(metadata.id);
     expect(asset?.mp4.equals(mp4)).toBe(true);
@@ -74,7 +77,7 @@ describe("render video storage", () => {
 
   it("returns null for malformed ids, missing values, and expired values", async () => {
     expect(await readRenderVideo("not-a-render")).toBeNull();
-    get.mockResolvedValueOnce(null);
+    kvGet.mockResolvedValueOnce(null);
     expect(await readRenderVideo("a".repeat(32))).toBeNull();
 
     const mp4 = Buffer.from("x");
@@ -86,13 +89,20 @@ describe("render video storage", () => {
       fps: 1,
       totalFrames: 1,
     });
-    const stored = set.mock.calls.at(-1)![1] as { expiresAt: string };
-    get.mockResolvedValueOnce({ ...stored, expiresAt: new Date(0).toISOString() });
+    const stored = JSON.parse(kvSet.mock.calls.at(-1)![1] as string) as { expiresAt: string };
+    kvGet.mockResolvedValueOnce(
+      JSON.stringify({ ...stored, expiresAt: new Date(0).toISOString() })
+    );
     expect(await readRenderVideo(metadata.id)).toBeNull();
   });
 
-  it("fails closed when Redis is unconfigured", async () => {
-    isRedisConfigured.mockReturnValue(false);
+  it("returns null for payloads that are not valid JSON", async () => {
+    kvGet.mockResolvedValueOnce("this is not json");
+    expect(await readRenderVideo("a".repeat(32))).toBeNull();
+  });
+
+  it("fails closed when storage is unconfigured", async () => {
+    isKvConfigured.mockReturnValue(false);
     await expect(
       storeRenderVideo({ mp4: Buffer.from("x"), duration: 1, width: 1, height: 1, fps: 1, totalFrames: 1 })
     ).rejects.toBeInstanceOf(RenderStorageConfigurationError);
@@ -112,6 +122,6 @@ describe("render video storage", () => {
         totalFrames: 1,
       })
     ).rejects.toBeInstanceOf(RenderVideoTooLargeError);
-    expect(set).not.toHaveBeenCalled();
+    expect(kvSet).not.toHaveBeenCalled();
   });
 });

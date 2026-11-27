@@ -188,7 +188,7 @@ export function registerRenderTools(server: McpServer) {
       requireRenderBackend();
       if (!isRenderStorageConfigured()) {
         throw new Error(
-          "Rendering is not configured on this deployment: Redis render storage is unavailable. Set UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN."
+          "Rendering is not configured on this deployment: render storage is unavailable. Set NEON_DATABASE_URL or DATABASE_URL for Postgres storage, or UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN for Redis storage."
         );
       }
       await throwIfRateLimited(

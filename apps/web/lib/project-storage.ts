@@ -51,6 +51,32 @@ function isStoredProject(value: unknown): value is StoredProject {
 }
 
 /**
+ * Interpret a raw facade string (lib/kv returns plain strings on every
+ * backend) as a storage value for parseProjectMarkdown: canonical JSON
+ * becomes the parsed value, while anything else — legacy plain-string
+ * markdown writes are the important case — is passed through as the string
+ * itself. JSON-looking scalars intentionally parse to numbers/booleans so
+ * that legacy corrupted documents (e.g. a markdown of exactly `42`) hit the
+ * same scalar-recovery path they did when the Upstash client performed the
+ * deserialization.
+ */
+export function parseProjectJson(raw: string): unknown {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    // Number fidelity protection mirrors the Upstash client's deserializer:
+    // when the numeric value does not round-trip to the exact source text
+    // (`3.140`, `1e5`, padded whitespace), the original string is preserved
+    // instead of corrupting formatting-sensitive markdown.
+    if (typeof parsed === "number" && parsed.toString() !== raw) {
+      return raw;
+    }
+    return parsed;
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * Parse a raw Redis GET result back into markdown, accepting the versioned
  * wrapper object, legacy plain strings, and legacy JSON-corrupted scalars.
  * Returns null when the value is missing, empty, or has an unrecognized shape

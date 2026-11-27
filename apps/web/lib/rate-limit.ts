@@ -1,5 +1,5 @@
-import { Ratelimit, type Duration } from "@upstash/ratelimit";
-import { getRedis, isRedisConfigured } from "@/lib/redis";
+import type { Duration } from "@upstash/ratelimit";
+import { isKvConfigured, kvSlidingWindowLimit } from "@/lib/kv";
 
 export type RateLimitFailureMode = "fail-closed" | "fail-open";
 
@@ -28,9 +28,9 @@ const MEMORY_FALLBACK_MAX_IDENTIFIERS = 5_000;
 
 /**
  * Read policy for project lookups: GET /api/projects and the editor page's
- * shared-project resolution. Project loading depends on the same Redis
- * instance as rate limiting, so there is no useful degraded mode when Redis
- * cannot be reached: fail closed.
+ * shared-project resolution. Project loading depends on the same storage
+ * backend as rate limiting, so there is no useful degraded mode when that
+ * backend cannot be reached: fail closed.
  */
 export const PROJECTS_READ_RATE_LIMIT: RateLimitPolicy = {
   prefix: "markdown-video:projects:read",
@@ -41,11 +41,11 @@ export const PROJECTS_READ_RATE_LIMIT: RateLimitPolicy = {
 
 /**
  * Write policy for project creation: POST /api/projects. Each accepted write
- * stores up to 1 MiB in Redis with a 7-day TTL, so writes get a much tighter
- * budget than reads — without one, a single IP could fill a small Redis plan
+ * stores up to 1 MiB with a 7-day TTL, so writes get a much tighter budget
+ * than reads — without one, a single IP could fill a small storage plan
  * within minutes. The read and write policies use separate prefixes so their
- * counters never interfere. Writes depend on the same Redis instance as rate
- * limiting, so there is no useful degraded mode when Redis cannot be reached:
+ * counters never interfere. Writes depend on the same storage backend as rate
+ * limiting, so there is no useful degraded mode when it cannot be reached:
  * fail closed.
  */
 export const PROJECTS_WRITE_RATE_LIMIT: RateLimitPolicy = {
@@ -57,11 +57,12 @@ export const PROJECTS_WRITE_RATE_LIMIT: RateLimitPolicy = {
 
 /**
  * MCP tools are read-only documentation/validation/parser operations and do not
- * otherwise require Redis. The documented behavior for this policy is therefore
- * a fail-open availability posture: if the optional rate-limit Redis dependency
- * is missing, times out, or errors, requests remain available, but each warm
- * process applies a bounded in-memory fixed-window fallback at the same per-IP
- * limit instead of becoming completely unthrottled.
+ * otherwise require the storage backend. The documented behavior for this
+ * policy is therefore a fail-open availability posture: if the optional
+ * rate-limit storage dependency is missing, times out, or errors, requests
+ * remain available, but each warm process applies a bounded in-memory
+ * fixed-window fallback at the same per-IP limit instead of becoming
+ * completely unthrottled.
  *
  * That fallback is explicitly best effort. It is process-local (serverless
  * instances and cold restarts do not share counters), uses fixed rather than
@@ -110,8 +111,8 @@ export const MCP_RENDER_VIDEO_RATE_LIMIT: RateLimitPolicy = {
 /**
  * Video players commonly issue several range requests for one playback. 120
  * requests/minute is generous for legitimate playback while still bounding
- * repeated Redis reads; failures are closed because the object store is the
- * same Redis dependency and oversized artifacts cost bandwidth.
+ * repeated storage reads; failures are closed because the object store is the
+ * same storage dependency and oversized artifacts cost bandwidth.
  */
 export const RENDERS_READ_RATE_LIMIT: RateLimitPolicy = {
   prefix: "markdown-video:renders:read",
@@ -120,7 +121,6 @@ export const RENDERS_READ_RATE_LIMIT: RateLimitPolicy = {
   failureMode: "fail-closed",
 };
 
-const RATE_LIMIT_TIMEOUT_MS = 1_000;
 const RETRY_AFTER_UNAVAILABLE_SECONDS = "30";
 const MAX_IP_HEADER_LENGTH = 128;
 
@@ -129,10 +129,6 @@ type MemoryFallbackEntry = {
   reset: number;
 };
 
-const limiters = new Map<
-  string,
-  { redisClient: ReturnType<typeof getRedis>; limiter: Ratelimit }
->();
 const memoryFallbacks = new Map<string, Map<string, MemoryFallbackEntry>>();
 const warningsOnce = new Set<string>();
 
@@ -360,23 +356,6 @@ function handleRateLimitUnavailable(
   return enforceProcessMemoryFallback(policy, identifier);
 }
 
-function getLimiter(policy: RateLimitPolicy): Ratelimit {
-  const redisClient = getRedis();
-  const cached = limiters.get(policy.prefix);
-  if (cached?.redisClient === redisClient) {
-    return cached.limiter;
-  }
-
-  const limiter = new Ratelimit({
-    redis: redisClient,
-    limiter: Ratelimit.slidingWindow(policy.limit, policy.window),
-    prefix: policy.prefix,
-    timeout: RATE_LIMIT_TIMEOUT_MS,
-  });
-  limiters.set(policy.prefix, { redisClient, limiter });
-  return limiter;
-}
-
 /**
  * Returns null when the request may proceed, or a ready-to-return Response for
  * 429/503. Failure behavior is explicit in each RateLimitPolicy; in particular,
@@ -389,19 +368,20 @@ export async function enforceRateLimit(
 ): Promise<Response | null> {
   const identifier = getClientIp(request);
 
-  if (!isRedisConfigured()) {
+  if (!isKvConfigured()) {
     return handleRateLimitUnavailable(policy, "missing-config", identifier);
   }
 
-  let limiter: Ratelimit;
   try {
-    limiter = getLimiter(policy);
-  } catch (error) {
-    return handleRateLimitUnavailable(policy, "setup-error", identifier, error);
-  }
-
-  try {
-    const result = await limiter.limit(identifier);
+    // The backend (Postgres or Redis, selected inside lib/kv) executes the
+    // sliding-window check atomically; both backends reproduce the same
+    // weighted-window semantics and the 1s timeout-as-"timeout"-reason shape.
+    const result = await kvSlidingWindowLimit({
+      prefix: policy.prefix,
+      identifier,
+      limit: policy.limit,
+      windowMs: durationToMilliseconds(policy.window),
+    });
 
     if (result.reason === "timeout") {
       return handleRateLimitUnavailable(policy, "timeout", identifier);

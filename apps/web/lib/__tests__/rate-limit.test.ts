@@ -1,34 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const {
-  limit,
-  slidingWindow,
-  ratelimitConstructor,
-  isRedisConfigured,
-  getRedis,
+  kvSlidingWindowLimit,
+  isKvConfigured,
 } = vi.hoisted(() => ({
-  limit: vi.fn(),
-  slidingWindow: vi.fn(),
-  ratelimitConstructor: vi.fn(),
-  isRedisConfigured: vi.fn(),
-  getRedis: vi.fn(),
+  kvSlidingWindowLimit: vi.fn(),
+  isKvConfigured: vi.fn(),
 }));
 
-vi.mock("@upstash/ratelimit", () => ({
-  Ratelimit: class MockRatelimit {
-    static slidingWindow = slidingWindow;
-    limit = limit;
-
-    constructor(config: unknown) {
-      ratelimitConstructor(config);
-    }
-  },
-}));
-
-vi.mock("@/lib/redis", () => ({
-  getRedis,
-  isRedisConfigured,
-  redis: {},
+vi.mock("@/lib/kv", () => ({
+  kvSlidingWindowLimit,
+  isKvConfigured,
 }));
 
 import {
@@ -51,13 +33,12 @@ function request(headers: Record<string, string> = {}) {
   return new Request("http://localhost/api/test", { headers });
 }
 
-function allowedResponse() {
+function allowedResult() {
   return {
     success: true,
     limit: 30,
     remaining: 29,
     reset: Date.now() + 30_000,
-    pending: Promise.resolve(),
   };
 }
 
@@ -123,16 +104,11 @@ describe("getClientIp", () => {
 
 describe("rate-limit enforcement", () => {
   beforeEach(() => {
-    limit.mockReset();
-    slidingWindow.mockReset();
-    ratelimitConstructor.mockReset();
-    isRedisConfigured.mockReset();
-    getRedis.mockReset();
+    kvSlidingWindowLimit.mockReset();
+    isKvConfigured.mockReset();
 
-    isRedisConfigured.mockReturnValue(true);
-    getRedis.mockReturnValue({});
-    slidingWindow.mockReturnValue("sliding-window-limiter");
-    limit.mockResolvedValue(allowedResponse());
+    isKvConfigured.mockReturnValue(true);
+    kvSlidingWindowLimit.mockResolvedValue(allowedResult());
   });
 
   it("allows requests under the limit and uses the client IP as the identifier", async () => {
@@ -141,25 +117,24 @@ describe("rate-limit enforcement", () => {
     );
 
     expect(response).toBeNull();
-    expect(limit).toHaveBeenCalledWith("198.51.100.23");
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: "198.51.100.23" })
+    );
   });
 
-  it("configures the documented sliding-window limits", async () => {
+  it("configures the documented sliding-window limits in milliseconds", async () => {
     await enforceProjectReadRateLimit(request());
     await enforceProjectWriteRateLimit(request());
     await enforceMcpRateLimit(request());
 
-    expect(slidingWindow).toHaveBeenCalledWith(30, "1 m");
-    expect(slidingWindow).toHaveBeenCalledWith(10, "1 h");
-    expect(slidingWindow).toHaveBeenCalledWith(60, "1 m");
-    expect(ratelimitConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ prefix: "markdown-video:projects:read", timeout: 1_000 })
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ prefix: "markdown-video:projects:read", limit: 30, windowMs: 60_000 })
     );
-    expect(ratelimitConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ prefix: "markdown-video:projects:write", timeout: 1_000 })
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ prefix: "markdown-video:projects:write", limit: 10, windowMs: 3_600_000 })
     );
-    expect(ratelimitConstructor).toHaveBeenCalledWith(
-      expect.objectContaining({ prefix: "markdown-video:mcp", timeout: 1_000 })
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ prefix: "markdown-video:mcp", limit: 60, windowMs: 60_000 })
     );
   });
 
@@ -170,7 +145,7 @@ describe("rate-limit enforcement", () => {
     expect(PROJECTS_WRITE_RATE_LIMIT.limit).toBe(10);
     expect(PROJECTS_WRITE_RATE_LIMIT.window).toBe("1 h");
     expect(PROJECTS_WRITE_RATE_LIMIT.failureMode).toBe("fail-closed");
-    // The policies must not share a Redis key prefix, or their counters would
+    // The policies must not share a storage key prefix, or their counters would
     // interfere with each other.
     expect(PROJECTS_READ_RATE_LIMIT.prefix).not.toBe(PROJECTS_WRITE_RATE_LIMIT.prefix);
   });
@@ -201,9 +176,15 @@ describe("rate-limit enforcement", () => {
       RENDERS_READ_RATE_LIMIT.prefix,
       MCP_RATE_LIMIT.prefix,
     ]).size).toBe(4);
-    expect(slidingWindow).toHaveBeenCalledWith(10, "1 h");
-    expect(slidingWindow).toHaveBeenCalledWith(5, "1 h");
-    expect(slidingWindow).toHaveBeenCalledWith(120, "1 m");
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 10, windowMs: 3_600_000 })
+    );
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 5, windowMs: 3_600_000 })
+    );
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ limit: 120, windowMs: 60_000 })
+    );
   });
 
   it("enforces the write policy for project writes with the client IP", async () => {
@@ -212,17 +193,18 @@ describe("rate-limit enforcement", () => {
     );
 
     expect(response).toBeNull();
-    expect(limit).toHaveBeenCalledWith("198.51.100.55");
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: "198.51.100.55" })
+    );
   });
 
   it("returns 429 with retry metadata when the limiter denies a request", async () => {
     const reset = Date.now() + 20_000;
-    limit.mockResolvedValueOnce({
+    kvSlidingWindowLimit.mockResolvedValueOnce({
       success: false,
       limit: 30,
       remaining: 0,
       reset,
-      pending: Promise.resolve(),
     });
 
     const response = await enforceProjectReadRateLimit(request());
@@ -236,8 +218,8 @@ describe("rate-limit enforcement", () => {
     expect(response!.headers.get("x-ratelimit-remaining")).toBe("0");
   });
 
-  it("fails closed with 503 when Redis is missing for the projects API", async () => {
-    isRedisConfigured.mockReturnValue(false);
+  it("fails closed with 503 when storage is missing for the projects API", async () => {
+    isKvConfigured.mockReturnValue(false);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const response = await enforceProjectReadRateLimit(request());
@@ -245,13 +227,13 @@ describe("rate-limit enforcement", () => {
     expect(response).not.toBeNull();
     expect(response!.status).toBe(503);
     expect((await response!.json()).error).toMatch(/rate limiting is unavailable/i);
-    expect(limit).not.toHaveBeenCalled();
+    expect(kvSlidingWindowLimit).not.toHaveBeenCalled();
     warn.mockRestore();
   });
 
   it("fails closed when a projects rate-limit check times out", async () => {
-    limit.mockResolvedValueOnce({
-      ...allowedResponse(),
+    kvSlidingWindowLimit.mockResolvedValueOnce({
+      ...allowedResult(),
       reason: "timeout",
     });
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
@@ -264,7 +246,7 @@ describe("rate-limit enforcement", () => {
   });
 
   it("fails closed when the projects limiter throws", async () => {
-    limit.mockRejectedValueOnce(new Error("redis unreachable"));
+    kvSlidingWindowLimit.mockRejectedValueOnce(new Error("storage unreachable"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const response = await enforceProjectReadRateLimit(request());
@@ -280,11 +262,13 @@ describe("rate-limit enforcement", () => {
     });
 
     expect(response).toBeNull();
-    expect(limit).toHaveBeenCalledWith("198.51.100.101");
+    expect(kvSlidingWindowLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ identifier: "198.51.100.101" })
+    );
   });
 
-  it("uses a bounded process-local fallback instead of becoming unthrottled when MCP Redis is missing", async () => {
-    isRedisConfigured.mockReturnValue(false);
+  it("uses a bounded process-local fallback instead of becoming unthrottled when MCP storage is missing", async () => {
+    isKvConfigured.mockReturnValue(false);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
     const limitedRequest = () =>
       request({ "x-forwarded-for": "198.51.100.120" });
@@ -312,7 +296,7 @@ describe("rate-limit enforcement", () => {
   it("resets the MCP process-local fallback when the window expires", async () => {
     vi.useFakeTimers();
     try {
-      isRedisConfigured.mockReturnValue(false);
+      isKvConfigured.mockReturnValue(false);
       const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
       const limitedRequest = () =>
         request({ "x-forwarded-for": "198.51.100.122" });
@@ -331,19 +315,19 @@ describe("rate-limit enforcement", () => {
     }
   });
 
-  it("documents and uses fail-open behavior for MCP when Redis is missing", async () => {
-    isRedisConfigured.mockReturnValue(false);
+  it("documents and uses fail-open behavior for MCP when storage is missing", async () => {
+    isKvConfigured.mockReturnValue(false);
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const response = await enforceMcpRateLimit(request());
 
     expect(response).toBeNull();
-    expect(limit).not.toHaveBeenCalled();
+    expect(kvSlidingWindowLimit).not.toHaveBeenCalled();
     warn.mockRestore();
   });
 
   it("fails open for MCP when the limiter throws", async () => {
-    limit.mockRejectedValueOnce(new Error("redis unreachable"));
+    kvSlidingWindowLimit.mockRejectedValueOnce(new Error("storage unreachable"));
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
 
     const response = await enforceMcpRateLimit(request());
