@@ -35,6 +35,22 @@ export interface CliArgs {
   version: boolean
 }
 
+export interface PreviewCliArgs {
+  inputPath: string | null
+  markdown: string | null
+  times?: number[] | undefined
+  resolution?: string | undefined
+  aspectRatio?: string | undefined
+  locale?: string | undefined
+  json: boolean
+  outputDir: string | null
+  overwrite: boolean
+  allowOutsideCwd: boolean
+  denyRemoteNetwork: boolean
+  chromiumExecutablePath?: string | undefined
+  help: boolean
+}
+
 function stringValue(value: string | boolean | undefined) {
   return typeof value === "string" ? value : undefined
 }
@@ -114,6 +130,75 @@ export function parseCliArgs(argv: string[]): CliArgs {
     chromiumExecutablePath: stringValue(parsed.values.chromium),
     help: parsed.values.help === true,
     version: parsed.values.version === true,
+  }
+}
+
+function parsePreviewTimes(value: string | undefined) {
+  if (value === undefined) return undefined
+  const parts = value.split(",").map((part) => part.trim())
+  if (parts.length === 0 || parts.some((part) => part.length === 0)) {
+    throw new UsageError(
+      "Invalid --times value. Expected a comma-separated list such as 0,1.5,3.",
+    )
+  }
+
+  const times = parts.map((part) => Number(part))
+  if (times.some((time) => !Number.isFinite(time) || time < 0)) {
+    throw new UsageError("Preview --times values must be finite non-negative seconds.")
+  }
+  return times
+}
+
+export function parsePreviewCliArgs(argv: string[]): PreviewCliArgs {
+  let parsed
+  try {
+    parsed = parseArgs({
+      args: argv,
+      allowPositionals: true,
+      strict: true,
+      options: {
+        markdown: { type: "string", short: "m" },
+        times: { type: "string" },
+        resolution: { type: "string" },
+        "aspect-ratio": { type: "string" },
+        locale: { type: "string" },
+        json: { type: "boolean" },
+        "output-dir": { type: "string" },
+        overwrite: { type: "boolean" },
+        "allow-outside-cwd": { type: "boolean" },
+        "deny-remote-network": { type: "boolean" },
+        chromium: { type: "string" },
+        help: { type: "boolean", short: "h" },
+      },
+    })
+  } catch (error) {
+    throw new UsageError(error instanceof Error ? error.message : String(error))
+  }
+
+  if (parsed.positionals.length > 1) {
+    throw new UsageError(`Unexpected positional argument: ${parsed.positionals[1]}`)
+  }
+
+  const inputPath = parsed.positionals[0] ?? null
+  const markdown = stringValue(parsed.values.markdown) ?? null
+  if (inputPath && markdown !== null) {
+    throw new UsageError("Use either an input file or --markdown, not both.")
+  }
+
+  return {
+    inputPath,
+    markdown,
+    times: parsePreviewTimes(stringValue(parsed.values.times)),
+    resolution: stringValue(parsed.values.resolution),
+    aspectRatio: stringValue(parsed.values["aspect-ratio"]),
+    locale: stringValue(parsed.values.locale),
+    json: parsed.values.json === true,
+    outputDir: stringValue(parsed.values["output-dir"]) ?? null,
+    overwrite: parsed.values.overwrite === true,
+    allowOutsideCwd: parsed.values["allow-outside-cwd"] === true,
+    denyRemoteNetwork: parsed.values["deny-remote-network"] === true,
+    chromiumExecutablePath: stringValue(parsed.values.chromium),
+    help: parsed.values.help === true,
   }
 }
 

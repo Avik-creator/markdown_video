@@ -1,4 +1,9 @@
-export { parseCliArgs, type CliArgs } from "./args.js"
+export {
+  parseCliArgs,
+  parsePreviewCliArgs,
+  type CliArgs,
+  type PreviewCliArgs,
+} from "./args.js"
 export { buildFfmpegArgs, startFfmpeg } from "./ffmpeg.js"
 export {
   expectedOutputExtension,
@@ -6,6 +11,7 @@ export {
   resolveOutputPath,
 } from "./paths.js"
 export {
+  DEFAULT_PREVIEW_FRAME_COUNT,
   MAX_PREVIEW_FRAME_COUNT,
   renderFrames,
   renderVideo,

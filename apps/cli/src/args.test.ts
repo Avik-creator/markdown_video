@@ -4,6 +4,7 @@ import {
   parseCliArgs,
   parseDoctorCliArgs,
   parseInstallBrowserCliArgs,
+  parsePreviewCliArgs,
 } from "./args.js"
 import { UsageError } from "./errors.js"
 
@@ -65,6 +66,74 @@ describe("parseCliArgs", () => {
     expect(() => parseCliArgs(["input.md", "-o", "x.mp4", "--fps", "bad"])).toThrow(
       UsageError,
     )
+  })
+})
+
+describe("parsePreviewCliArgs", () => {
+  it("parses comma-separated times and JSON output options", () => {
+    const args = parsePreviewCliArgs([
+      "input.md",
+      "--times",
+      "0, 1.5,3",
+      "--resolution",
+      "720p",
+      "--aspect-ratio",
+      "1:1",
+      "--locale",
+      "pt-BR",
+      "--json",
+      "--deny-remote-network",
+    ])
+
+    expect(args).toMatchObject({
+      inputPath: "input.md",
+      markdown: null,
+      times: [0, 1.5, 3],
+      resolution: "720p",
+      aspectRatio: "1:1",
+      locale: "pt-BR",
+      json: true,
+      outputDir: null,
+      denyRemoteNetwork: true,
+      help: false,
+    })
+  })
+
+  it("parses PNG directory output options", () => {
+    const args = parsePreviewCliArgs([
+      "--markdown",
+      "!scene\n!text\nHello",
+      "--output-dir",
+      "frames",
+      "--overwrite",
+      "--allow-outside-cwd",
+    ])
+
+    expect(args.times).toBeUndefined()
+    expect(args.outputDir).toBe("frames")
+    expect(args.overwrite).toBe(true)
+    expect(args.allowOutsideCwd).toBe(true)
+  })
+
+  it("rejects malformed and negative times", () => {
+    expect(() =>
+      parsePreviewCliArgs(["input.md", "--times", "0,,1", "--json"]),
+    ).toThrow(UsageError)
+    expect(() =>
+      parsePreviewCliArgs(["input.md", "--times", "0,-1", "--json"]),
+    ).toThrow(UsageError)
+    expect(() =>
+      parsePreviewCliArgs(["input.md", "--times", "abc", "--json"]),
+    ).toThrow(UsageError)
+  })
+
+  it("rejects mixed input modes and extra positionals", () => {
+    expect(() =>
+      parsePreviewCliArgs(["input.md", "--markdown", "# Hi", "--json"]),
+    ).toThrow(UsageError)
+    expect(() =>
+      parsePreviewCliArgs(["one.md", "two.md", "--json"]),
+    ).toThrow(UsageError)
   })
 })
 

@@ -28,6 +28,7 @@ import {
 
 export const MAX_MARKDOWN_BYTES = 512 * 1024
 export const MAX_PREVIEW_FRAME_COUNT = 16
+export const DEFAULT_PREVIEW_FRAME_COUNT = 5
 
 export interface RenderProgress {
   phase: "preparing" | "capturing" | "encoding" | "complete"
@@ -107,7 +108,8 @@ export interface RenderVideoBufferResult {
 
 export interface RenderFramesOptions {
   markdown: string
-  times: number[]
+  /** Explicit timeline times. When omitted, five times span the full duration. */
+  times?: number[] | undefined
   resolution?: string | undefined
   aspectRatio?: string | undefined
   locale?: string | null | undefined
@@ -587,6 +589,30 @@ export async function renderVideoToBuffer(
   }
 }
 
+function defaultPreviewTimes(totalDuration: number) {
+  return Array.from(
+    { length: DEFAULT_PREVIEW_FRAME_COUNT },
+    (_, index) => (index / (DEFAULT_PREVIEW_FRAME_COUNT - 1)) * totalDuration,
+  )
+}
+
+function validatePreviewTimes(times: number[] | undefined) {
+  if (times === undefined) return
+  if (!Array.isArray(times) || times.length === 0) {
+    throw new UsageError("At least one preview frame time is required.")
+  }
+  if (times.length > MAX_PREVIEW_FRAME_COUNT) {
+    throw new UsageError(
+      `At most ${MAX_PREVIEW_FRAME_COUNT} preview frames can be rendered per request.`,
+    )
+  }
+  for (const time of times) {
+    if (!Number.isFinite(time) || time < 0) {
+      throw new UsageError("Preview frame times must be finite non-negative numbers.")
+    }
+  }
+}
+
 /**
  * Capture lossless PNG screenshots at exact timeline times. This deliberately
  * does not extract frames from a rendered mp4: direct screenshots avoid a lossy
@@ -597,19 +623,7 @@ export async function renderFrames(
 ): Promise<RenderFramesResult> {
   const started = performance.now()
   validateMarkdown(options.markdown)
-  if (!Array.isArray(options.times) || options.times.length === 0) {
-    throw new UsageError("At least one preview frame time is required.")
-  }
-  if (options.times.length > MAX_PREVIEW_FRAME_COUNT) {
-    throw new UsageError(
-      `At most ${MAX_PREVIEW_FRAME_COUNT} preview frames can be rendered per request.`,
-    )
-  }
-  for (const time of options.times) {
-    if (!Number.isFinite(time) || time < 0) {
-      throw new UsageError("Preview frame times must be finite non-negative numbers.")
-    }
-  }
+  validatePreviewTimes(options.times)
 
   const settings = resolveRenderSettings({
     resolution: options.resolution,
@@ -631,7 +645,8 @@ export async function renderFrames(
     quality: settings.quality,
   })
 
-  for (const time of options.times) {
+  const times = options.times ?? defaultPreviewTimes(totalDuration)
+  for (const time of times) {
     if (time - totalDuration > 1e-9) {
       throw new UsageError(
         `Preview frame time ${time}s is beyond the ${totalDuration}s video duration.`,
@@ -652,7 +667,7 @@ export async function renderFrames(
     })
 
     const frames: RenderedFrame[] = []
-    for (const requestedTime of options.times) {
+    for (const requestedTime of times) {
       throwIfAborted(options.signal)
       const time = Math.min(requestedTime, totalDuration)
       await session.page.evaluate((t) => window.__mv!.seek(t), time)

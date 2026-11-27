@@ -13,7 +13,7 @@ export function resolveInputPath(inputPath: string, cwd: string) {
   return resolved
 }
 
-function assertPortablePath(value: string, label: string) {
+export function assertPortablePath(value: string, label: string) {
   if (!value || value.trim() !== value || value.includes("\0")) {
     throw new UsageError(`Invalid ${label} path.`)
   }
