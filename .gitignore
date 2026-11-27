@@ -16,3 +16,4 @@ apps/web/public/ffmpeg/
 
 # Generated Vercel Sandbox renderer bundle
 apps/web/lib/render-sandbox/cli-bundle/
+.env*

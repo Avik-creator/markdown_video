@@ -17,14 +17,14 @@ export const PREVIEW_RESOLUTION = "720p";
 export const SANDBOX_PREVIEW_TIMEOUT_MS = 20_000;
 export const SANDBOX_VIDEO_TIMEOUT_MS = 45_000;
 const SANDBOX_FORK_LIFETIME_MS = 10 * 60_000;
-const JOB_CWD = "/vercel/sandbox/job";
+const JOB_CWD = "/vercel/job";
 const SANDBOX_COMMAND_ENV = {
   // Sandbox command env maps must be self-contained enough for the renderer
   // even if the executor treats them as a replacement rather than an overlay.
   PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
   HOME: JOB_CWD,
-  XDG_CACHE_HOME: "/vercel/sandbox/job/.cache",
-  PLAYWRIGHT_BROWSERS_PATH: "/vercel/sandbox/ms-playwright",
+  XDG_CACHE_HOME: "/vercel/job/.cache",
+  PLAYWRIGHT_BROWSERS_PATH: "/vercel/ms-playwright",
 } as const;
 const MAX_STDERR_CHARS = 1_000;
 

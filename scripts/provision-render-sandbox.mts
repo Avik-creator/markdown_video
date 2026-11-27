@@ -23,8 +23,8 @@ const { loadSandboxCliBundle } = await import(
 );
 
 const TEMPLATE_NAME = process.env.MDV_RENDER_SANDBOX_TEMPLATE?.trim() || "mdv-render-template";
-const JOB_DIR = "/vercel/sandbox/job";
-const PLAYWRIGHT_BROWSERS_PATH = "/vercel/sandbox/ms-playwright";
+const JOB_DIR = "/vercel/job";
+const PLAYWRIGHT_BROWSERS_PATH = "/vercel/ms-playwright";
 // Hobby sandboxes cap at 45 minutes; keep the template valid on every plan.
 const TEMPLATE_TIMEOUT_MS = 45 * 60 * 1000;
 const smokeMarkdown = `!scene

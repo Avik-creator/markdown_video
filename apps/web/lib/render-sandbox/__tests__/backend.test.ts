@@ -140,7 +140,7 @@ describe("renderSandboxPreview", () => {
 
     const command = commandParams[0] as { cmd: string; args: string[]; cwd: string; timeoutMs: number };
     expect(command.cmd).toBe("node");
-    expect(command.cwd).toBe("/vercel/sandbox/job");
+    expect(command.cwd).toBe("/vercel/job");
     expect(command.timeoutMs).toBe(20_000);
     expect(command.args).toContain("--deny-remote-network");
     expect(command.args).toContain("--resolution");
@@ -236,7 +236,7 @@ describe("renderSandboxVideo", () => {
     });
     expect(result.mp4.equals(MP4)).toBe(true);
     expect(sandbox.readFileToBuffer).toHaveBeenCalledWith(
-      { path: "output.mp4", cwd: "/vercel/sandbox/job" },
+      { path: "output.mp4", cwd: "/vercel/job" },
       expect.objectContaining({})
     );
     expect(sandbox.stop).toHaveBeenCalledOnce();
