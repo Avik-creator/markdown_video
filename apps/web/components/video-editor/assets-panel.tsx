@@ -31,6 +31,11 @@ import {
   assetReferenceSnippet,
   referenceInsertionAt,
 } from "@/lib/assets/asset-references"
+import {
+  findMissingAssetReferences,
+  type MissingAssetReference,
+} from "@/lib/assets/missing-assets"
+import { useVideoStore } from "@/lib/use-video-store"
 import type { MarkdownEditorHandle } from "./markdown-editor"
 
 interface AssetsPanelProps {
@@ -159,6 +164,7 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
   const uploadFiles = useAssetLibrary((state) => state.uploadFiles)
   const deleteAsset = useAssetLibrary((state) => state.deleteAsset)
   const refreshAssets = useAssetLibrary((state) => state.refreshAssets)
+  const markdown = useVideoStore((state) => state.markdown)
 
   const inputRef = useRef<HTMLInputElement>(null)
   const noticeIdRef = useRef(0)
@@ -166,10 +172,25 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
   const [notices, setNotices] = useState<Notice[]>([])
+  const [missingReferences, setMissingReferences] = useState<MissingAssetReference[]>([])
 
   useEffect(() => {
     void ensureAssetLibraryLoaded()
   }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    void findMissingAssetReferences(markdown, { assets })
+      .then((missing) => {
+        if (!cancelled) setMissingReferences(missing)
+      })
+      .catch(() => {
+        if (!cancelled) setMissingReferences([])
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [assets, markdown])
 
   const pushNotice = useCallback((tone: Notice["tone"], message: string) => {
     noticeIdRef.current += 1
@@ -373,6 +394,20 @@ export function AssetsPanel({ onClose, editorRef }: AssetsPanelProps) {
       )}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-4">
+        {missingReferences.length > 0 && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <p className="text-xs font-semibold uppercase tracking-wide text-amber-800 dark:text-amber-300">
+              Missing references
+            </p>
+            <div className="mt-2 space-y-1.5">
+              {missingReferences.map((reference) => (
+                <p key={`${reference.kind}:${reference.filename}:${reference.lineNumber}`} className="text-xs text-amber-800 dark:text-amber-200">
+                  Line {reference.lineNumber}: <code>./{reference.filename}</code> is not in browser assets or public static files.
+                </p>
+              ))}
+            </div>
+          </div>
+        )}
         {status === "error" ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-300">
             <p className="font-medium">Browser asset storage is unavailable.</p>
