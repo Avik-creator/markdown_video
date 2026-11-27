@@ -41,6 +41,14 @@ node apps/cli/dist/cli.js render examples/launch.video.md \
 
 The render command writes `.srt` and `.vtt` sidecars beside each MP4 for top-level text scenes. Copy the needed MP4s and sidecars into `apps/web/public/landing/`.
 
+The page also serves exact plaintext snapshots of the canonical example files so every source link is valid in preview deploys and can be compared without leaving the artifact trail:
+
+```sh
+mkdir -p apps/web/public/landing/sources
+cp examples/{launch,landing-hero,landing-captions,landing-agent-mcp,landing-i18n,landing-action}.video.md \
+  apps/web/public/landing/sources/
+```
+
 Preview frames are direct exact-timeline browser captures, not frames extracted from encoded video:
 
 ```sh
@@ -86,6 +94,7 @@ ffmpeg -i launch-poster.png \
 | `examples/landing-agent-mcp.video.md` | `mcp-agent.mp4`, `mcp-agent-poster.webp` |
 | `examples/landing-i18n.video.md` | `i18n-en.webp`, `i18n-es.webp` |
 | `examples/landing-action.video.md` | `action-workflow.webp` |
+| all six linked `examples/*.video.md` files above | byte-identical snapshots in `sources/` |
 
 ## Customize safely
 
