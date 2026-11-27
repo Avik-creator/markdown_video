@@ -9,7 +9,7 @@ import {
 export const DIFF_REPORT_SCHEMA_VERSION = 1
 export const DEFAULT_UNCHANGED_THRESHOLD_PERCENT = 0.1
 export const DEFAULT_OUTLIER_THRESHOLD_PERCENT = 25
-export const MODIFIED_OUTLIER_MIN_CONTENT_SIMILARITY = 0.85
+export const MODIFIED_OUTLIER_MIN_CONTENT_SIMILARITY = 0.9
 export const DEFAULT_SAMPLES_PER_SCENE = 2
 export const MAX_SAMPLES_PER_SCENE = 3
 
@@ -718,7 +718,7 @@ export function aggregateChangePercents(percents: readonly number[]) {
  * - added/removed scenes are explicit structural edits and are never failures
  *   by themselves;
  * - modified scenes are expected to look different, except when a very small
- *   content delta (similarity >= 0.85) coincides with a large pixel delta;
+ *   content delta (similarity >= 0.9) coincides with a large pixel delta;
  * - unchanged-content and retimed scenes have no source-content explanation
  *   for a pixel difference, so they fail at the much stricter unchanged
  *   threshold.

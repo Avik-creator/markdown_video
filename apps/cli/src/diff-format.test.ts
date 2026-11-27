@@ -19,7 +19,7 @@ function reportFixture(): DiffReport {
       pixelmatchThreshold: 0.1,
       unchangedThresholdPercent: 0.1,
       modifiedOutlierPercent: 25,
-      modifiedOutlierMinContentSimilarity: 0.85,
+      modifiedOutlierMinContentSimilarity: 0.9,
     },
     dimensions: { width: 854, height: 480 },
     summary: {
