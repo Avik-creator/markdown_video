@@ -1,7 +1,11 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import type { PersistStorage, StorageValue } from "zustand/middleware";
-import { parseMarkdownFull, getTimelineSegments } from "@markdown-video/core";
+import {
+  applyDirectiveValueEdit,
+  parseMarkdownFull,
+  getTimelineSegments,
+} from "@markdown-video/core";
 import { DEFAULT_MARKDOWN } from "./default-markdown";
 import type { AspectRatio, SourceRange } from "@markdown-video/core";
 import type { Marker, ThemePreset, VideoStore } from "./types";
@@ -255,6 +259,18 @@ export const useVideoStore = create<VideoStore>()(
                 }
               : state.history,
           }));
+        },
+
+        applyDirectiveEdit: (edit) => {
+          const result = applyDirectiveValueEdit(get().markdown, edit);
+          // The pure engine owns all safety/validation decisions. The store's
+          // job is only to commit successful non-noop text synchronously so
+          // preview, timeline, and panel all observe the edit in the same
+          // state update (and so undo gets exactly one document entry).
+          if (result.ok && result.action !== "noop") {
+            get().setMarkdown(result.markdown);
+          }
+          return result;
         },
 
         undo: () => {
