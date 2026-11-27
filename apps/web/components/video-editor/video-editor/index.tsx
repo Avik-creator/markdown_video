@@ -8,6 +8,7 @@ import { Controls } from "../controls"
 import { SyntaxGuide } from "../syntax-guide"
 import { SceneProperties } from "../scene-properties"
 import { TemplatesPanel } from "../templates-panel"
+import { AssetsPanel } from "../assets-panel"
 import { ExportModal } from "../export-modal"
 import { KeyboardShortcuts } from "../keyboard-shortcuts"
 import { FindReplace } from "../find-replace"
@@ -19,7 +20,7 @@ import type { InsertableSnippet } from "@/lib/editor/snippets"
 import { EditorHeader } from "./components/EditorHeader"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
-type RightPanel = "properties" | "guide" | "templates"
+type RightPanel = "properties" | "guide" | "templates" | "assets"
 
 export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkdown?: string; isEmbed?: boolean; }) {
   const [rightPanel, setRightPanel] = useState<RightPanel>("properties")
@@ -206,6 +207,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
         </div>
         {rightPanel === "guide" && <SyntaxGuide onClose={() => setRightPanel("properties")} />}
         {rightPanel === "templates" && <TemplatesPanel onClose={() => setRightPanel("properties")} />}
+        {rightPanel === "assets" && <AssetsPanel editorRef={editorRef} onClose={() => setRightPanel("properties")} />}
         {rightPanel === "properties" && <SceneProperties />}
 
         <FindReplace

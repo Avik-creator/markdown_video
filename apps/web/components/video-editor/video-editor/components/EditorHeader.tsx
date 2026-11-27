@@ -29,8 +29,8 @@ interface EditorHeaderProps {
   setZoom: (zoom: ZoomLevel) => void
   aspectRatio: keyof typeof ASPECT_RATIOS
   setAspectRatio: (ratio: keyof typeof ASPECT_RATIOS) => void
-  rightPanel: "properties" | "guide" | "templates"
-  togglePanel: (panel: "properties" | "guide" | "templates") => void
+  rightPanel: "properties" | "guide" | "templates" | "assets"
+  togglePanel: (panel: "properties" | "guide" | "templates" | "assets") => void
   setShowFind: (show: boolean) => void
   setShowShortcuts: (show: boolean) => void
   setShowShareModal: (show: boolean) => void
@@ -184,6 +184,20 @@ export function EditorHeader({
           <CornerMarkers />
           <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
             Templates
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => togglePanel("assets")}
+          aria-pressed={rightPanel === "assets"}
+          className={cn(
+            "group flex items-center justify-between gap-1 relative transition-all duration-300 ease-out",
+            "hover:translate-x-0.5"
+          )}
+        >
+          <CornerMarkers />
+          <span className="text-lg font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+            Assets
           </span>
         </button>
         <button

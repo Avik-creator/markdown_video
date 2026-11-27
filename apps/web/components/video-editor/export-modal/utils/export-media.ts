@@ -1,6 +1,8 @@
 // Browser-side media fetching for ffmpeg.wasm export. Network access happens
 // in the user's browser (never in the shared worker): cross-origin music is
-// HTTPS-only and relies on normal CORS permission.
+// HTTPS-only and relies on normal CORS permission. Document-relative uploads
+// are supplied from IndexedDB before static-path fetching is attempted.
+import { resolveBrowserAssetSource } from "@/lib/assets/asset-resolution";
 
 export const MAX_BROWSER_MUSIC_BYTES = 32 * 1024 * 1024;
 
@@ -36,9 +38,10 @@ async function readLimitedArrayBuffer(
 /**
  * Resolve and fetch a browser !music source into bytes suitable for MEMFS.
  *
- * Relative sources are application assets resolved against the current origin.
- * Cross-origin sources must be HTTPS and CORS-readable. data:/blob: URLs are
- * self-contained browser objects and do not create additional network egress.
+ * Relative sources first match uploaded IndexedDB assets by filename; when no
+ * upload matches they remain application assets resolved against the current
+ * origin. Cross-origin sources must be HTTPS and CORS-readable. data:/blob:
+ * URLs are self-contained browser objects and do not create network egress.
  */
 export async function fetchBrowserMusicData(
   src: string,
@@ -47,13 +50,19 @@ export async function fetchBrowserMusicData(
   const trimmed = src.trim();
   if (!trimmed) throw new Error("Music source is empty");
 
+  const resolvedSource = await resolveBrowserAssetSource(trimmed);
+  if (signal.aborted) {
+    throw new DOMException("Music export was cancelled", "AbortError");
+  }
+  const sourceUrl = resolvedSource.url;
+
   let url: string;
-  if (/^(data|blob):/i.test(trimmed)) {
-    url = trimmed;
+  if (/^(data|blob):/i.test(sourceUrl)) {
+    url = sourceUrl;
   } else {
     let resolved: URL;
     try {
-      resolved = new URL(trimmed, window.location.href);
+      resolved = new URL(sourceUrl, window.location.href);
     } catch {
       throw new Error(`Invalid music source "${trimmed}"`);
     }

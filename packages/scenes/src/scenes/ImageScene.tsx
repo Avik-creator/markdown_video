@@ -3,6 +3,7 @@
 import { motion, useAnimation } from "framer-motion";
 import { useEffect } from "react";
 import { cn } from "../cn.js";
+import { useSceneSourceResolver } from "../source-resolution.js";
 import type { Scene } from "@markdown-video/core";
 
 export function ImageScene({
@@ -14,6 +15,7 @@ export function ImageScene({
 }) {
   const image = scene.image;
   const controls = useAnimation();
+  const resolveSrc = useSceneSourceResolver();
 
   useEffect(() => {
     if (sceneTime !== undefined) {
@@ -44,6 +46,9 @@ export function ImageScene({
     right: "object-right",
   };
 
+  const rawSrc =
+    image.src || "/placeholder.svg?height=400&width=600&query=image";
+
   return (
     <motion.div
       className="flex items-center justify-center h-full w-full p-4 overflow-hidden"
@@ -53,7 +58,7 @@ export function ImageScene({
       transition={{ duration: 0.4 }}
     >
       <img
-        src={image.src || "/placeholder.svg?height=400&width=600&query=image"}
+        src={resolveSrc(rawSrc)}
         alt={image.alt || "Scene image"}
         className={cn(
           "w-full h-full",

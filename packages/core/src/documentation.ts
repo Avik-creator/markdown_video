@@ -219,6 +219,18 @@ underscores with optional single-hyphen separators (for example \`en\`,
 \`key:\` lines and translations are indented \`locale: value\` lines; quotes
 are optional and multiple \`!strings\` blocks merge.
 
+## Images and browser-local assets
+
+\`!image src:...\` accepts HTTPS image URLs, \`data:\` URLs, absolute application
+paths such as \`/logo.png\`, and same-tree relative paths such as \`./logo.png\`.
+In the browser editor a relative path first matches an uploaded browser-local
+asset and then the same-origin static fallback. Uploaded assets can be inserted
+from the editor's Assets panel and are stored only in that browser's IndexedDB;
+they are not sent to a server and do not travel with share links. The CLI does
+not currently map markdown-relative image paths to files beside the input
+markdown, so CLI projects should use remote/data images or a host-specific
+static URL unless that host documents otherwise.
+
 ## Music and captions
 \`\`\`markdown
 !music https://example.com/theme.mp3 volume:0.4 fade:1s loop:true
@@ -238,6 +250,13 @@ carry audio, so music is ignored for GIF output. Editor and embed previews play
 music after the user starts playback, using the same linear volume/fade
 envelope. Browser media-element looping can be slightly less seamless than
 export's ffmpeg stream repetition.
+
+In the browser editor, a same-tree relative source such as \`./theme.mp3\` first
+matches an uploaded browser-local asset by filename, then falls back to a
+same-origin/static file. Browser-local uploads are private to that browser and
+are not included in markdown downloads or share links; use static or HTTPS
+media for portable projects. In the CLI, relative music instead resolves
+against the markdown file's directory (or cwd for stdin/inline input).
 
 Captions are generated from top-level \`!text\` scenes using the exact scene
 boundaries from the core timeline. Exports provide SRT and WebVTT sidecars;

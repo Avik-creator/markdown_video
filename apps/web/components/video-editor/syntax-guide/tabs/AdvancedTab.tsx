@@ -426,7 +426,10 @@ These words become captions`}
         <p className="text-xs text-muted-foreground mt-2">
           <strong>Export behavior:</strong> Music starts at 0s, loops by
           default, is truncated at video end, and never extends duration.
-          Remote music must use HTTPS (and CORS in browser export). SRT/VTT
+          Relative paths such as ./theme.mp3 first use files uploaded in the
+          browser-local Assets panel, then static files. Uploads do not travel
+          with share links. Remote music must use HTTPS (and CORS in browser
+          export). SRT/VTT
           captions are generated from top-level text scenes; burn-in is
           optional and off by default. Burned captions render with the same
           fonts as the rest of the video, so non-Latin text is fully

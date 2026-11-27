@@ -116,14 +116,16 @@ describe("Controls preview music", () => {
     expect(FakeAudioElement.instances).toHaveLength(0);
   });
 
-  it("creates a preloading audio element and renders an unmuted toggle when music exists", () => {
+  it("creates a preloading audio element and renders an unmuted toggle when music exists", async () => {
     useVideoStore.getState().setMarkdown(MUSIC_MARKDOWN, false);
     render(<Controls />);
 
     const toggle = screen.getByRole("button", { name: "Mute preview music" });
     expect(toggle.getAttribute("aria-pressed")).toBe("false");
     expect(FakeAudioElement.instances).toHaveLength(1);
-    expect(FakeAudioElement.instances[0].src).toBe("theme.mp3");
+    await vi.waitFor(() => {
+      expect(FakeAudioElement.instances[0].src).toBe("theme.mp3");
+    });
     expect(FakeAudioElement.instances[0].preload).toBe("auto");
     expect(FakeAudioElement.instances[0].muted).toBe(false);
     // At t=0 with a one-second fade-in the envelope starts at silence.

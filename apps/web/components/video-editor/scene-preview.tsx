@@ -21,6 +21,7 @@ import {
   getExportCaptionBurnCuesServerSnapshot,
   subscribeExportCaptionBurn,
 } from "./export-modal/utils/export-burn-captions";
+import { useBrowserAssetSourceResolver } from "@/lib/assets/use-browser-asset-resolver";
 
 // Frame embedding cannot change during the lifetime of a document, so there
 // is no external event to subscribe to. useSyncExternalStore still gives us
@@ -93,6 +94,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     const { sizingElementRef, size: fittedSize } = useMeasuredPreviewSize(
       currentScene !== null
     );
+    const resolveSceneSrc = useBrowserAssetSourceResolver();
 
     // Embed previews historically ignored the editor zoom control (which is
     // not available there), while editor zoom composes multiplicatively with
@@ -154,6 +156,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
             sceneTime={sceneTime}
             aspectRatio={aspectRatio}
             localization={sceneLocalization}
+            resolveSrc={resolveSceneSrc}
             {...(burnCues
               ? { captions: { cues: burnCues, time: currentTime } }
               : {})}

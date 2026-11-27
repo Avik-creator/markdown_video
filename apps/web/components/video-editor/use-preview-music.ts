@@ -7,6 +7,7 @@ import {
 } from "@/lib/preview-music"
 import { useVideoStore } from "@/lib/use-video-store"
 import type { VideoStore } from "@/lib/types"
+import { resolveBrowserAssetSource } from "@/lib/assets/asset-resolution"
 
 function snapshotFromStore(state: VideoStore): PreviewMusicSnapshot | null {
   if (!state.music) return null
@@ -87,16 +88,27 @@ export function usePreviewMusic(): UsePreviewMusicResult {
     }
     document.addEventListener("visibilitychange", handleVisibilityChange)
 
-    // Assigning the URL as-is lets the browser implement the same source set
-    // as plain media playback: HTTPS, same-origin/relative, data:, and blob:.
-    // Unlike the ffmpeg exporter, playback does not need to fetch bytes and
-    // therefore does not need CORS permission for remote audio.
-    audio.src = musicSrc
+    // Resolve uploaded IndexedDB bytes first for document-relative paths,
+    // then preserve the browser's existing static/remote/data/blob behavior.
+    // Playback itself remains source-agnostic and does not need remote CORS.
+    let sourceResolutionCancelled = false
+    void resolveBrowserAssetSource(musicSrc)
+      .then((resolved) => {
+        if (sourceResolutionCancelled) return
+        audio.src = resolved.url
+        sync()
+      })
+      .catch((error) => {
+        if (!sourceResolutionCancelled) {
+          console.warn(`[markdown-video] Could not resolve preview music "${musicSrc}":`, error)
+        }
+      })
 
     const unsubscribe = useVideoStore.subscribe(sync)
     sync()
 
     return () => {
+      sourceResolutionCancelled = true
       unsubscribe()
       document.removeEventListener("visibilitychange", handleVisibilityChange)
       for (const eventName of mediaReadyEvents) {

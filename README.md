@@ -91,7 +91,7 @@ flowchart LR
 ```
 
 Interactive editing and manual export remain client-side: the parser produces scenes, the preview draws them,
-and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts in Redis for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
+and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The editor's Assets panel can store music and images in browser-local IndexedDB and reference them as `./filename`; those bytes never leave the browser during editing/export and are not included in share links. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts in Redis for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
 
 ## 🏗️ Project Structure
 

@@ -36,6 +36,7 @@ import {
   getExportArtifactNames,
 } from "../utils/export-utils";
 import { fetchBrowserMusicData } from "../utils/export-media";
+import { warmBrowserAssetSources } from "@/lib/assets/asset-resolution";
 import {
   beginExportCaptionBurn,
   endExportCaptionBurn,
@@ -389,6 +390,12 @@ export default function FfmpegRender({
       // point on already contains the captions, with the full Unicode
       // coverage of the document's real fonts — no MEMFS sidecar, no
       // bundled Latin-only TTF, no libass inside ffmpeg.wasm.
+      // Uploaded image blobs are lazy IndexedDB reads. Warm all document
+      // references before frame seeking begins so capture cannot race the
+      // asynchronous object-url cache on a scene's first visible frame.
+      await warmBrowserAssetSources(state.markdown);
+      throwIfNotCurrent();
+
       if (burnCaptions) {
         beginExportCaptionBurn(captionSidecars.cues);
       }
