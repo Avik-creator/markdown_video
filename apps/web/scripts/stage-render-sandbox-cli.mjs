@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process"
 import { cp, mkdir, readFile, readdir, rm, stat, writeFile } from "node:fs/promises"
 import { createRequire } from "node:module"
 import path from "node:path"
@@ -102,6 +103,15 @@ async function main() {
       }
     }
   }
+  const versionCheck = spawnSync(process.execPath, [path.join(bundleDir, "cli.js"), "--version"], {
+    encoding: "utf8",
+  })
+  if (versionCheck.status !== 0 || !versionCheck.stdout.trim()) {
+    throw new Error(
+      `Staged CLI bundle failed its --version smoke check: ${versionCheck.stderr || versionCheck.stdout || "no output"}`,
+    )
+  }
+
   await measure(bundleDir)
   console.log(
     `Staged markdown-video sandbox CLI bundle: ${fileCount} files, ${(byteCount / 1024 / 1024).toFixed(1)} MiB (playwright-core ${playwrightPackageJson.version}).`,
