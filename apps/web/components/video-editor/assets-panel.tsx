@@ -111,7 +111,10 @@ function AssetRow({
   const Icon = kind === "audio" ? Music : ImageIcon
 
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-3">
+    <div
+      data-asset-row={asset.filename}
+      className="rounded-lg border border-gray-200 dark:border-white/10 bg-gray-50 dark:bg-white/[0.03] p-3"
+    >
       <div className="flex items-start gap-3 min-w-0">
         <div
           className={cn(
@@ -135,11 +138,23 @@ function AssetRow({
       </div>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <Button size="sm" variant="outline" onClick={onInsert} className="h-8 px-2 text-xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onInsert}
+          className="h-8 px-2 text-xs"
+          aria-label={`Insert reference to ${asset.filename}`}
+        >
           <Plus className="h-3.5 w-3.5" />
           Insert
         </Button>
-        <Button size="sm" variant="outline" onClick={onCopy} className="h-8 px-2 text-xs">
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onCopy}
+          className="h-8 px-2 text-xs"
+          aria-label={`Copy reference to ${asset.filename}`}
+        >
           <Copy className="h-3.5 w-3.5" />
           Copy
         </Button>
@@ -148,6 +163,7 @@ function AssetRow({
           variant="outline"
           onClick={onDelete}
           className="h-8 px-2 text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+          aria-label={`Delete ${asset.filename}`}
         >
           <Trash2 className="h-3.5 w-3.5" />
           Delete
