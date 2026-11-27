@@ -54,7 +54,7 @@ export function Footer() {
 
         <div className="flex flex-col justify-between gap-4 border-t border-[color:var(--landing-line)] py-5 font-mono text-[11px] text-[color:var(--landing-muted)] md:flex-row">
           <span>© {new Date().getFullYear()} markdown_video</span>
-          <span>paper texture · registration marks · real rendered artifacts</span>
+          <span>plum hairlines · warm themes · real rendered artifacts</span>
         </div>
 
         <div aria-hidden="true" className="landing-outline-word landing-display-tight pointer-events-none select-none text-center text-[clamp(5.5rem,17vw,19rem)] font-semibold leading-[0.68] tracking-[-0.09em]">

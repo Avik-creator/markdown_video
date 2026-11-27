@@ -34,7 +34,7 @@ export function LocalePicker({ className }: { className?: string }) {
     <div
       data-locale-picker="true"
       className={cn(
-        "flex items-center gap-1.5 rounded-md border border-border bg-black/40 px-2 py-1 text-xs text-neutral-200 shadow-sm backdrop-blur",
+        "flex items-center gap-1.5 rounded-md border border-border bg-preview-canvas/70 px-2 py-1 text-xs text-[#fdebf4] shadow-sm backdrop-blur",
         className
       )}
     >
@@ -49,7 +49,7 @@ export function LocalePicker({ className }: { className?: string }) {
         className="cursor-pointer rounded bg-transparent font-medium text-foreground outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent"
       >
         {locales.map((locale) => (
-          <option key={locale} value={locale} className="bg-neutral-950 text-foreground">
+          <option key={locale} value={locale} className="bg-popover text-popover-foreground">
             {locale}
           </option>
         ))}

@@ -121,7 +121,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
 
     if (!currentScene) {
       return (
-        <div className="flex-1 flex items-center justify-center bg-[#0d0d12]">
+        <div className="flex-1 flex items-center justify-center bg-preview-canvas">
           <p className="text-muted-foreground">No scenes to preview</p>
         </div>
       );
@@ -130,7 +130,7 @@ export const ScenePreview = forwardRef<HTMLDivElement, object>(
     return (
       <div
         className={cn(
-          "flex-1 min-h-0 min-w-0 flex bg-[#0d0d12]",
+          "flex-1 min-h-0 min-w-0 flex bg-preview-canvas",
           isEmbedded
             ? "p-2 overflow-auto"
             : "items-center justify-center p-4 overflow-hidden"
