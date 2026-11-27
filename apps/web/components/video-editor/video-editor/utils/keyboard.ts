@@ -220,6 +220,29 @@ export function shouldUsePlainShortcut(
   return true;
 }
 
+/**
+ * Whether undo/redo keystrokes targeted at this element should keep their
+ * native text-editing behavior instead of triggering document-level undo.
+ * True for inputs, textareas, and contenteditable surfaces OUTSIDE the
+ * CodeMirror markdown editor — the store's document history stays the
+ * intended undo inside the editor itself.
+ */
+export function isNativeTextUndoTarget(target: EventTarget | null): boolean {
+  const shortcutTarget = getShortcutTarget(target);
+  if (!shortcutTarget) return false;
+
+  const tagName = shortcutTarget.tagName?.toLowerCase();
+  const editable =
+    shortcutTarget.isContentEditable === true || tagName === "textarea" || tagName === "input";
+  if (!editable) return false;
+
+  if (typeof Element !== "undefined" && target instanceof Element && target.closest(".cm-editor")) {
+    return false;
+  }
+
+  return true;
+}
+
 /** Extract the small, testable target shape needed by shouldUsePlainShortcut. */
 export function getShortcutTarget(target: EventTarget | null): ShortcutTargetLike | null {
   if (typeof Element === "undefined" || !(target instanceof Element)) {
