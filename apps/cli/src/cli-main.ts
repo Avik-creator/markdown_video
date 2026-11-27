@@ -16,7 +16,22 @@ import { writePreviewFrames } from "./preview-output.js"
 import { renderFrames, renderVideo, type RenderProgress } from "./render.js"
 
 const require = createRequire(import.meta.url)
-const packageJson = require("../package.json") as { version: string }
+
+function loadPackageJson() {
+  // Source and npm layouts keep package.json one directory above cli-main/cli.js.
+  // Sandbox/job bundles place the executable and package.json in one flat
+  // directory instead, so accept that layout as a deliberate transport fallback.
+  for (const candidate of ["../package.json", "./package.json"]) {
+    try {
+      return require(candidate) as { version: string }
+    } catch {
+      // Try the next supported layout.
+    }
+  }
+  throw new Error("Could not locate the markdown-video package.json.")
+}
+
+const packageJson = loadPackageJson()
 
 const HELP = `markdown-video — render markdown scenes to MP4 or GIF
 
