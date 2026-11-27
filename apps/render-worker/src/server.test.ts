@@ -3,7 +3,11 @@ import type { Server } from "node:http"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import type { RenderWorkerConfig } from "./config.js"
-import { createRenderWorkerServer, type RenderWorkerRenderers } from "./server.js"
+import {
+  createRenderWorkerServer,
+  type RenderWorkerRenderers,
+  type RenderWorkerTimeoutOverrides,
+} from "./server.js"
 
 const secret = "worker-test-secret-with-32-chars"
 const markdown = "!scene\n!duration 1\n!text\nHello"
@@ -54,8 +58,11 @@ afterEach(async () => {
   )
 })
 
-async function startServer(renderers = rendererOverrides()) {
-  const server = createRenderWorkerServer(config(), renderers)
+async function startServer(
+  renderers = rendererOverrides(),
+  timeoutOverrides: RenderWorkerTimeoutOverrides = {},
+) {
+  const server = createRenderWorkerServer(config(), renderers, timeoutOverrides)
   openServers.push(server)
   await new Promise<void>((resolve) => {
     server.listen(0, "127.0.0.1", () => resolve())
@@ -74,6 +81,23 @@ function postJson(url: string, body: unknown, authorized = true) {
     },
     body: JSON.stringify(body),
   })
+}
+
+function videoOutput(elapsedSeconds = 0.25) {
+  return {
+    mp4: Buffer.from("fake-mp4"),
+    duration: 1,
+    width: 1280,
+    height: 720,
+    fps: 24,
+    totalFrames: 24,
+    sizeBytes: 8,
+    elapsedSeconds,
+  }
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms))
 }
 
 describe("render worker HTTP service", () => {
@@ -145,6 +169,101 @@ describe("render worker HTTP service", () => {
     expect(response.headers.get("x-mv-duration")).toBe("1.000")
     expect(response.headers.get("x-mv-width")).toBe("1280")
     expect(Buffer.from(await response.arrayBuffer()).toString()).toBe("fake-mp4")
+  })
+
+  it("gives a queued video its full execution timeout after dequeue", async () => {
+    let invocation = 0
+    const renderers: RenderWorkerRenderers = {
+      ...rendererOverrides(),
+      renderVideo: vi.fn(async () => {
+        invocation += 1
+        await delay(invocation === 1 ? 60 : 50)
+        return videoOutput()
+      }),
+    }
+    const baseUrl = await startServer(renderers, {
+      videoTimeoutMs: 100,
+      queueWaitTimeoutMs: 1_000,
+    })
+
+    const firstPromise = postJson(`${baseUrl}/v1/video`, { markdown })
+    await delay(10)
+    const secondPromise = postJson(`${baseUrl}/v1/video`, { markdown })
+    const [first, second] = await Promise.all([firstPromise, secondPromise])
+
+    expect(first.status).toBe(200)
+    expect(second.status).toBe(200)
+    expect(renderers.renderVideo).toHaveBeenCalledTimes(2)
+  })
+
+  it("still enforces the execution timeout after rendering starts", async () => {
+    const renderers: RenderWorkerRenderers = {
+      ...rendererOverrides(),
+      renderVideo: vi.fn(async (_input, signal) => {
+        await new Promise<void>((_resolve, reject) => {
+          signal.addEventListener(
+            "abort",
+            () => {
+              const error = new Error("cancelled")
+              error.name = "AbortError"
+              reject(error)
+            },
+            { once: true },
+          )
+        })
+        return videoOutput()
+      }),
+    }
+    const baseUrl = await startServer(renderers, {
+      videoTimeoutMs: 30,
+      queueWaitTimeoutMs: 1_000,
+    })
+
+    const response = await postJson(`${baseUrl}/v1/video`, { markdown })
+
+    expect(response.status).toBe(504)
+    expect(await response.json()).toEqual({ error: "Render timed out" })
+  })
+
+  it("returns an honest busy error when the queue wait deadline expires", async () => {
+    let releaseFirst!: () => void
+    let markFirstStarted!: () => void
+    const firstGate = new Promise<void>((resolve) => {
+      releaseFirst = resolve
+    })
+    const firstStarted = new Promise<void>((resolve) => {
+      markFirstStarted = resolve
+    })
+    let invocation = 0
+    const renderers: RenderWorkerRenderers = {
+      ...rendererOverrides(),
+      renderVideo: vi.fn(async () => {
+        invocation += 1
+        if (invocation === 1) {
+          markFirstStarted()
+          await firstGate
+        }
+        return videoOutput()
+      }),
+    }
+    const baseUrl = await startServer(renderers, {
+      videoTimeoutMs: 200,
+      queueWaitTimeoutMs: 30,
+    })
+
+    const firstPromise = postJson(`${baseUrl}/v1/video`, { markdown })
+    await firstStarted
+    const second = await postJson(`${baseUrl}/v1/video`, { markdown })
+
+    expect(second.status).toBe(503)
+    expect(second.headers.get("retry-after")).toBe("5")
+    expect(await second.json()).toEqual({
+      error: "Render worker is busy; queue wait timed out",
+    })
+
+    releaseFirst()
+    const first = await firstPromise
+    expect(first.status).toBe(200)
   })
 
   it("enforces the request body cap before validation", async () => {
