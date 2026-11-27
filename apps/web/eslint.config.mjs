@@ -34,6 +34,7 @@ export default defineConfig([
     "node_modules/**",
     "coverage/**",
     "public/**",
+    "lib/render-sandbox/cli-bundle/**",
     "out/**",
     "build/**",
     "next-env.d.ts",

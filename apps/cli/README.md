@@ -93,6 +93,12 @@ cat hello.md | markdown-video render - -o hello.mp4
 
 # Burn generated text-scene captions into the captured frames
 markdown-video render hello.md -o hello-captioned.mp4 --burn-captions
+
+# Capture exact-timeline lossless preview frames as JSON/base64
+markdown-video preview hello.md --times 0,1.5,3 --json
+
+# Or write the same direct PNG captures to files
+markdown-video preview hello.md --times 0,1.5,3 --output-dir preview-frames
 ```
 
 Progress is written to stderr. The final line reports dimensions, format, frame count, fps, elapsed time, and output path.
@@ -131,6 +137,28 @@ markdown-video --markdown "<markdown>" --output <output.mp4>
 | `-h, --help` | Print help. |
 
 Input and output paths must be different files. MP4 output is H.264/yuv420p in an `.mp4` container. If present, music is encoded as AAC at 128 kbps. GIF output uses palette generation and Bayer dithering and loops forever.
+
+### `markdown-video preview`
+
+```text
+markdown-video preview <input.md> --times 0,1.5,3 --json
+markdown-video preview <input.md> --times 0,1.5,3 --output-dir frames
+markdown-video preview - --times 0,1 --json                  # read stdin
+markdown-video preview --markdown "<markdown>" --json
+```
+
+`preview` captures lossless PNG screenshots by seeking the real browser renderer to exact timeline times. It does not render an mp4 first and does not extract lossy encoded video frames. This is useful both for visual inspection and for agent/API integrations that need compact machine-readable frame data.
+
+Input uses the same three forms as `render`: one file path, `-` for stdin, or `--markdown`/`-m` text. `--times` is a comma-separated list of finite non-negative seconds (maximum 16 frames). Every requested time is validated against the parsed video duration before Chromium starts; values beyond the duration are usage errors. When `--times` is omitted, five times are spread inclusively across the duration, including the first and final states.
+
+Choose exactly one output mode:
+
+| Option | Meaning |
+| --- | --- |
+| `--json` | Print exactly one JSON object to stdout: `{duration,width,height,frames:[{time,pngBase64}]}`. No extra stdout text is emitted; diagnostics use stderr. |
+| `--output-dir <dir>` | Write numbered files such as `frame-001-t0.000s.png`. Existing files are protected unless `--overwrite` is passed. |
+
+Relevant render flags are supported: `--resolution` (`480p` through `4k`; default `1080p`), `--aspect-ratio` (`16:9`, `9:16`, `1:1`, `4:3`), `--locale`, `--deny-remote-network`, and `--chromium`. Encoding-specific flags such as `--quality`, `--speed`, `--fps`, `--format`, and `--burn-captions` do not apply because direct PNG capture invokes no video encoder. `--output-dir` is confined to the current working directory unless `--allow-outside-cwd` is explicit.
 
 ### `markdown-video doctor`
 

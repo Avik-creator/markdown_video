@@ -12,10 +12,10 @@ import {
   storeRenderVideo,
 } from "@/lib/render-storage";
 import {
-  isRenderWorkerConfigured,
-  renderWorkerPreview,
-  renderWorkerVideo,
-} from "@/lib/render-worker-client";
+  renderBackendPreview,
+  renderBackendVideo,
+  requireRenderBackend,
+} from "@/lib/render-backend";
 
 export const MAX_MCP_RENDER_MARKDOWN_CHARS = 100_000;
 export const MAX_MCP_RENDER_MARKDOWN_BYTES = 400_000;
@@ -122,18 +122,10 @@ function publicOrigin(extra: ToolExtra) {
   return extra.requestInfo?.url?.origin ?? "http://localhost:3000";
 }
 
-function requireRenderWorker() {
-  if (!isRenderWorkerConfigured()) {
-    throw new Error(
-      "Rendering is not configured on this deployment: RENDER_WORKER_URL and RENDER_WORKER_SHARED_SECRET are required."
-    );
-  }
-}
-
 export function registerRenderTools(server: McpServer) {
   server.tool(
     "render_preview",
-    "Renders 3–6 direct PNG screenshots of a markdown_video document so agents can visually inspect their output. Duration is capped at 30s; remote image URLs are blocked by the render worker.",
+    "Renders 3–6 direct PNG screenshots of a markdown_video document so agents can visually inspect their output. Duration is capped at 30s; remote image URLs are blocked by the configured render backend.",
     {
       markdown: markdownSchema,
       times: timesSchema,
@@ -143,14 +135,14 @@ export function registerRenderTools(server: McpServer) {
       locale: localeSchema.describe("Optional locale code such as en or pt-BR"),
     },
     async ({ markdown, times, aspectRatio, locale }, extra) => {
-      requireRenderWorker();
+      requireRenderBackend();
       await throwIfRateLimited(
         extra,
         enforceMcpRenderPreviewRateLimit,
         "render_preview"
       );
 
-      const result = await renderWorkerPreview({
+      const result = await renderBackendPreview({
         markdown,
         ...(times ? { times } : {}),
         ...(aspectRatio ? { aspectRatio } : {}),
@@ -177,7 +169,7 @@ export function registerRenderTools(server: McpServer) {
 
   server.tool(
     "render_video",
-    "Renders a markdown_video document to MP4 and returns a temporary URL. Caps: 30s, 1080p, 30fps, 6 MiB. URLs expire after 1 hour. Remote image URLs are blocked by the render worker.",
+    "Renders a markdown_video document to MP4 and returns a temporary URL. Caps: 30s, 1080p, 30fps, 6 MiB. URLs expire after 1 hour. Remote image URLs are blocked by the configured render backend.",
     {
       markdown: markdownSchema,
       options: z
@@ -193,7 +185,7 @@ export function registerRenderTools(server: McpServer) {
         .describe("Render options; defaults are 720p, medium quality, fast encoding, 24fps, 16:9"),
     },
     async ({ markdown, options }, extra) => {
-      requireRenderWorker();
+      requireRenderBackend();
       if (!isRenderStorageConfigured()) {
         throw new Error(
           "Rendering is not configured on this deployment: Redis render storage is unavailable. Set UPSTASH_REDIS_REST_URL/TOKEN or KV_REST_API_URL/TOKEN."
@@ -205,7 +197,7 @@ export function registerRenderTools(server: McpServer) {
         "render_video"
       );
 
-      const rendered = await renderWorkerVideo({
+      const rendered = await renderBackendVideo({
         markdown,
         ...(options ? { options } : {}),
       });
