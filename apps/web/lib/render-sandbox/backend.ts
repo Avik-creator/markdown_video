@@ -122,7 +122,13 @@ export interface SandboxRenderDependencies {
 
 export function isRenderSandboxConfigured(env = process.env) {
   if (env.VERCEL_OIDC_TOKEN) return true;
-  return Boolean(env.VERCEL_TOKEN && env.VERCEL_TEAM_ID && env.VERCEL_PROJECT_ID);
+  if (env.VERCEL_TOKEN && env.VERCEL_TEAM_ID && env.VERCEL_PROJECT_ID) return true;
+  // Inside a Vercel deployment the OIDC token is not an environment variable:
+  // it arrives per-request as the x-vercel-oidc-token header, which
+  // @vercel/oidc resolves from the request context when the SDK infers
+  // credentials. Treat every Vercel runtime as configured and let the SDK
+  // surface a clear error if OIDC federation is disabled for the project.
+  return Boolean(env.VERCEL);
 }
 
 function sandboxCredentials(env = process.env) {
@@ -131,6 +137,7 @@ function sandboxCredentials(env = process.env) {
   const teamId = env.VERCEL_TEAM_ID;
   const projectId = env.VERCEL_PROJECT_ID;
   if (token && teamId && projectId) return { token, teamId, projectId };
+  if (env.VERCEL) return {};
   throw new RenderSandboxConfigurationError(
     "Vercel Sandbox rendering is not configured. Set VERCEL_OIDC_TOKEN on Vercel, or VERCEL_TOKEN, VERCEL_TEAM_ID, and VERCEL_PROJECT_ID for API-token authentication."
   );

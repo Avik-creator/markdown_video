@@ -9,6 +9,7 @@ const envKeys = [
   "VERCEL_TOKEN",
   "VERCEL_TEAM_ID",
   "VERCEL_PROJECT_ID",
+  "VERCEL",
 ] as const;
 let savedEnv: Record<string, string | undefined> = {};
 
@@ -56,6 +57,15 @@ describe("render backend selection", () => {
     process.env.VERCEL_TOKEN = "token";
     process.env.VERCEL_TEAM_ID = "team";
     expect(getRenderBackend()).toBeNull();
+  });
+
+  it("selects the sandbox backend inside a Vercel deployment without explicit credentials", () => {
+    // At runtime the OIDC token arrives as the x-vercel-oidc-token request
+    // header rather than an env var; @vercel/oidc resolves it from the
+    // request context. VERCEL marks the deployment runtime itself.
+    process.env.VERCEL = "1";
+    expect(getRenderBackend()).toBe("sandbox");
+    delete process.env.VERCEL;
   });
 
   it("treats a malformed worker URL as a worker configuration error rather than silently falling back", () => {
