@@ -4,7 +4,10 @@
   "license": "MIT",
   "private": true,
   "scripts": {
+    "copy:ffmpeg": "node scripts/copy-ffmpeg-assets.mjs",
+    "predev": "pnpm run copy:ffmpeg",
     "dev": "next dev",
+    "prebuild": "pnpm run copy:ffmpeg",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
@@ -19,6 +22,7 @@
     "@codemirror/lint": "6.9.8",
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.15",
+    "@ffmpeg/core": "0.12.10",
     "@ffmpeg/ffmpeg": "0.12.15",
     "@lezer/highlight": "1.2.5",
     "@markdown-video/core": "workspace:*",
