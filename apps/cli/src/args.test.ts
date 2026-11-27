@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import { parseCliArgs } from "./args.js"
+import {
+  parseCliArgs,
+  parseDoctorCliArgs,
+  parseInstallBrowserCliArgs,
+} from "./args.js"
 import { UsageError } from "./errors.js"
 
 describe("parseCliArgs", () => {
@@ -61,5 +65,37 @@ describe("parseCliArgs", () => {
     expect(() => parseCliArgs(["input.md", "-o", "x.mp4", "--fps", "bad"])).toThrow(
       UsageError,
     )
+  })
+})
+
+describe("parseDoctorCliArgs", () => {
+  it("parses dependency overrides", () => {
+    expect(parseDoctorCliArgs([
+      "--ffmpeg",
+      "/opt/ffmpeg/bin/ffmpeg",
+      "--chromium",
+      "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    ])).toEqual({
+      ffmpegPath: "/opt/ffmpeg/bin/ffmpeg",
+      chromiumExecutablePath: "/Applications/Chromium.app/Contents/MacOS/Chromium",
+      help: false,
+    })
+  })
+
+  it("rejects unexpected positional arguments", () => {
+    expect(() => parseDoctorCliArgs(["input.md"])).toThrow(UsageError)
+  })
+})
+
+describe("parseInstallBrowserCliArgs", () => {
+  it("parses --with-deps", () => {
+    expect(parseInstallBrowserCliArgs(["--with-deps"])).toEqual({
+      withDeps: true,
+      help: false,
+    })
+  })
+
+  it("rejects unexpected positional arguments", () => {
+    expect(() => parseInstallBrowserCliArgs(["chromium"])).toThrow(UsageError)
   })
 })
