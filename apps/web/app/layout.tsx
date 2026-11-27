@@ -2,6 +2,7 @@ import type React from "react";
 import type { Metadata, Viewport } from "next";
 import {
   Fira_Code,
+  Geist,
   Geist_Mono,
   IBM_Plex_Mono,
   Inconsolata,
@@ -20,28 +21,36 @@ import { PrivacyAnalytics } from "./privacy-analytics";
 // Text fallback arrays are intentionally empty: next/font concatenates them
 // inside each CSS variable, while globals.css composes the complete chain. The
 // composed order must be primary text face, color emoji, then platform fallback.
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-geist",
+  fallback: [],
+});
+
 const inter = Inter({
   subsets: ["latin"],
   variable: "--font-inter",
+  preload: false,
   fallback: [],
 });
 
 const geistMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-geist-mono",
+  preload: false,
   fallback: [],
 });
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   variable: "--font-playfair",
+  preload: false,
   fallback: [],
 });
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ["latin"],
   variable: "--font-jetbrains-family",
-  preload: false,
   fallback: [],
 });
 
@@ -195,8 +204,8 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#0a0a0f" },
+    { media: "(prefers-color-scheme: light)", color: "#fff4ec" },
+    { media: "(prefers-color-scheme: dark)", color: "#130a24" },
   ],
   width: "device-width",
   initialScale: 1,
@@ -211,7 +220,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable} ${notoColorEmoji.variable}`}
+      className={`${geist.variable} ${inter.variable} ${geistMono.variable} ${playfair.variable} ${jetbrainsMono.variable} ${firaCode.variable} ${sourceCodePro.variable} ${inconsolata.variable} ${ibmPlexMono.variable} ${merriweather.variable} ${notoColorEmoji.variable}`}
       suppressHydrationWarning
     >
       <body className="font-sans antialiased">
