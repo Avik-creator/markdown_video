@@ -1,6 +1,6 @@
 !scene
 !duration 2
-!background #f4f0e6
+!background #fff4ec
 !code
 typing: false
 fontSize: lg
@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: Avik-creator/markdown_video/action@<sha>
+      - uses: Avik-creator/markdown_video/action@main
         with:
           markdown-path: release.md
           output-name: release-demo.mp4

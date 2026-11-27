@@ -2,12 +2,12 @@
 
 !scene
 !duration 1.7
-!background #f4f0e6
+!background #fff4ec
 !transition fade
 !text
 music lives on the document.
 size: xl
-color: #181614
+color: #2b1030
 fontFamily: display
 animation: none
 
@@ -15,12 +15,12 @@ animation: none
 
 !scene
 !duration 1.8
-!background #f4f0e6
+!background #fff4ec
 !transition fade
 !text
 captions follow the same timeline.
 size: xl
-color: #181614
+color: #2b1030
 fontFamily: display
 animation: fadeIn
 
@@ -28,11 +28,11 @@ animation: fadeIn
 
 !scene
 !duration 1.6
-!background #f4f0e6
+!background #130a24
 !transition fade
 !text
 export once. publish everywhere.
 size: xl
-color: #a81645
+color: #ff4fa3
 fontFamily: sans
 animation: fadeIn
