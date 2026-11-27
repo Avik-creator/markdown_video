@@ -2,12 +2,12 @@ import { spawn } from "node:child_process"
 import { createRequire } from "node:module"
 import path from "node:path"
 
-import { chromium, type Browser } from "playwright"
+import { chromium, type Browser } from "playwright-core"
 
 import { RenderError } from "./errors.js"
 
 const require = createRequire(import.meta.url)
-const playwrightPackageJson = require("playwright/package.json") as { version: string }
+const playwrightPackageJson = require("playwright-core/package.json") as { version: string }
 
 export const PLAYWRIGHT_VERSION = playwrightPackageJson.version
 
@@ -34,7 +34,7 @@ export function chromiumInstallInstructions() {
     "  markdown-video install-browser",
     "On Linux, install Chromium together with its system libraries:",
     "  markdown-video install-browser --with-deps",
-    `Equivalent explicit command: npx playwright@${PLAYWRIGHT_VERSION} install chromium`,
+    `Equivalent explicit command: npx playwright-core@${PLAYWRIGHT_VERSION} install chromium`,
     "If you use a system Chrome/Chromium instead, pass `--chromium /path/to/browser`.",
   ].join("\n")
 }
@@ -134,7 +134,7 @@ export async function installPlaywrightChromium({
 }: {
   withDeps?: boolean | undefined
 } = {}) {
-  const packageJsonPath = require.resolve("playwright/package.json")
+  const packageJsonPath = require.resolve("playwright-core/package.json")
   const cliPath = path.join(path.dirname(packageJsonPath), "cli.js")
   const args = [
     cliPath,

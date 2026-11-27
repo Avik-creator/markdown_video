@@ -4,7 +4,7 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import { PNG } from "pngjs"
-import { chromium, type Browser } from "playwright"
+import { chromium, type Browser } from "playwright-core"
 import { afterAll, beforeAll, describe, expect, it } from "vitest"
 
 import { serveRenderPage, type RenderPageServer } from "../../src/static-server.js"

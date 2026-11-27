@@ -46,7 +46,7 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: playwright-${{ runner.os }}-
-      - run: pnpm --filter markdown-video exec playwright install chromium
+      - run: pnpm --filter markdown-video exec playwright-core install chromium
         timeout-minutes: 10
       - name: Ensure native ffmpeg/ffprobe
         run: |

@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { performance } from "node:perf_hooks"
 
-import { type Browser, type Locator, type Page } from "playwright"
+import { type Browser, type Locator, type Page } from "playwright-core"
 import {
   captionSidecarPathsForOutput,
   createRenderPlan,

@@ -14,7 +14,7 @@ rendering.
 - Playwright Chromium:
 
   ```sh
-  pnpm --filter markdown-video exec playwright install chromium
+  pnpm --filter markdown-video exec playwright-core install chromium
   ```
 
 Before use in this monorepo, build the workspace dependencies:

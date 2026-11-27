@@ -100,7 +100,7 @@ Supported runner: Linux (`ubuntu-latest` recommended). The action:
 4. caches Playwright Chromium by OS/architecture/Playwright version;
 5. caches compiled `dist/` output by a hash of the renderer source;
 6. installs only the `markdown-video...` filtered workspace dependency closure (core, scenes, render page, and CLI), not the web app or worker;
-7. verifies that Chromium actually launches, falling back to `playwright install-deps chromium` only when necessary;
+7. verifies that Chromium actually launches, falling back to `playwright-core install-deps chromium` only when necessary;
 8. uses system ffmpeg/ffprobe, installing Debian/Ubuntu `ffmpeg` with apt only when either binary is missing.
 
 The CLI intentionally does not vendor ffmpeg. `ffmpeg-static` can be GPL build
