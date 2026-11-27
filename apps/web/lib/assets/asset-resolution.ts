@@ -11,6 +11,10 @@ import {
   normalizeRelativeAssetFilename,
   type AssetMetadata,
 } from "./asset-store";
+import {
+  extractRelativeAssetReferences,
+  uniqueAssetReferences,
+} from "./asset-references";
 
 export type AssetSourceProvenance =
   | "asset-store"
@@ -162,6 +166,25 @@ export function resolveBrowserAssetSrcSync(src: string): string {
     console.warn(`[markdown-video] Could not read uploaded asset "./${filename}":`, error);
   });
   return src;
+}
+
+
+/**
+ * Warm every uploaded asset referenced by a markdown document. Export uses
+ * this before deterministic frame capture so first-use IndexedDB latency can
+ * never race a small number of animation frames.
+ */
+export async function warmBrowserAssetSources(markdown: string): Promise<void> {
+  const ready = await ensureAssetLibraryLoaded();
+  if (!ready) return;
+  const assets = useAssetLibrary.getState().assets;
+  const warmups: Promise<unknown>[] = [];
+
+  for (const reference of uniqueAssetReferences(extractRelativeAssetReferences(markdown))) {
+    const asset = assets.find((candidate) => candidate.filename === reference.filename);
+    if (asset) warmups.push(getAssetObjectUrl(asset.id));
+  }
+  await Promise.all(warmups);
 }
 
 /** Test hook for pending object-url request state. */

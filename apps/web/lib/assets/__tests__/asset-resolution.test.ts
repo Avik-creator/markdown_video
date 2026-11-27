@@ -4,6 +4,7 @@ import {
   getAssetObjectUrl,
   resolveBrowserAssetSource,
   resolveBrowserAssetSrcSync,
+  warmBrowserAssetSources,
 } from "../asset-resolution";
 import {
   resetAssetLibraryForTests,
@@ -102,6 +103,14 @@ describe("browser asset resolution", () => {
     await useAssetLibrary.getState().deleteAsset(upload.asset.id);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith(first);
     expect(getCachedAssetObjectUrl(upload.asset.id)).toBeNull();
+  });
+
+  it("warms all uploaded references before deterministic export capture", async () => {
+    const image = new File(["png"], "logo.png", { type: "image/png" });
+    const [upload] = (await useAssetLibrary.getState().uploadFiles([image])).uploaded;
+
+    await warmBrowserAssetSources("!scene\n!image src:./logo.png");
+    expect(getCachedAssetObjectUrl(upload.asset.id)).toMatch(/^blob:asset-/);
   });
 
   it("keeps the synchronous scene resolver pure and falls back until the cache is warm", async () => {
