@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getDirectiveValueOptions } from "@markdown-video/core";
-import { EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
+import { DIRECTIVE_SNIPPETS, EXAMPLE_SNIPPETS, EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
+import { getDiagnostics } from "../diagnostics";
 
 /**
  * The snippet/schema invariant lives here rather than at module scope: a
@@ -23,7 +24,10 @@ describe("snippet schema bindings", () => {
   it("registers a binding for every schema value the templates interpolate", () => {
     // Every recorded binding is used in at least one template, so the
     // registration list cannot drift apart from the templates themselves.
-    const templates = Object.values(EXAMPLE_TEMPLATES);
+    const templates = [
+      ...Object.values(EXAMPLE_TEMPLATES),
+      ...DIRECTIVE_SNIPPETS.map((snippet) => snippet.markdown),
+    ];
     for (const { value } of SNIPPET_SCHEMA_BINDINGS) {
       expect(
         templates.some((template) => template.includes(value)),
@@ -31,4 +35,24 @@ describe("snippet schema bindings", () => {
       ).toBe(true);
     }
   });
+
+  it.each(DIRECTIVE_SNIPPETS.map((snippet) => [snippet.name, snippet.markdown] as const))(
+    "directive snippet %s is diagnostic-clean inside a scene",
+    (_name, markdown) => {
+      const document = ["!scene", markdown, "!text", "Content"].join("\n");
+      expect(getDiagnostics(document).filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
+    }
+  );
+
+  it("keeps palette metadata keyed to the canonical snippet templates", () => {
+    expect(EXAMPLE_SNIPPETS.map((snippet) => snippet.id).sort()).toEqual(
+      Object.keys(EXAMPLE_TEMPLATES).sort()
+    );
+    for (const snippet of EXAMPLE_SNIPPETS) {
+      expect(snippet.markdown).toBe(EXAMPLE_TEMPLATES[snippet.id]);
+      expect(snippet.name.length).toBeGreaterThan(0);
+      expect(snippet.description.length).toBeGreaterThan(0);
+    }
+  });
+
 });

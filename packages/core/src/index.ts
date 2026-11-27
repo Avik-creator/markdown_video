@@ -61,6 +61,17 @@ export {
 } from "./parser/index.js";
 export type { ParseResult } from "./parser/index.js";
 
+// Schema-driven source inspection and round-trip-safe directive editing.
+export { applyDirectiveValueEdit, inspectSceneDirective } from "./markdown-edits.js";
+export type {
+  DirectiveEditableScalar,
+  DirectiveEditAction,
+  DirectiveEditResult,
+  DirectiveValueEdit,
+  InspectedDirectiveValue,
+  SceneDirectiveInspection,
+} from "./markdown-edits.js";
+
 // Pure caption extraction and SRT/WebVTT sidecar serialization. Cue timing is
 // derived from the same timeline segments used for preview/export.
 export {

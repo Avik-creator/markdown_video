@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { createRef } from "react";
 import { Transaction } from "@codemirror/state";
@@ -406,16 +406,61 @@ describe("MarkdownEditor (CodeMirror)", () => {
     });
   });
 
-  describe("quick templates", () => {
-    it("appends the template with a scene separator", () => {
-      render(<MarkdownEditor ref={ref} />);
-      const intro = [...document.querySelectorAll("button")].find(
-        (b) => b.textContent?.trim() === "Intro"
+  describe("scene insertion", () => {
+    it("exposes a single palette entry point instead of snippet-specific buttons", () => {
+      const openPalette = vi.fn();
+      render(<MarkdownEditor ref={ref} onOpenInsertPalette={openPalette} />);
+      const button = [...document.querySelectorAll("button")].find(
+        (b) => b.textContent?.trim().startsWith("Insert")
       );
-      expect(intro).toBeDefined();
-      act(() => intro!.click());
-      expect(view().state.doc.toString()).toContain("Welcome to My Video");
-      expect(view().state.doc.toString()).toContain("\n\n---\n\n");
+      expect(button).toBeDefined();
+      act(() => button!.click());
+      expect(openPalette).toHaveBeenCalledOnce();
+    });
+
+    it("insertSceneTemplate appends and commits a snippet as one undoable action", () => {
+      render(<MarkdownEditor ref={ref} />);
+      const before = useVideoStore.getState().markdown;
+      let inserted = false;
+      act(() => {
+        inserted = ref.current!.insertSceneTemplate("!scene\n!text\nInserted\n!duration 2s");
+      });
+
+      expect(inserted).toBe(true);
+      expect(useVideoStore.getState().markdown).toContain("Inserted");
+      expect(useVideoStore.getState().markdown).toContain("\n\n---\n\n");
+      expect(useVideoStore.getState().scenes).toHaveLength(2);
+      expect(useVideoStore.getState().history.past).toEqual([before]);
+
+      act(() => useVideoStore.getState().undo());
+      expect(useVideoStore.getState().markdown).toBe(before);
+    });
+
+    it("inserts after the current scene rather than at the end when another scene follows", () => {
+      resetStore("!scene\n!text\nOne\n!duration 1s\n\n---\n\n!scene\n!text\nTwo\n!duration 1s");
+      render(<MarkdownEditor ref={ref} />);
+      act(() => {
+        ref.current!.insertSceneTemplate("!scene\n!text\nInserted\n!duration 2s");
+      });
+
+      const markdown = useVideoStore.getState().markdown;
+      expect(markdown.indexOf("Inserted")).toBeLessThan(markdown.indexOf("Two"));
+      expect(markdown).toContain("One\n!duration 1s\n\n---\n\n!scene\n!text\nInserted");
+    });
+
+
+    it("insertDirective targets the scene containing the editor cursor", () => {
+      resetStore("!scene\n!text\nOne\n!duration 1s\n\n---\n\n!scene\n!text\nTwo\n!duration 1s");
+      render(<MarkdownEditor ref={ref} />);
+      const cursor = view().state.doc.toString().indexOf("Two");
+      act(() => {
+        view().dispatch({ selection: { anchor: cursor } });
+        ref.current!.insertDirective("!background #123456");
+      });
+
+      const markdown = useVideoStore.getState().markdown;
+      expect(markdown).toContain("Two\n!duration 1s\n!background #123456");
+      expect(useVideoStore.getState().scenes[1].background).toBe("#123456");
     });
   });
 

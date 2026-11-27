@@ -840,6 +840,7 @@ function parseMarkdownInternal(
             }
 
             case DIRECTIVE_CASES.CALLOUT: {
+              const calloutLine = i + 1;
               const { positional } = parseInlineArguments(directiveArgs);
               const arrow = parseDirectiveEnumOrDefault<CalloutArrow>(
                 "callout",
@@ -862,6 +863,7 @@ function parseMarkdownInternal(
                 target: getInlinePropertyValue("callout", directiveArgs, "target"),
                 style,
               };
+              sourceMap.callout = { startLine: calloutLine, endLine: calloutLine };
               i++;
               break;
             }
@@ -1111,6 +1113,7 @@ function parseMarkdownInternal(
             }
 
             case DIRECTIVE_CASES.LAYOUT: {
+              const layoutLine = i + 1;
               scene.type = "split";
               const direction = parseDirectiveEnumOrDefault<LayoutSplitDirection>(
                 "layout",
@@ -1140,6 +1143,7 @@ function parseMarkdownInternal(
                 ratio: 0.5,
               };
               i = parsedLayout.endIndex;
+              sourceMap.layout = { startLine: layoutLine, endLine: i };
               break;
             }
 
@@ -1342,11 +1346,13 @@ function parseMarkdownInternal(
             }
 
             case DIRECTIVE_CASES.LOCALE: {
+              const localeLine = i + 1;
               const { positional } = parseInlineArguments(directiveArgs);
               const locale = firstInlineValue(positional, 0);
               if (locale) {
                 scene.locale = locale;
               }
+              sourceMap.locale = { startLine: localeLine, endLine: localeLine };
               i++;
               break;
             }

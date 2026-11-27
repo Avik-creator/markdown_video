@@ -276,6 +276,8 @@ export interface SceneSourceMap {
   progress?: SourceRange;
   diff?: SourceRange;
   callout?: SourceRange;
+  layout?: SourceRange;
+  locale?: SourceRange;
 }
 
 export interface Scene {
