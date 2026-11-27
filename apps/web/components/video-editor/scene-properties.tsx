@@ -253,6 +253,9 @@ function ValueControl({
     flushCommit(null);
   }, [flushCommit]);
 
+  const canClear =
+    !schema.required ||
+    (inspection.kind === "positional" && REMOVABLE_REQUIRED_POSITIONAL_DIRECTIVES.has(directive));
   const disabled = Boolean(disabledReason);
   const inputClass = cn(
     "w-full rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-sm text-gray-900 shadow-sm outline-none transition-colors",
@@ -276,7 +279,7 @@ function ValueControl({
     const raw = inspection.present ? String(inspection.value ?? inspection.rawValue ?? "") : "";
     const selectValue = inspection.present && raw ? raw : "__default";
     return (
-      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={clear}>
+      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={canClear ? clear : undefined}>
         <select
           aria-label={accessibilityLabel}
           value={selectValue}
@@ -312,7 +315,7 @@ function ValueControl({
           ? schema.default
           : false;
     return (
-      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={clear}>
+      <ControlShell label={label} accessibilityLabel={accessibilityLabel} inspection={inspection} onJump={onJump} onClear={canClear ? clear : undefined}>
         <label className="flex min-h-9 cursor-pointer items-center justify-between rounded-md border border-gray-200 bg-white px-2.5 py-1.5 dark:border-neutral-800 dark:bg-neutral-900">
           <span className="text-sm text-gray-700 dark:text-neutral-300">
             {effective ? "Enabled" : "Disabled"}
@@ -342,7 +345,7 @@ function ValueControl({
         accessibilityLabel={accessibilityLabel}
         inspection={inspection}
         onJump={onJump}
-        onClear={clear}
+        onClear={canClear ? clear : undefined}
         error={focused ? draftError ?? undefined : undefined}
         hint={!focused && !inspection.present && schema.default !== undefined ? `Default: ${schema.default}` : undefined}
       >
@@ -421,7 +424,7 @@ function ValueControl({
       accessibilityLabel={accessibilityLabel}
       inspection={inspection}
       onJump={onJump}
-      onClear={schema.required && !(inspection.kind === "positional" && REMOVABLE_REQUIRED_POSITIONAL_DIRECTIVES.has(directive)) ? undefined : clear}
+      onClear={canClear ? clear : undefined}
       error={focused ? draftError ?? undefined : undefined}
       hint={!focused && !inspection.present && schema.default !== undefined ? `Default: ${schema.default}` : undefined}
     >
