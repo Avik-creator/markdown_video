@@ -121,6 +121,9 @@ async function main() {
   await rm(outputDir, { recursive: true, force: true })
   await mkdir(outputDir, { recursive: true })
   await cp(distDir, path.join(outputDir, "dist"), { recursive: true })
+  // The composite source action stores its cache marker in dist. It is an
+  // action-runtime artifact, not package payload.
+  await rm(path.join(outputDir, "dist", ".markdown-video-action-build"), { force: true })
   await cp(path.join(cliDir, "README.md"), path.join(outputDir, "README.md"))
   await cp(path.join(repoRoot, "LICENSE"), path.join(outputDir, "LICENSE"))
   await writeFile(

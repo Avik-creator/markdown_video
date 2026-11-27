@@ -26,7 +26,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "markdown-video": "./dist/cli.js"
+    "markdown-video": "dist/cli.js"
   },
   "exports": {
     ".": {
