@@ -129,6 +129,46 @@ describe("SceneProperties schema-driven editing", () => {
     expect(markdown).toContain("!transition fade 0.5s");
   });
 
+  it("duplicates the current scene structurally and selects the copy", () => {
+    render(<SceneProperties />);
+
+    fireEvent.click(screen.getByLabelText("Duplicate scene"));
+
+    const state = useVideoStore.getState();
+    expect(state.scenes).toHaveLength(2);
+    expect(state.markdown.split("!scene")).toHaveLength(3);
+    expect(state.markdown).toContain(`!scene
+!text
+Welcome`);
+    expect(state.currentTime).toBe(3);
+    expect(state.history.past).toHaveLength(1);
+
+    act(() => state.undo());
+    expect(useVideoStore.getState().scenes).toHaveLength(1);
+  });
+
+  it("deletes the current scene with correct separator handling", () => {
+    resetStore(`${TEXT_SCENE}
+
+---
+
+!scene
+!text
+Second
+!duration 2s`);
+    render(<SceneProperties />);
+
+    fireEvent.click(screen.getByLabelText("Delete scene"));
+
+    const state = useVideoStore.getState();
+    expect(state.scenes).toHaveLength(1);
+    expect(state.markdown).toBe(`!scene
+!text
+Second
+!duration 2s`);
+    expect(state.scenes[0].text?.content).toBe("Second");
+  });
+
   it("keeps source jump integration on editable properties", () => {
     render(<SceneProperties />);
 

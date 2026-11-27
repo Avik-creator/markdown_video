@@ -5,6 +5,7 @@ import {
   BarChart3,
   Clock,
   Code,
+  Copy,
   ImageIcon,
   Layers,
   MousePointerClick,
@@ -13,6 +14,7 @@ import {
   Smartphone,
   Sparkles,
   Terminal,
+  Trash2,
   Type,
 } from "lucide-react";
 import {
@@ -26,6 +28,8 @@ import {
 } from "@markdown-video/core";
 import { useVideoStore } from "@/lib/use-video-store";
 import { applyDirectiveEditInEditor } from "@/lib/editor/apply-directive-edit";
+import { rewriteSceneOperation, type SceneOperation } from "@/lib/editor/scene-operations";
+import { flushPendingEditorText } from "@/lib/editor/codemirror/store-sync";
 import { Label } from "@components/ui/label";
 import { cn } from "@/lib/utils";
 
@@ -585,6 +589,36 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
     [setHighlightRange]
   );
 
+  const applySceneOperation = useCallback(
+    (operation: SceneOperation) => {
+      flushPendingEditorText();
+      const before = useVideoStore.getState();
+      const ranges = before.scenes.map((item) => item.sourceMap?.scene);
+      const rewritten = rewriteSceneOperation(before.markdown, ranges, sceneIndex, operation);
+      if (rewritten === null) {
+        console.warn(`[markdown-video] Scene ${operation} skipped: inconsistent scene source ranges`);
+        return false;
+      }
+
+      const sceneStart = before.scenes
+        .slice(0, sceneIndex)
+        .reduce((total, item) => total + item.duration, 0);
+      const duplicatedSceneEnd = sceneStart + (before.scenes[sceneIndex]?.duration ?? 0);
+      before.setMarkdown(rewritten);
+
+      const after = useVideoStore.getState();
+      if (operation === "duplicate") {
+        // Put playback and the properties panel on the new copy so the action
+        // is visible immediately rather than only as a markdown diff.
+        after.seekTo(Math.min(duplicatedSceneEnd, after.totalDuration));
+      } else {
+        after.seekTo(Math.min(sceneStart, after.totalDuration));
+      }
+      return true;
+    },
+    [sceneIndex]
+  );
+
   const TypeIcon = TYPE_ICONS[scene.type] || Layers;
   const contentSchema = inspections.content;
   const transitionPresent = inspections.transition?.present === true;
@@ -613,6 +647,26 @@ function EditableSceneProperties({ scene, sceneIndex }: { scene: Scene; sceneInd
               <div className="text-xs text-gray-500 dark:text-neutral-400">
                 Scene {sceneIndex + 1} of {scenes.length}
               </div>
+            </div>
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                aria-label="Duplicate scene"
+                title="Duplicate scene (undoable)"
+                onClick={() => applySceneOperation("duplicate")}
+                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-blue-50 hover:text-blue-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-blue-950/30 dark:hover:text-blue-400"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                aria-label="Delete scene"
+                title="Delete scene (undoable)"
+                onClick={() => applySceneOperation("delete")}
+                className="rounded p-1.5 text-gray-400 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:text-neutral-500 dark:hover:bg-red-950/30 dark:hover:text-red-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
 
