@@ -129,7 +129,12 @@ async function provision(sandbox) {
     },
   });
 
-  const runtimeEnv = { PLAYWRIGHT_BROWSERS_PATH };
+  const runtimeEnv = {
+    PLAYWRIGHT_BROWSERS_PATH,
+    PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+    HOME: JOB_DIR,
+    XDG_CACHE_HOME: `${JOB_DIR}/.cache`,
+  };
   await run(sandbox, "apt-get", ["update"], {
     sudo: true,
     timeoutMs: 8 * 60 * 1000,

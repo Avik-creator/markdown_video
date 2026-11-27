@@ -18,6 +18,14 @@ export const SANDBOX_PREVIEW_TIMEOUT_MS = 20_000;
 export const SANDBOX_VIDEO_TIMEOUT_MS = 45_000;
 const SANDBOX_FORK_LIFETIME_MS = 10 * 60_000;
 const JOB_CWD = "/vercel/sandbox/job";
+const SANDBOX_COMMAND_ENV = {
+  // Sandbox command env maps must be self-contained enough for the renderer
+  // even if the executor treats them as a replacement rather than an overlay.
+  PATH: "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+  HOME: JOB_CWD,
+  XDG_CACHE_HOME: "/vercel/sandbox/job/.cache",
+  PLAYWRIGHT_BROWSERS_PATH: "/vercel/sandbox/ms-playwright",
+} as const;
 const MAX_STDERR_CHARS = 1_000;
 
 const markdownSchema = z
@@ -304,11 +312,7 @@ async function runCliCommand(
     cwd: JOB_CWD,
     timeoutMs,
     signal,
-    env: {
-      // Keep fontconfig/Chromium caches inside the per-job filesystem. The
-      // template still owns the browser installation itself.
-      XDG_CACHE_HOME: "/vercel/sandbox/job/.cache",
-    },
+    env: SANDBOX_COMMAND_ENV,
   });
   const [stdout, stderr] = await Promise.all([command.stdout(), command.stderr()]);
   if (command.exitCode !== 0) {
