@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { getDirectiveValueOptions } from "@markdown-video/core";
 import { DIRECTIVE_SNIPPETS, EXAMPLE_SNIPPETS, EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
+import { getDiagnostics } from "../diagnostics";
 
 /**
  * The snippet/schema invariant lives here rather than at module scope: a
@@ -34,6 +35,14 @@ describe("snippet schema bindings", () => {
       ).toBe(true);
     }
   });
+
+  it.each(DIRECTIVE_SNIPPETS.map((snippet) => [snippet.name, snippet.markdown] as const))(
+    "directive snippet %s is diagnostic-clean inside a scene",
+    (_name, markdown) => {
+      const document = ["!scene", markdown, "!text", "Content"].join("\n");
+      expect(getDiagnostics(document).filter((diagnostic) => diagnostic.severity === "error")).toEqual([]);
+    }
+  );
 
   it("keeps palette metadata keyed to the canonical snippet templates", () => {
     expect(EXAMPLE_SNIPPETS.map((snippet) => snippet.id).sort()).toEqual(
