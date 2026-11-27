@@ -1,0 +1,23 @@
+1
+00:00:00,000 --> 00:00:02,400
+this video is a text file.
+
+2
+00:00:08,400 --> 00:00:10,600
+the editor writes the markdown for you.
+
+3
+00:00:15,800 --> 00:00:18,000
+captions. music. locales. agents.
+
+4
+00:00:18,000 --> 00:00:20,600
+write markdown.
+
+5
+00:00:20,600 --> 00:00:23,200
+render the video.
+
+6
+00:00:23,200 --> 00:00:26,400
+markdownvideo.avikmukherjee.com
