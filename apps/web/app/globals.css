@@ -25,7 +25,9 @@
   --foreground: #2b1030;
   --muted-foreground: #2b1030a6;
   --hairline: #2b103014;
-  --accent: #d81b7a;
+  /* AA-adjusted raspberry: visually the reference accent, deepened just
+     enough for 4.5:1 text contrast on cream. */
+  --accent: #d41674;
   --on-accent: #ffffff;
   --mark-ink: #c2410c;
   --mark-tint: #ff8a3d33;

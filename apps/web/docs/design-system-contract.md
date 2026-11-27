@@ -4,7 +4,7 @@ Derived from the public design language of `avikmukherjee.com` (inspected 2026-1
 
 ## Reference evidence
 
-- Light theme: warm cream-peach `background #fff4ec`, deep warm plum ink `foreground #2b1030`, muted ink `#2b1030a6`, raspberry accent `#d81b7a`, white on-accent, burnt-orange marker ink `#c2410c`, translucent orange marker tint `#ff8a3d33`.
+- Light theme: warm cream-peach `background #fff4ec`, deep warm plum ink `foreground #2b1030`, muted ink `#2b1030a6`, raspberry accent `#d81b7a` (implemented as the minimally deepened AA-accessible `#d41674` for product text/action use), white on-accent, burnt-orange marker ink `#c2410c`, translucent orange marker tint `#ff8a3d33`.
 - Dark theme: warm aubergine `background #130a24`, pink-cream ink `#fdebf4`, muted ink `#fdebf4a3`, bright raspberry `#ff4fa3`, dark plum on-accent, orange marker `#ffa24c`, tint `#ffa24c2e`.
 - Hairline system: ink-alpha lines rather than shadow-heavy elevation — `--hairline` 14 hex alpha, `--border` 24, `--line` 1c/1f, `--line-soft` 3d, `--line-strong` 45/40. Surfaces are ink at 0a alpha.
 - Supporting tones: destructive rose, live teal (`#0f8f8a` light / `#3ee6e0` dark), tag orange; occasional blue/cyan accents may be used only for syntax/status differentiation, never as a purple/indigo product theme.
