@@ -43,7 +43,7 @@ function rankSnippet(snippet: InsertableSnippet, query: string): number {
  * Searchable insertion surface for the same schema-validated scene snippets
  * used by the editor's quick-insert path. It is intentionally not a second
  * template engine: selecting a row only chooses which existing snippet the
- * editor inserts structurally after the current scene.
+ * editor inserts structurally at the correct scene boundary.
  */
 export function InsertPalette({ open, onOpenChange, onInsert }: InsertPaletteProps) {
   const [query, setQuery] = useState("");
@@ -127,7 +127,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
             <ul
               id="insert-palette-listbox"
               role="listbox"
-              aria-label="Scene snippets"
+              aria-label="Scenes and directives"
               className="min-h-64 flex-1 overflow-y-auto p-2"
             >
               {filtered.map((snippet, index) => {
