@@ -250,9 +250,20 @@ async function main() {
         `Template stopped.${stopped.snapshot?.id ? ` Snapshot: ${stopped.snapshot.id}` : " The API did not report a snapshot id; verify snapshot state before deploying."}`
       );
     } else {
-      console.error(
-        "\nProvisioning failed before the acceptance gate. The template sandbox was left to its normal timeout rather than snapshotting a known-good state. Re-run this script after fixing the failure."
-      );
+      try {
+        // Do not persist a partially provisioned filesystem over the last good
+        // template snapshot. Making the sandbox non-persistent before stop means
+        // this session is discarded; the next run re-enables persistence above.
+        await sandbox.update({ persistent: false });
+        await sandbox.stop();
+        console.error(
+          "\nProvisioning failed before the acceptance gate. The partial session was stopped without snapshotting; the previous template snapshot remains the fork source. Re-run this script after fixing the failure."
+        );
+      } catch (cleanupError) {
+        console.error(
+          `\nProvisioning failed, and cleanup of the partial session also failed: ${cleanupError instanceof Error ? cleanupError.message : String(cleanupError)}. Inspect and stop/delete the template sandbox manually before re-running.`
+        );
+      }
     }
   }
   console.log(`Vercel Sandbox template "${TEMPLATE_NAME}" is provisioned and ready for forks.`);
