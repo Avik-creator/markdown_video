@@ -210,11 +210,31 @@ function timeoutController(timeoutMs: number) {
   };
 }
 
+function cleanupSignal(timeoutMs: number) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  timer.unref?.();
+  return { signal: controller.signal, clear: () => clearTimeout(timer) };
+}
+
 async function cleanupSandbox(sandbox: SandboxInstance) {
-  const errors: unknown[] = [];
-  await sandbox.stop().catch((error) => errors.push(error));
-  await sandbox.delete({ deleteOrphanSnapshots: true }).catch((error) => errors.push(error));
-  return errors;
+  const stopTimeout = cleanupSignal(10_000);
+  const stopError = await sandbox
+    .stop({ signal: stopTimeout.signal })
+    .then(() => null)
+    .catch((error: unknown) => error);
+  stopTimeout.clear();
+
+  const deleteTimeout = cleanupSignal(10_000);
+  const deleteError = await sandbox
+    .delete({ deleteOrphanSnapshots: true, signal: deleteTimeout.signal })
+    .then(() => null)
+    .catch((error: unknown) => error);
+  deleteTimeout.clear();
+
+  // Delete is the terminal cleanup operation. If it succeeds, a transient
+  // stop/API race did not leak the fork and should not fail the render.
+  return deleteError ? [stopError, deleteError].filter(Boolean) : [];
 }
 
 async function withSandboxFork<T>(

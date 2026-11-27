@@ -43,8 +43,11 @@ function makeSandbox({
 } = {}) {
   const commandParams: unknown[] = [];
   const sandbox = {
-    writeFiles: vi.fn(async () => undefined),
-    runCommand: vi.fn(async (params: unknown) => {
+    writeFiles: vi.fn(async (_files: Array<{ path: string; content: unknown }>, _opts?: unknown) => {
+      void _files;
+      void _opts;
+    }),
+    runCommand: vi.fn(async (params: Record<string, unknown>) => {
       commandParams.push(params);
       return {
         exitCode,
@@ -52,15 +55,27 @@ function makeSandbox({
         stderr: async () => stderr,
       };
     }),
-    readFileToBuffer: vi.fn(async () => mp4),
-    stop: vi.fn(async () => ({})),
-    delete: vi.fn(async () => undefined),
+    readFileToBuffer: vi.fn(async (_file: unknown, _opts?: unknown) => {
+      void _file;
+      void _opts;
+      return mp4;
+    }),
+    stop: vi.fn(async (_opts?: unknown) => {
+      void _opts;
+      return {};
+    }),
+    delete: vi.fn(async (_opts?: unknown) => {
+      void _opts;
+    }),
   };
   return { sandbox, commandParams };
 }
 
 function makeDependencies(sandbox: ReturnType<typeof makeSandbox>["sandbox"]) {
-  const fork = vi.fn(async () => sandbox);
+  const fork = vi.fn(async (_params: Record<string, unknown>) => {
+    void _params;
+    return sandbox;
+  });
   return {
     fork,
     dependencies: {
@@ -133,7 +148,9 @@ describe("renderSandboxPreview", () => {
     expect(command.args[command.args.indexOf("--times") + 1]).toBe("0,0.5,1");
     expect(command.args).not.toContain("input.md;rm -rf /");
     expect(sandbox.stop).toHaveBeenCalledOnce();
-    expect(sandbox.delete).toHaveBeenCalledWith({ deleteOrphanSnapshots: true });
+    expect(sandbox.delete).toHaveBeenCalledWith(
+      expect.objectContaining({ deleteOrphanSnapshots: true })
+    );
   });
 
   it("uses five inclusive default preview times", async () => {
