@@ -114,7 +114,7 @@ const x = 1
           ].map(({ color }) => (
             <div key={color} className="text-center">
               <div className="w-full h-8 rounded" style={{ backgroundColor: color }} />
-              <span className="text-xs text-gray-500 mt-1 block">{color}</span>
+              <span className="text-xs text-muted-foreground mt-1 block">{color}</span>
             </div>
           ))}
         </div>

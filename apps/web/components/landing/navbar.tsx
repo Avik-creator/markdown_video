@@ -41,7 +41,7 @@ export function Navbar({ stargazersCount = 0 }: { stargazersCount?: number }) {
           <LandingThemeToggle />
           <Link
             href="/editor"
-            className="inline-flex h-10 items-center rounded-full bg-[color:var(--landing-ink)] px-4 text-[13px] font-medium text-[color:var(--landing-paper)] landing-action-shadow-sm transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+            className="tool-button tool-button-primary h-8 px-3 text-[12px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
           >
             open editor
           </Link>

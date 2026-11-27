@@ -60,7 +60,7 @@ export function SyntaxDemo() {
               <span aria-hidden="true" className="size-2 rounded-[2px] bg-[color:var(--landing-accent)]" />
               the document is the interface
             </p>
-            <h2 id="document-heading" className="landing-display-tight mt-6 text-[clamp(3rem,6vw,6.4rem)] font-medium leading-[0.9] tracking-[-0.06em]">
+            <h2 id="document-heading" className="landing-display-tight mt-6 text-[clamp(2.8rem,5.4vw,5.5rem)] font-medium leading-[0.9] tracking-[-0.06em]">
               no timeline.
               <br />
               <span className="text-[color:var(--landing-faint)]">no hidden project file.</span>
@@ -70,13 +70,13 @@ export function SyntaxDemo() {
               review, generate it with an agent, then render the same file locally or in CI.
             </p>
 
-            <div className="mt-9 overflow-x-auto rounded-[14px] border border-[color:var(--landing-line)] bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
+            <div className="mt-9 overflow-x-auto rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
               <code className="whitespace-pre">{cliExample}</code>
             </div>
           </Reveal>
 
           <Reveal delay={0.1}>
-            <div className="landing-dark-card relative rounded-[20px] p-4 text-[#f4efe2] sm:p-5">
+            <div className="landing-dark-card relative rounded-md p-4 text-[color:var(--landing-dark-card-ink)] sm:p-5">
               <div className="mb-4 flex items-center justify-between border-b border-white/10 pb-4">
                 <span className="font-mono text-[11px] text-white/48">landing-i18n.video.md</span>
                 <span className="rounded-full border border-white/12 px-2.5 py-1 font-mono text-[10px] text-white/58">
@@ -86,7 +86,7 @@ export function SyntaxDemo() {
               <pre className="overflow-x-auto font-mono text-[12px] leading-[1.75] text-white/84 sm:text-[12.5px]">
                 {documentExample}
               </pre>
-              <div className="mt-5 grid gap-px overflow-hidden rounded-[12px] border border-white/10 bg-white/10 font-mono text-[10.5px] text-white/62 sm:grid-cols-3">
+              <div className="mt-5 grid gap-px overflow-hidden rounded-md border border-white/10 bg-white/10 font-mono text-[10.5px] text-white/62 sm:grid-cols-3">
                 <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">01 parse directives</span>
                 <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">02 rasterize scenes</span>
                 <span className="bg-[color:var(--landing-dark-card-bg)] px-3 py-2">03 encode mp4 + sidecars</span>

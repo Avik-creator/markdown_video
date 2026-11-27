@@ -13,7 +13,7 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
 
 function CodeLine({ children }: { children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto rounded-[12px] border border-[color:var(--landing-line)]/70 bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed text-[color:var(--landing-ink)] shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
+    <div className="overflow-x-auto rounded-md border border-[color:var(--landing-line)]/70 bg-[color:var(--landing-code-bg)] px-4 py-3 font-mono text-[11.5px] leading-relaxed text-[color:var(--landing-ink)] shadow-[inset_0_1px_0_var(--landing-inset-highlight)]">
       <code className="whitespace-nowrap">{children}</code>
     </div>
   );
@@ -34,7 +34,7 @@ export function Features() {
         <div className="grid gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
           <Reveal>
             <Eyebrow>built for the way video gets made now</Eyebrow>
-            <h2 id="capabilities-heading" className="landing-display-tight mt-6 max-w-[820px] text-[clamp(3.15rem,6.7vw,7rem)] font-medium leading-[0.88] tracking-[-0.06em]">
+            <h2 id="capabilities-heading" className="landing-display-tight mt-6 max-w-[820px] text-[clamp(2.9rem,5.8vw,5.8rem)] font-medium leading-[0.88] tracking-[-0.06em]">
               one document.
               <br />
               <span className="text-[color:var(--landing-faint)]">four ways out.</span>
@@ -49,7 +49,7 @@ export function Features() {
         </div>
 
         <Reveal delay={0.14}>
-          <div className="mt-16 grid overflow-hidden rounded-[22px] border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/62 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-16 grid overflow-hidden rounded-md border border-[color:var(--landing-line)] bg-[color:var(--landing-card)]/62 md:grid-cols-2 xl:grid-cols-4">
             {[
               ["01", "MCP for agents", "render previews and final videos through 12 HTTP tools"],
               ["02", "GitHub Action", "render release videos in CI and upload release assets"],
@@ -95,7 +95,7 @@ export function Features() {
               </div>
 
               <div className="mt-9">
-                <div className="landing-card overflow-hidden rounded-[20px] p-2 sm:p-3">
+                <div className="landing-card overflow-hidden rounded-md p-2 sm:p-3">
                   <div className="overflow-hidden rounded-[13px]">
                     <LoopingVideo
                       src="/landing/mcp-agent.mp4"
@@ -136,7 +136,7 @@ export function Features() {
                   alt="Rendered GitHub Actions workflow for markdown_video release rendering"
                   width={960}
                   height={720}
-                  className="landing-card aspect-[4/3] w-full rounded-[18px] object-cover"
+                  className="landing-card aspect-[4/3] w-full rounded-md object-cover"
                 />
                 <ArtifactCaption>
                   <span>workflow artifact</span>
@@ -165,7 +165,7 @@ export function Features() {
               </div>
 
               <div className="mt-9">
-                <div className="landing-card overflow-hidden rounded-[20px] p-2 sm:p-3">
+                <div className="landing-card overflow-hidden rounded-md p-2 sm:p-3">
                   <video
                     controls
                     width={960}
@@ -206,25 +206,25 @@ export function Features() {
               </div>
 
               <div className="relative mt-9 grid gap-4 sm:grid-cols-2 lg:pl-10">
-                <figure className="landing-card overflow-hidden rounded-[18px] p-2">
+                <figure className="landing-card overflow-hidden rounded-md p-2">
                   <Image
                     src="/landing/i18n-en.webp"
                     alt="English frame rendered from the localized markdown source"
                     width={960}
                     height={720}
-                    className="aspect-[4/3] w-full rounded-[12px] object-cover"
+                    className="aspect-[4/3] w-full rounded-md object-cover"
                   />
                   <figcaption className="px-2 pb-1 pt-3 font-mono text-[11px] text-[color:var(--landing-muted)]">
                     --locale en
                   </figcaption>
                 </figure>
-                <figure className="landing-card overflow-hidden rounded-[18px] p-2 sm:translate-y-8">
+                <figure className="landing-card overflow-hidden rounded-md p-2 sm:translate-y-8">
                   <Image
                     src="/landing/i18n-es.webp"
                     alt="Spanish frame rendered from the same localized markdown source"
                     width={960}
                     height={720}
-                    className="aspect-[4/3] w-full rounded-[12px] object-cover"
+                    className="aspect-[4/3] w-full rounded-md object-cover"
                   />
                   <figcaption className="px-2 pb-1 pt-3 font-mono text-[11px] text-[color:var(--landing-muted)]">
                     --locale es
