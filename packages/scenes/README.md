@@ -156,7 +156,35 @@ text; the literal i18n key when no translation exists) — the documented
 missing-translation behavior. Resolution order lives in
 `@markdown-video/core` (`resolveEffectiveLocale`/`resolveSceneTextContent`).
 
-### 4. Deterministic capture
+### 4. Media source resolution
+
+Image scenes receive their source text exactly as parsed from markdown. By
+default that text is also what appears in the rendered `<img src>` — the
+identity mapping — so remote URLs, root-relative static assets, data URLs and
+ordinary browser-relative paths keep the host's native behavior.
+
+Hosts that support document-local media can pass a synchronous
+`resolveSrc(src)` function to `SceneFrame` (or mount
+`SceneSourceResolverProvider` above a scene tree). The function is a pure
+mapping seam only: storage, fetching, object-url caching/revocation, and any
+asynchronous warming all remain host-owned. Because nested split/mockup image
+content reads the same React context, one provider covers the whole composed
+frame.
+
+```tsx
+<SceneFrame
+  scene={currentScene}
+  sceneTime={sceneTime}
+  resolveSrc={(src) => hostMediaLookup(src) ?? src}
+/>
+```
+
+The resolver must be deterministic for a given host state. If the host loads
+media asynchronously, it should warm its cache before capture or re-render
+when the cache becomes ready; the scene package deliberately does not perform
+storage or network I/O itself.
+
+### 5. Deterministic capture
 
 For frame-accurate capture (the CLI render loop):
 
@@ -169,7 +197,7 @@ For frame-accurate capture (the CLI render loop):
   byte-identical, and the SSR determinism tests in
   `src/scenes/__tests__/scene-ssr.test.ts` pin that property.
 
-### 5. Caption burn-in (optional)
+### 6. Caption burn-in (optional)
 
 Burned-in captions are DOM, not an ffmpeg filter. When a host passes the
 `captions` prop to `SceneFrame` (`{ cues, time }` — generated cues from
@@ -211,6 +239,8 @@ exactly, while text-shadow/stroke rendering would diverge between them.
   `CaptionBurnOverlay`.
 - `SceneLocalizationProvider`, `useSceneLocalization`,
   `SceneLocalizationContext`, `SceneLocalization` type.
+- `SceneSourceResolverProvider`, `useSceneSourceResolver`,
+  `identitySceneSourceResolver`, `SceneSourceResolver` type.
 - Animation/transition math: `springProgress`, `countdownDigitState`,
   `computeTerminalCommandStates`, `staggeredLineProgress`,
   `pulseOpacityAtTime`, `timelineElementVisualState`, `interpolateValue`,

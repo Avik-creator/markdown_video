@@ -27,6 +27,10 @@ import {
   SceneLocalizationProvider,
   type SceneLocalization,
 } from "../localization.js";
+import {
+  SceneSourceResolverProvider,
+  type SceneSourceResolver,
+} from "../source-resolution.js";
 
 /**
  * Transition wrapper for one mounted scene.
@@ -133,6 +137,13 @@ export interface SceneFrameProps {
    */
   localization?: SceneLocalization;
   /**
+   * Optional host-owned media source mapping. Scene media receives the parsed
+   * source text and renders the returned URL/path instead. The default is the
+   * identity mapping, so hosts that do not need document-local media behavior
+   * keep their existing semantics unchanged.
+   */
+  resolveSrc?: SceneSourceResolver;
+  /**
    * Extra classes for the frame element. Positioning is host-owned: the
    * editor pins the frame absolutely inside its fit box, while a render page
    * can leave it in normal flow.
@@ -159,7 +170,16 @@ export interface SceneFrameProps {
  */
 export const SceneFrame = forwardRef<HTMLDivElement, SceneFrameProps>(
   function SceneFrame(
-    { scene, sceneTime, captions, aspectRatio, localization, className, style },
+    {
+      scene,
+      sceneTime,
+      captions,
+      aspectRatio,
+      localization,
+      resolveSrc,
+      className,
+      style,
+    },
     ref
   ) {
     const logicalLayout = getRenderLayoutDimensions(aspectRatio);
@@ -225,13 +245,15 @@ export const SceneFrame = forwardRef<HTMLDivElement, SceneFrameProps>(
           ...style,
         }}
       >
-        {localization ? (
-          <SceneLocalizationProvider value={localization}>
-            {content}
-          </SceneLocalizationProvider>
-        ) : (
-          content
-        )}
+        <SceneSourceResolverProvider resolveSrc={resolveSrc}>
+          {localization ? (
+            <SceneLocalizationProvider value={localization}>
+              {content}
+            </SceneLocalizationProvider>
+          ) : (
+            content
+          )}
+        </SceneSourceResolverProvider>
       </div>
     );
   }

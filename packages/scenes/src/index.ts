@@ -90,6 +90,16 @@ export {
 } from "./localization.js";
 export type { SceneLocalization } from "./localization.js";
 
+// Host-owned media source resolution contract. Scenes consume only the
+// synchronous mapping supplied by their host; storage, fetching, caching and
+// object-url lifetime remain host responsibilities.
+export {
+  SceneSourceResolverProvider,
+  identitySceneSourceResolver,
+  useSceneSourceResolver,
+} from "./source-resolution.js";
+export type { SceneSourceResolver } from "./source-resolution.js";
+
 // Logical frame composition: the capture target every host renders, plus
 // the timeline-position helper that resolves a time to (scene, sceneTime).
 export { SceneFrame } from "./frame/SceneFrame.js";
