@@ -16,6 +16,23 @@ jobs:
   check:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    services:
+      # Backs the KV Postgres integration tests
+      # (apps/web/lib/__tests__/kv-postgres.integration.test.ts), which run the
+      # real bootstrap and rate-limit concurrency query paths when
+      # KV_TEST_POSTGRES_URL is set and skip cleanly otherwise.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: kvtest
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -36,6 +53,8 @@ jobs:
         timeout-minutes: 5
       - run: pnpm test
         timeout-minutes: 10
+        env:
+          KV_TEST_POSTGRES_URL: postgres://postgres:postgres@localhost:5432/kvtest
       - run: pnpm build
         timeout-minutes: 15
       # Browser-dependent golden/ffprobe tests are deliberately separate from
