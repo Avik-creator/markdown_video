@@ -10,3 +10,5 @@ coverage
 *.log
 next-env.d.ts
 dist
+
+.npm-publish

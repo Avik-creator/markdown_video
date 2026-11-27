@@ -2,7 +2,7 @@ import tseslint from "typescript-eslint"
 
 export default tseslint.config(
   {
-    ignores: ["dist", "node_modules", "golden-output"],
+    ignores: ["dist", "node_modules", "golden-output", ".npm-publish"],
   },
   ...tseslint.configs.recommended,
   {

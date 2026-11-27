@@ -49,6 +49,7 @@
   },
   "scripts": {
     "build": "tsup --config tsup.config.ts && node scripts/embed-render-page.mjs",
+    "publish:prepare": "node scripts/prepare-publish.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
