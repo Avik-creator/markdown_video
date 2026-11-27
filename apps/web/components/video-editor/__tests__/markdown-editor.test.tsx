@@ -447,6 +447,21 @@ describe("MarkdownEditor (CodeMirror)", () => {
       expect(markdown.indexOf("Inserted")).toBeLessThan(markdown.indexOf("Two"));
       expect(markdown).toContain("One\n!duration 1s\n\n---\n\n!scene\n!text\nInserted");
     });
+
+
+    it("insertDirective targets the scene containing the editor cursor", () => {
+      resetStore("!scene\n!text\nOne\n!duration 1s\n\n---\n\n!scene\n!text\nTwo\n!duration 1s");
+      render(<MarkdownEditor ref={ref} />);
+      const cursor = view().state.doc.toString().indexOf("Two");
+      act(() => {
+        view().dispatch({ selection: { anchor: cursor } });
+        ref.current!.insertDirective("!background #123456");
+      });
+
+      const markdown = useVideoStore.getState().markdown;
+      expect(markdown).toContain("Two\n!duration 1s\n!background #123456");
+      expect(useVideoStore.getState().scenes[1].background).toBe("#123456");
+    });
   });
 
   describe("imperative handle", () => {

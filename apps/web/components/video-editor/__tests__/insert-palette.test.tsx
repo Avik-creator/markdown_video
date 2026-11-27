@@ -4,7 +4,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { InsertPalette } from "../insert-palette";
 
 describe("InsertPalette", () => {
-  afterEach(() => cleanup());
+  afterEach(() => {
+    cleanup();
+    // Radix portals are appended outside the testing-library container.
+    document.body.innerHTML = "";
+  });
 
   it("lists searchable snippets with a markdown preview", () => {
     render(
@@ -26,7 +30,8 @@ describe("InsertPalette", () => {
     });
 
     expect(screen.queryByRole("option", { name: /Intro/ })).toBeNull();
-    expect(screen.getByRole("option", { name: /Celebration/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /^Celebration/ })).toBeTruthy();
+    expect(screen.getByRole("option", { name: /^Particles/ })).toBeTruthy();
   });
 
   it("inserts the keyboard-active snippet with Enter and closes", () => {

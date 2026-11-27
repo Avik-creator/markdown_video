@@ -15,6 +15,7 @@ import { ShareModal } from "../share-modal"
 import { InsertPalette } from "../insert-palette"
 import { useVideoStore } from "@/lib/use-video-store"
 import { NEW_PROJECT_MARKDOWN } from "@/lib/default-markdown"
+import type { InsertableSnippet } from "@/lib/editor/snippets"
 import { EditorHeader } from "./components/EditorHeader"
 import { useKeyboardShortcuts } from "./hooks/useKeyboardShortcuts"
 
@@ -106,8 +107,11 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
     setShowInsertPalette(true)
   }, [])
 
-  const insertSnippet = useCallback((markdown: string) => {
-    return editorRef.current?.insertSceneTemplate(markdown) ?? false
+  const insertSnippet = useCallback((snippet: InsertableSnippet) => {
+    if ("kind" in snippet && snippet.kind === "directive") {
+      return editorRef.current?.insertDirective(snippet.markdown) ?? false
+    }
+    return editorRef.current?.insertSceneTemplate(snippet.markdown) ?? false
   }, [])
 
   const createNewProject = useCallback(() => {
@@ -221,7 +225,7 @@ export function VideoEditor({ initialMarkdown, isEmbed = false }: { initialMarkd
       <InsertPalette
         open={showInsertPalette}
         onOpenChange={setShowInsertPalette}
-        onInsert={(snippet) => insertSnippet(snippet.markdown)}
+        onInsert={insertSnippet}
       />
     </div>
   )

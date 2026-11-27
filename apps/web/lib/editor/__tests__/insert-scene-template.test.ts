@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { sceneTemplateInsertion } from "../insert-scene-template";
+import { sceneDirectiveInsertion, sceneTemplateInsertion } from "../insert-scene-template";
 
 const TEMPLATE = "!scene\n!text\nInserted\n!duration 2s";
 
@@ -60,5 +60,47 @@ describe("sceneTemplateInsertion", () => {
     const insertion = sceneTemplateInsertion(markdown, TEMPLATE, [undefined], 0);
     expect(insertion.placement).toBe("append");
     expect(apply(markdown, insertion)).toContain(TEMPLATE);
+  });
+});
+
+describe("sceneDirectiveInsertion", () => {
+  const ranges = [
+    { startLine: 1, endLine: 4 },
+    { startLine: 8, endLine: 11 },
+  ];
+  const markdown = "!scene\n!text\nOne\n!duration 1s\n\n---\n\n!scene\n!text\nTwo\n!duration 1s";
+
+  it("inserts at the end of the scene containing the cursor", () => {
+    const cursor = markdown.indexOf("Two");
+    const insertion = sceneDirectiveInsertion(markdown, "!background #123456", ranges, 0, cursor);
+
+    expect(insertion.placement).toBe("inside-current-scene");
+    const rewritten = apply(markdown, insertion);
+    expect(rewritten).toContain("!scene\n!text\nTwo\n!duration 1s\n!background #123456");
+    expect(rewritten.indexOf("!background #123456")).toBeGreaterThan(rewritten.indexOf("Two"));
+  });
+
+  it("uses inter-scene glue as belonging to the preceding scene", () => {
+    const cursor = markdown.indexOf("---");
+    const insertion = sceneDirectiveInsertion(markdown, "!transition fade", ranges, 1, cursor);
+    const rewritten = apply(markdown, insertion);
+
+    expect(rewritten).toContain("!duration 1s\n!transition fade\n\n---");
+    expect(rewritten.indexOf("!transition fade")).toBeLessThan(rewritten.indexOf("---"));
+  });
+
+  it("preserves CRLF pairs when inserting at a line end", () => {
+    const crlf = markdown.replace(/\n/g, "\r\n");
+    const insertion = sceneDirectiveInsertion(crlf, "!background #123456", ranges, 0, 0);
+    const rewritten = apply(crlf, insertion);
+
+    expect(rewritten).toContain("!duration 1s\r\n!background #123456\r\n");
+    expect(rewritten).not.toContain("\r!background");
+  });
+
+  it("wraps the directive in a minimal scene when no scene exists", () => {
+    const insertion = sceneDirectiveInsertion("", "!duration 3s", [], -1, 0);
+    expect(insertion.placement).toBe("append");
+    expect(insertion.text).toBe("!scene\n!duration 3s\n");
   });
 });

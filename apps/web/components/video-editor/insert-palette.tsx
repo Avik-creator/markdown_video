@@ -9,16 +9,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@components/ui/dialog";
-import { EXAMPLE_SNIPPETS, type ExampleSnippet } from "@/lib/editor/snippets";
+import { INSERTABLE_SNIPPETS, type InsertableSnippet } from "@/lib/editor/snippets";
 import { cn } from "@/lib/utils";
 
 interface InsertPaletteProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onInsert: (snippet: ExampleSnippet) => boolean;
+  onInsert: (snippet: InsertableSnippet) => boolean;
 }
 
-function matchesQuery(snippet: ExampleSnippet, query: string): boolean {
+function matchesQuery(snippet: InsertableSnippet, query: string): boolean {
   const haystack = [snippet.name, snippet.description, snippet.id, ...snippet.keywords]
     .join(" ")
     .toLowerCase();
@@ -40,7 +40,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
   const [activeIndex, setActiveIndex] = useState(0);
 
   const filtered = useMemo(
-    () => EXAMPLE_SNIPPETS.filter((snippet) => matchesQuery(snippet, query)),
+    () => INSERTABLE_SNIPPETS.filter((snippet) => matchesQuery(snippet, query)),
     [query]
   );
   const clampedActiveIndex = filtered.length === 0 ? 0 : Math.min(activeIndex, filtered.length - 1);
@@ -54,7 +54,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
     onOpenChange(nextOpen);
   };
 
-  const insert = (snippet: ExampleSnippet) => {
+  const insert = (snippet: InsertableSnippet) => {
     if (onInsert(snippet)) {
       closeAndReset(false);
     }
@@ -69,7 +69,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
             Insert scene
           </DialogTitle>
           <DialogDescription className="text-gray-500 dark:text-neutral-400">
-            Search a schema-valid snippet. It is inserted after the current scene as markdown.
+            Search scene scaffolds and common directives. Scenes insert after the cursor scene; directives insert inside it.
           </DialogDescription>
         </DialogHeader>
 
@@ -82,7 +82,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                 role="combobox"
                 aria-expanded="true"
                 aria-controls="insert-palette-listbox"
-                aria-activedescendant={active ? `insert-option-${active.id}` : undefined}
+                aria-activedescendant={active ? `insert-option-${"kind" in active ? "directive" : "scene"}-${active.id}` : undefined}
                 aria-label="Search scene snippets"
                 value={query}
                 placeholder="Search scenes…"
@@ -118,9 +118,9 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
               {filtered.map((snippet, index) => {
                 const selected = index === clampedActiveIndex;
                 return (
-                  <li key={snippet.id} role="presentation">
+                  <li key={`${"kind" in snippet ? "directive" : "scene"}-${snippet.id}`} role="presentation">
                     <button
-                      id={`insert-option-${snippet.id}`}
+                      id={`insert-option-${"kind" in snippet ? "directive" : "scene"}-${snippet.id}`}
                       type="button"
                       role="option"
                       aria-selected={selected}
@@ -136,7 +136,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                       <div className="flex items-center justify-between gap-3">
                         <span className="text-sm font-medium">{snippet.name}</span>
                         <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] uppercase tracking-wide text-gray-400 dark:border-neutral-800 dark:text-neutral-500">
-                          Scene
+                          {"kind" in snippet ? "Directive" : "Scene"}
                         </span>
                       </div>
                       <p className="mt-1 text-xs text-gray-500 dark:text-neutral-400">

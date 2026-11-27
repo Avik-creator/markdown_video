@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getDirectiveValueOptions } from "@markdown-video/core";
-import { EXAMPLE_SNIPPETS, EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
+import { DIRECTIVE_SNIPPETS, EXAMPLE_SNIPPETS, EXAMPLE_TEMPLATES, SNIPPET_SCHEMA_BINDINGS } from "../snippets";
 
 /**
  * The snippet/schema invariant lives here rather than at module scope: a
@@ -23,7 +23,10 @@ describe("snippet schema bindings", () => {
   it("registers a binding for every schema value the templates interpolate", () => {
     // Every recorded binding is used in at least one template, so the
     // registration list cannot drift apart from the templates themselves.
-    const templates = Object.values(EXAMPLE_TEMPLATES);
+    const templates = [
+      ...Object.values(EXAMPLE_TEMPLATES),
+      ...DIRECTIVE_SNIPPETS.map((snippet) => snippet.markdown),
+    ];
     for (const { value } of SNIPPET_SCHEMA_BINDINGS) {
       expect(
         templates.some((template) => template.includes(value)),

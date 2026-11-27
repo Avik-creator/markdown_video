@@ -21,7 +21,11 @@ import {
 import { EditorState, EditorSelection } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { setDiagnostics } from "@codemirror/lint";
-import { sceneTemplateInsertion } from "@/lib/editor/insert-scene-template";
+import {
+  sceneDirectiveInsertion,
+  sceneIndexAtCursorLine,
+  sceneTemplateInsertion,
+} from "@/lib/editor/insert-scene-template";
 import type { Scene } from "@markdown-video/core";
 import {
   diagnosticsByLine,
@@ -62,8 +66,10 @@ export interface MarkdownEditorHandle {
   flushPending: () => void;
   /** Replace a range of the live document, committed like a user edit. */
   replaceRange: (from: number, to: number, text: string) => void;
-  /** Structurally insert a full scene snippet after the scene at playback time. */
+  /** Structurally insert a full scene snippet after the cursor/playback scene. */
   insertSceneTemplate: (template: string) => boolean;
+  /** Insert a scene-scoped directive scaffold into the cursor/playback scene. */
+  insertDirective: (directive: string) => boolean;
 
 }
 
@@ -296,11 +302,14 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           return false;
         }
 
+        const ranges = store.scenes.map((scene) => scene.sourceMap?.scene);
+        const cursorLine = liveText.slice(0, view.state.selection.main.head).split("\n").length;
+        const cursorSceneIndex = sceneIndexAtCursorLine(ranges, cursorLine);
         const insertion = sceneTemplateInsertion(
           liveText,
           template,
-          store.scenes.map((scene) => scene.sourceMap?.scene),
-          sceneIndexAtTime(store.scenes, store.currentTime)
+          ranges,
+          cursorSceneIndex >= 0 ? cursorSceneIndex : sceneIndexAtTime(store.scenes, store.currentTime)
         );
         const end = insertion.offset + insertion.text.length;
         view.dispatch({
@@ -311,6 +320,35 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
         // Palette insertion is a discrete authoring action, not typing: commit
         // it immediately so preview/properties update and undo captures exactly
         // this insertion as one history entry.
+        syncRef.current?.flushPending();
+        view.contentDOM.focus();
+        return true;
+      },
+      insertDirective: (directive: string) => {
+        const view = viewRef.current;
+        if (!view) return false;
+
+        syncRef.current?.flushPending();
+        const store = useVideoStore.getState();
+        const liveText = view.state.doc.toString();
+        if (liveText !== store.markdown) {
+          console.warn("[markdown-video] Directive insertion skipped: editor and store markdown diverged");
+          return false;
+        }
+
+        const insertion = sceneDirectiveInsertion(
+          liveText,
+          directive,
+          store.scenes.map((scene) => scene.sourceMap?.scene),
+          sceneIndexAtTime(store.scenes, store.currentTime),
+          view.state.selection.main.head
+        );
+        const end = insertion.offset + insertion.text.length;
+        view.dispatch({
+          changes: { from: insertion.offset, insert: insertion.text },
+          selection: EditorSelection.cursor(end),
+          effects: EditorView.scrollIntoView(end, { y: "end" }),
+        });
         syncRef.current?.flushPending();
         view.contentDOM.focus();
         return true;
