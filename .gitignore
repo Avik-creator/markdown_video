@@ -13,3 +13,6 @@ dist
 apps/web/public/ffmpeg/
 
 .npm-publish
+
+# Generated Vercel Sandbox renderer bundle
+apps/web/lib/render-sandbox/cli-bundle/

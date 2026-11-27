@@ -7,6 +7,11 @@ const workspaceRoot = path.resolve(appRoot, "../..")
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: workspaceRoot,
+  outputFileTracingIncludes: {
+    // The MCP route invokes the sandbox renderer, whose self-contained CLI
+    // payload is generated into lib/render-sandbox/cli-bundle during prebuild.
+    "/api/mcp/*": ["./lib/render-sandbox/cli-bundle/**/*"],
+  },
   turbopack: {
     root: workspaceRoot,
   },
