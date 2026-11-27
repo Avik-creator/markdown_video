@@ -81,7 +81,7 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
         <DialogHeader className="border-b border-gray-200 px-5 py-4 dark:border-neutral-800">
           <DialogTitle className="flex items-center gap-2 text-base">
             <FilePlus2 className="h-4 w-4 text-pink-500 dark:text-pink-400" />
-            Insert scene
+            Insert scene or directive
           </DialogTitle>
           <DialogDescription className="text-gray-500 dark:text-neutral-400">
             Search scene scaffolds and common directives. Scenes insert after the cursor scene; directives insert inside it.
@@ -98,9 +98,9 @@ export function InsertPalette({ open, onOpenChange, onInsert }: InsertPalettePro
                 aria-expanded="true"
                 aria-controls="insert-palette-listbox"
                 aria-activedescendant={active ? `insert-option-${"kind" in active ? "directive" : "scene"}-${active.id}` : undefined}
-                aria-label="Search scene snippets"
+                aria-label="Search scenes or directives"
                 value={query}
-                placeholder="Search scenes…"
+                placeholder="Search scenes or directives…"
                 onChange={(event) => {
                   setQuery(event.target.value);
                   setActiveIndex(0);

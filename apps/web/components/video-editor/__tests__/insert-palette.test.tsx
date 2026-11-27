@@ -25,7 +25,7 @@ describe("InsertPalette", () => {
       <InsertPalette open onOpenChange={() => {}} onInsert={() => true} />
     );
 
-    fireEvent.change(screen.getByLabelText("Search scene snippets"), {
+    fireEvent.change(screen.getByLabelText("Search scenes or directives"), {
       target: { value: "confetti" },
     });
 
@@ -39,7 +39,7 @@ describe("InsertPalette", () => {
       <InsertPalette open onOpenChange={() => {}} onInsert={() => true} />
     );
 
-    fireEvent.change(screen.getByLabelText("Search scene snippets"), {
+    fireEvent.change(screen.getByLabelText("Search scenes or directives"), {
       target: { value: "camera" },
     });
 
@@ -51,7 +51,7 @@ describe("InsertPalette", () => {
     const onOpenChange = vi.fn();
     render(<InsertPalette open onOpenChange={onOpenChange} onInsert={onInsert} />);
 
-    const input = screen.getByLabelText("Search scene snippets");
+    const input = screen.getByLabelText("Search scenes or directives");
     fireEvent.keyDown(input, { key: "ArrowDown" });
     fireEvent.keyDown(input, { key: "Enter" });
 

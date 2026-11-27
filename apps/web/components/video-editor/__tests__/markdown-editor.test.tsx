@@ -411,7 +411,7 @@ describe("MarkdownEditor (CodeMirror)", () => {
       const openPalette = vi.fn();
       render(<MarkdownEditor ref={ref} onOpenInsertPalette={openPalette} />);
       const button = [...document.querySelectorAll("button")].find(
-        (b) => b.textContent?.includes("Insert scene")
+        (b) => b.textContent?.trim().startsWith("Insert")
       );
       expect(button).toBeDefined();
       act(() => button!.click());

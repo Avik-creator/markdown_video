@@ -448,7 +448,7 @@ export const MarkdownEditor = forwardRef<MarkdownEditorHandle, MarkdownEditorPro
           className="flex w-full items-center justify-center gap-2 rounded-md border border-pink-200 bg-white px-3 py-2 text-sm font-medium text-pink-600 shadow-sm transition-colors hover:bg-pink-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-pink-500 dark:border-pink-900/60 dark:bg-neutral-950 dark:text-pink-400 dark:hover:bg-pink-950/25"
         >
           <Plus className="h-4 w-4" />
-          Insert scene
+          Insert scene or directive
           <kbd className="ml-auto whitespace-nowrap rounded border border-pink-200 bg-pink-50 px-1.5 py-0.5 text-[10px] dark:border-pink-900/60 dark:bg-pink-950/25">
             ⌘/Ctrl I
           </kbd>
