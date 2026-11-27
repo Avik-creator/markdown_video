@@ -2,6 +2,8 @@ import Link from "next/link";
 
 const resourceLinks = [
   ["repository", "https://github.com/Avik-creator/markdown_video"],
+  ["examples", "https://github.com/Avik-creator/markdown_video/tree/main/examples"],
+  ["cli readme", "https://github.com/Avik-creator/markdown_video/tree/main/apps/cli#readme"],
   ["action readme", "https://github.com/Avik-creator/markdown_video/tree/main/action"],
   ["issues", "https://github.com/Avik-creator/markdown_video/issues"],
 ] as const;
@@ -26,10 +28,11 @@ export function Footer() {
           <nav aria-label="Landing sections">
             <h2 className="font-mono text-[11px] text-[color:var(--landing-muted)]">index</h2>
             <ul className="mt-5 space-y-3 text-[14px] font-medium">
-              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#mcp">agents + MCP</a></li>
-              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#action">GitHub Action</a></li>
-              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#captions">music + captions</a></li>
-              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#i18n">localization</a></li>
+              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#provenance">provenance</a></li>
+              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#workflows">write once, render anywhere</a></li>
+              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#pipeline">source → output</a></li>
+              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#markdown-first">markdown-first</a></li>
+              <li><a className="hover:text-[color:var(--landing-accent-deep)]" href="#capabilities">capabilities</a></li>
             </ul>
           </nav>
 
