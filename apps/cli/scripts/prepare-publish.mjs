@@ -100,8 +100,10 @@ function publishManifest(source) {
       throw new Error(`Publish manifest still depends on private workspace package ${name}.`)
     }
   }
-  if (!manifest.dependencies?.["playwright-core"]) {
-    throw new Error("Publish manifest must retain the playwright-core runtime dependency.")
+  for (const name of ["playwright-core", "pixelmatch", "pngjs"]) {
+    if (!manifest.dependencies?.[name]) {
+      throw new Error(`Publish manifest must retain the ${name} runtime dependency.`)
+    }
   }
   if (manifest.publishConfig?.access !== "public") {
     throw new Error("publishConfig.access must be public.")

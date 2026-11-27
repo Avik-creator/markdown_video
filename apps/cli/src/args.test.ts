@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   parseCliArgs,
+  parseDiffCliArgs,
   parseDoctorCliArgs,
   parseInstallBrowserCliArgs,
   parsePreviewCliArgs,
@@ -133,6 +134,63 @@ describe("parsePreviewCliArgs", () => {
     ).toThrow(UsageError)
     expect(() =>
       parsePreviewCliArgs(["one.md", "two.md", "--json"]),
+    ).toThrow(UsageError)
+  })
+})
+
+describe("parseDiffCliArgs", () => {
+  it("parses two file inputs and visual diff options", () => {
+    const args = parseDiffCliArgs([
+      "old.md",
+      "new.md",
+      "--json",
+      "--out-dir",
+      "diff-frames",
+      "--threshold",
+      "2.5",
+      "--outlier-threshold",
+      "30",
+      "--samples-per-scene",
+      "3",
+      "--resolution",
+      "480p",
+      "--aspect-ratio",
+      "1:1",
+      "--locale",
+      "en",
+      "--overwrite",
+      "--deny-remote-network",
+    ])
+
+    expect(args).toMatchObject({
+      oldInputPath: "old.md",
+      newInputPath: "new.md",
+      json: true,
+      outDir: "diff-frames",
+      thresholdPercent: 2.5,
+      outlierThresholdPercent: 30,
+      samplesPerScene: 3,
+      resolution: "480p",
+      aspectRatio: "1:1",
+      locale: "en",
+      overwrite: true,
+      denyRemoteNetwork: true,
+      help: false,
+    })
+  })
+
+  it("rejects invalid thresholds, sample counts, and extra positionals", () => {
+    expect(() =>
+      parseDiffCliArgs(["old.md", "new.md", "--threshold", "101"]),
+    ).toThrow(UsageError)
+    expect(() =>
+      parseDiffCliArgs(["old.md", "new.md", "--outlier-threshold", "bad"]),
+    ).toThrow(UsageError)
+    expect(() =>
+      parseDiffCliArgs(["old.md", "new.md", "--samples-per-scene", "4"]),
+    ).toThrow(UsageError)
+    expect(() =>
+      parseDiffCliArgs(["old.md", "new.md", "third.md"]),
     ).toThrow(UsageError)
   })
 })

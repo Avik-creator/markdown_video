@@ -51,6 +51,24 @@ export interface PreviewCliArgs {
   help: boolean
 }
 
+export interface DiffCliArgs {
+  oldInputPath: string | null
+  newInputPath: string | null
+  json: boolean
+  outDir: string | null
+  thresholdPercent?: number | undefined
+  outlierThresholdPercent?: number | undefined
+  samplesPerScene?: number | undefined
+  resolution?: string | undefined
+  aspectRatio?: string | undefined
+  locale?: string | undefined
+  overwrite: boolean
+  allowOutsideCwd: boolean
+  denyRemoteNetwork: boolean
+  chromiumExecutablePath?: string | undefined
+  help: boolean
+}
+
 function stringValue(value: string | boolean | undefined) {
   return typeof value === "string" ? value : undefined
 }
@@ -194,6 +212,86 @@ export function parsePreviewCliArgs(argv: string[]): PreviewCliArgs {
     locale: stringValue(parsed.values.locale),
     json: parsed.values.json === true,
     outputDir: stringValue(parsed.values["output-dir"]) ?? null,
+    overwrite: parsed.values.overwrite === true,
+    allowOutsideCwd: parsed.values["allow-outside-cwd"] === true,
+    denyRemoteNetwork: parsed.values["deny-remote-network"] === true,
+    chromiumExecutablePath: stringValue(parsed.values.chromium),
+    help: parsed.values.help === true,
+  }
+}
+
+function parsePercentOption(value: string | undefined, optionName: string) {
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed) || parsed < 0 || parsed > 100) {
+    throw new UsageError(
+      `Invalid ${optionName} value "${value}". Expected a number from 0 through 100.`,
+    )
+  }
+  return parsed
+}
+
+function parseSamplesPerScene(value: string | undefined) {
+  if (value === undefined) return undefined
+  const parsed = Number(value)
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 3) {
+    throw new UsageError(
+      `Invalid --samples-per-scene value "${value}". Expected an integer from 1 through 3.`,
+    )
+  }
+  return parsed
+}
+
+export function parseDiffCliArgs(argv: string[]): DiffCliArgs {
+  let parsed
+  try {
+    parsed = parseArgs({
+      args: argv,
+      allowPositionals: true,
+      strict: true,
+      options: {
+        json: { type: "boolean" },
+        "out-dir": { type: "string" },
+        threshold: { type: "string" },
+        "outlier-threshold": { type: "string" },
+        "samples-per-scene": { type: "string" },
+        resolution: { type: "string" },
+        "aspect-ratio": { type: "string" },
+        locale: { type: "string" },
+        overwrite: { type: "boolean" },
+        "allow-outside-cwd": { type: "boolean" },
+        "deny-remote-network": { type: "boolean" },
+        chromium: { type: "string" },
+        help: { type: "boolean", short: "h" },
+      },
+    })
+  } catch (error) {
+    throw new UsageError(error instanceof Error ? error.message : String(error))
+  }
+
+  if (parsed.positionals.length > 2) {
+    throw new UsageError(`Unexpected positional argument: ${parsed.positionals[2]}`)
+  }
+
+  return {
+    oldInputPath: parsed.positionals[0] ?? null,
+    newInputPath: parsed.positionals[1] ?? null,
+    json: parsed.values.json === true,
+    outDir: stringValue(parsed.values["out-dir"]) ?? null,
+    thresholdPercent: parsePercentOption(
+      stringValue(parsed.values.threshold),
+      "--threshold",
+    ),
+    outlierThresholdPercent: parsePercentOption(
+      stringValue(parsed.values["outlier-threshold"]),
+      "--outlier-threshold",
+    ),
+    samplesPerScene: parseSamplesPerScene(
+      stringValue(parsed.values["samples-per-scene"]),
+    ),
+    resolution: stringValue(parsed.values.resolution),
+    aspectRatio: stringValue(parsed.values["aspect-ratio"]),
+    locale: stringValue(parsed.values.locale),
     overwrite: parsed.values.overwrite === true,
     allowOutsideCwd: parsed.values["allow-outside-cwd"] === true,
     denyRemoteNetwork: parsed.values["deny-remote-network"] === true,

@@ -99,6 +99,9 @@ markdown-video preview hello.md --times 0,1.5,3 --json
 
 # Or write the same direct PNG captures to files
 markdown-video preview hello.md --times 0,1.5,3 --output-dir preview-frames
+
+# Compare what an edit actually changed in the render
+markdown-video diff old.md new.md --resolution 480p --out-dir diff-frames
 ```
 
 Progress is written to stderr. The final line reports dimensions, format, frame count, fps, elapsed time, and output path.
@@ -159,6 +162,168 @@ Choose exactly one output mode:
 | `--output-dir <dir>` | Write numbered files such as `frame-001-t0.000s.png`. Existing files are protected unless `--overwrite` is passed. |
 
 Relevant render flags are supported: `--resolution` (`480p` through `4k`; default `1080p`), `--aspect-ratio` (`16:9`, `9:16`, `1:1`, `4:3`), `--locale`, `--deny-remote-network`, and `--chromium`. Encoding-specific flags such as `--quality`, `--speed`, `--fps`, `--format`, and `--burn-captions` do not apply because direct PNG capture invokes no video encoder. `--output-dir` is confined to the current working directory unless `--allow-outside-cwd` is explicit.
+
+### `markdown-video diff`
+
+```text
+markdown-video diff <old.md> <new.md> [options]
+```
+
+`diff` answers a narrower question than a text diff: after editing the document, what changed in the actual rendered frames? It parses both files with the same parser used for rendering, aligns scenes by content, captures representative lossless PNG frames with the preview machinery, and compares aligned frame pairs with pixelmatch. It does **not** render an mp4/GIF and does not invoke ffmpeg.
+
+Both inputs must be markdown files. Comparing a file with itself is valid and useful as a determinism control.
+
+| Option | Meaning |
+| --- | --- |
+| `--json` | Print exactly one machine-readable report object to stdout. Diagnostics use stderr. |
+| `--out-dir <dir>` | Write one `old | new | diff-highlight` composite PNG per compared sample. Existing files are protected unless `--overwrite` is passed. |
+| `--threshold <percent>` | Failure threshold for scenes whose content is unchanged or only retimed. Default `0.1`; `0` means any non-zero pixel difference. |
+| `--outlier-threshold <percent>` | Pixel magnitude at which a very small modified-scene edit is treated as an outlier. Default `25`. |
+| `--samples-per-scene <n>` | `1`, `2` (default), or `3` interior fractional positions per aligned scene pair. |
+| `--resolution <preset>` | `480p`, `720p`, `1080p` (default), `1440p`, or `4k`. Lower resolutions are recommended for CI because percentages are scale-invariant for normal scene content. |
+| `--aspect-ratio <ratio>` | Project aspect ratio: `16:9` (default), `9:16`, `1:1`, or `4:3`. |
+| `--locale <code>` | Locale override such as `en`, `es`, or `pt-BR`. |
+| `--overwrite` | Replace existing comparison PNGs in `--out-dir`. |
+| `--allow-outside-cwd` | Permit `--out-dir` outside the current working directory. By default it must remain inside cwd. |
+| `--deny-remote-network` | Block non-loopback browser requests. Use for untrusted markdown. |
+| `--chromium <path>` | Chrome/Chromium executable. Default: Playwright-managed Chromium. |
+| `-h, --help` | Print help. |
+
+#### Alignment algorithm and limits
+
+Each scene is fingerprinted with a SHA-256 hash of canonical parsed content. The hash excludes random parser ids, source-map bookkeeping, and the top-level duration so duration-only edits can be recognized as retiming. It also excludes an *implicit* parser-assigned background because that color is a function of scene position; an explicit `!background` remains part of the content hash. This means a reordered scene with an implicit background can be aligned correctly while the pixel comparison still reports its real positional color change.
+
+Alignment is a deliberately simple two-phase heuristic:
+
+1. Exact content hashes are matched one-to-one independent of sequence position. Duplicate hash occurrences are zipped in document order. This handles insertions, deletions, and reorders of stable scenes. A longest non-crossing subset of those exact matches becomes a set of edit-gap anchors; reordered exact matches stay aligned without discarding the surrounding sequence information.
+2. Remaining same-type scenes in the same anchor gap receive a recursive content-similarity score (weighted toward primary text/code/terminal/media content) plus a small positional prior. The best scoring unused pairs are consumed greedily. Scenes that remain unmatched are `added` or `removed`; a scene type replacement is therefore normally remove+add rather than modify.
+
+Rows are classified as:
+
+| Status | Meaning |
+| --- | --- |
+| `unchanged-content` | Same content hash, start time, and duration. |
+| `retimed` | Same content hash but a different start time and/or duration. Reordered scenes normally appear here because their start time changed. |
+| `modified` | Different content hash, but similar enough to align as the same logical scene. Modified takes precedence over retimed when both changed. |
+| `added` | Present only in the new document; not frame-compared. |
+| `removed` | Present only in the old document; not frame-compared. |
+
+This is not a proof of author intent. Duplicate scenes are inherently ambiguous; a modified scene moved across a stable anchor can fall back to remove+add; and large rewrites of the same type may cross in either direction between `modified` and remove+add depending on similarity. The important guarantee is that alignment is content-aware rather than index-only, so one insertion does not cascade into false edits for every downstream scene, and stable anchors keep an independent delete+insert pair from being force-aligned merely because both scenes have the same type.
+
+#### Sampling, comparison, and performance
+
+For each aligned pair, samples are taken at the same fractions within each version's scene, not at the same global timestamps. Fractions are interior/mid-late positions to avoid hard boundaries and most entrance transitions:
+
+| Samples/scene | Fractions |
+| --- | --- |
+| `1` | `0.5` |
+| `2` | `0.5, 0.8` |
+| `3` | `0.4, 0.65, 0.85` |
+
+Very short scenes can still overlap their entrance transition; increase sample count only when that extra sensitivity is useful. Added and removed scenes cost no captures. At the default of 2, a 10-scene document with all scenes aligned costs 20 compared frame pairs (40 total captures), not two full video renders. All captures for one version reuse one Chromium instance and one render-page server; the old and new versions are captured sequentially to bound memory use in CI.
+
+Frame pairs are lossless PNGs from the same Chromium/render-page environment and are compared with pixelmatch 8 using an OKLab color-distance threshold of `0.1` and anti-alias detection enabled (`includeAA: false`). Because there is no video codec round trip, exact repeated renders measured `0.000%`; codec noise does not need to be hidden. In 480p control documents, inserting one word into a short text scene measured about `0.308%`; varying pixelmatch's color threshold from `0.03` to `0.25` changed that result only to about `0.288-0.318%`, while counting anti-aliased pixels as differences inflated it to about `0.534%`. A duration-only camera-shake control measured up to `0.812%`; a 3x camera zoom measured `7.0%`; a dark-to-light full-background inversion measured `99.5%`. These measurements motivate the magnitude labels:
+
+| Mean scene change | Class |
+| --- | --- |
+| `<0.1%` | `identical` |
+| `0.1%` to `<5%` | `minor` |
+| `5%` to `<25%` | `moderate` |
+| `>=25%` | `heavy` |
+
+The mean across a scene's samples is used for the displayed magnitude/class. The maximum sample is used for CI failure decisions so a localized transient change is not diluted by averaging.
+
+#### Exit semantics for CI
+
+| Exit | Meaning |
+| --- | --- |
+| `0` | No unexpected visual changes. |
+| `3` | Unexpected visual changes were found. |
+| `2` | Usage/input error. |
+| `1` | Renderer/dependency failure. |
+
+"Unexpected" is deliberately not "anything changed":
+
+- `added` and `removed` scenes are explicit structural edits and never fail by themselves.
+- `modified` scenes are expected to render differently. They fail only as magnitude outliers: content similarity at least `0.9` **and** a maximum sample change at least `--outlier-threshold` (default `25%`). This catches cases such as a tiny textual edit unexpectedly rewriting most of the frame. It is a heuristic; intentional scene-wide visual property edits can also be extreme, so inspect the report before treating every outlier as a defect.
+- `unchanged-content` and `retimed` scenes have no source-content explanation for changed pixels. They fail when their maximum non-zero sample change is at least `--threshold` (default `0.1%`). Raise `--threshold` to tolerate known animation/retiming drift; set it to `0` to require bit-identical pixels for these scenes.
+
+Example pass output:
+
+```text
+STATUS             OLD  NEW  TYPE  CHANGE  CLASS      DETAIL
+-----------------  ---  ---  ----  ------  ---------  ------------------------
+modified           #1   #1   text  0.308%  minor      content similarity 0.939
+unchanged-content  #2   #2   text  0.000%  identical  same source content
+
+Verdict: PASS — no unexpected visual changes
+```
+
+A pull-request workflow can compare the base version of a changed document with the PR version and rely on exit code 3 as a review signal:
+
+```sh
+git show "origin/main:examples/launch.video.md" > baseline.launch.video.md
+markdown-video diff baseline.launch.video.md examples/launch.video.md \
+  --resolution 480p \
+  --json \
+  --out-dir diff-frames
+```
+
+Upload `diff-frames` as a CI artifact when it exists. Because intentional content edits are expected, the most actionable failures are unchanged/retimed scenes and small-edit magnitude outliers; the JSON report contains the exact reasons.
+
+#### JSON report schema
+
+`--json` emits one object (version `1`) with these top-level keys:
+
+- `version`: currently `1`.
+- `verdict`: `"pass"` or `"fail"`.
+- `inputs`: `old`/`new`, each `{path,sceneCount,duration}`; durations are seconds.
+- `settings`: `{resolution,aspectRatio,locale,samplesPerScene,pixelmatchThreshold,unchangedThresholdPercent,modifiedOutlierPercent,modifiedOutlierMinContentSimilarity}`.
+- `dimensions`: `{width,height}` of compared frames, or `null` when no aligned scenes required capture.
+- `summary`: `{alignedPairs,unchangedContent,modified,added,removed,retimed,comparedScenes,comparedFramePairs,capturedFrames,comparisonImagesWritten,unexpectedScenes,maxMeanChangePercent,elapsedSeconds,oldRenderElapsedSeconds,newRenderElapsedSeconds}`.
+- `scenes`: one row per alignment result.
+
+Each scene row is:
+
+```ts
+{
+  status: "unchanged-content" | "modified" | "added" | "removed" | "retimed"
+  old: null | {
+    index: number         // zero-based in old document
+    type: string
+    startTime: number     // seconds
+    duration: number      // seconds
+    contentHash: string   // lowercase SHA-256 hex
+  }
+  new: null | /* same descriptor shape as old */
+  contentSimilarity: number | null  // [0,1]; null for added/removed
+  timing: {
+    positionDeltaSeconds: number | null  // new start - old start
+    durationDeltaSeconds: number | null  // new duration - old duration
+  }
+  comparison: null | {
+    classification: "identical" | "minor" | "moderate" | "heavy"
+    meanChangePercent: number
+    maxFrameChangePercent: number
+    samples: Array<{
+      sampleIndex: number
+      fraction: number
+      oldTime: number
+      newTime: number
+      width: number
+      height: number
+      totalPixels: number
+      mismatchedPixels: number
+      changePercent: number
+      comparisonImagePath: string | null
+    }>
+  }
+  unexpected: boolean
+  unexpectedReasons: string[]
+}
+```
+
+Composite artifacts are horizontally concatenated panels: old frame, new frame, then pixelmatch's highlighted diff, separated by two neutral gray columns at each boundary. Names are deterministic, for example `scene-o001-n003-sample-01.png` uses one-based scene/sample numbers.
 
 ### `markdown-video doctor`
 
