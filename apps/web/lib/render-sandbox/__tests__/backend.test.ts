@@ -274,6 +274,18 @@ describe("renderSandboxVideo", () => {
     }
   });
 
+  it("fails closed when terminal fork cleanup fails after an otherwise successful render", async () => {
+    const { sandbox } = makeSandbox();
+    sandbox.delete.mockRejectedValueOnce(new Error("delete unavailable"));
+    const { dependencies } = makeDependencies(sandbox);
+
+    await expect(renderSandboxVideo({ markdown: MARKDOWN }, dependencies)).rejects.toThrow(
+      /cleanup failed/
+    );
+    expect(sandbox.stop).toHaveBeenCalledOnce();
+    expect(sandbox.delete).toHaveBeenCalledOnce();
+  });
+
   it("rejects malformed or oversized mp4 output", async () => {
     const malformed = makeSandbox({ mp4: Buffer.from("not an mp4") });
     const malformedDeps = makeDependencies(malformed.sandbox).dependencies;
