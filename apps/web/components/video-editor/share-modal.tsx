@@ -219,12 +219,12 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-white dark:bg-neutral-950 border-gray-200 dark:border-neutral-800 text-gray-900 dark:text-neutral-100 max-w-lg">
+      <DialogContent className="bg-panel dark:bg-panel border-border dark:border-border text-foreground dark:text-foreground max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 font-serif font-semibold">
             Share Project
           </DialogTitle>
-          <DialogDescription className="text-gray-600 dark:text-neutral-400">
+          <DialogDescription className="text-muted-foreground dark:text-muted-foreground">
             Share your project via link or embed it on your website
           </DialogDescription>
         </DialogHeader>
@@ -236,23 +236,23 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
         {shareError && (
           <div
             role="alert"
-            className="mt-4 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-3 text-red-900 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-200"
+            className="mt-4 flex gap-3 rounded-lg border border-destructive/40 bg-destructive-soft p-3 text-destructive dark:border-destructive/40 dark:bg-destructive-soft dark:text-destructive"
           >
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
             <div className="space-y-1 text-sm">
               <p className="font-medium">Share link unavailable</p>
-              <p className="text-red-700 dark:text-red-300">{shareError}</p>
+              <p className="text-destructive dark:text-destructive">{shareError}</p>
             </div>
           </div>
         )}
 
         <Tabs defaultValue="link" className="mt-4">
-          <TabsList className="bg-gray-100 dark:bg-neutral-900 w-full">
-            <TabsTrigger value="link" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-neutral-100">
+          <TabsList className="bg-surface dark:bg-surface w-full">
+            <TabsTrigger value="link" className="flex-1 data-[state=active]:bg-panel-raised dark:data-[state=active]:bg-panel-raised data-[state=active]:text-foreground dark:data-[state=active]:text-foreground">
               <Link className="w-4 h-4 mr-2" aria-hidden="true" />
               Share Link
             </TabsTrigger>
-            <TabsTrigger value="embed" className="flex-1 data-[state=active]:bg-white dark:data-[state=active]:bg-neutral-800 data-[state=active]:text-gray-900 dark:data-[state=active]:text-neutral-100">
+            <TabsTrigger value="embed" className="flex-1 data-[state=active]:bg-panel-raised dark:data-[state=active]:bg-panel-raised data-[state=active]:text-foreground dark:data-[state=active]:text-foreground">
               <Code className="w-4 h-4 mr-2" aria-hidden="true" />
               Embed Code
             </TabsTrigger>
@@ -260,7 +260,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
           <TabsContent value="link" className="mt-4 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="project-share-link" className="text-sm text-gray-600 dark:text-neutral-400">Project Link</Label>
+              <Label htmlFor="project-share-link" className="text-sm text-muted-foreground dark:text-muted-foreground">Project Link</Label>
               <div className="flex gap-2">
                 <Input
                   id="project-share-link"
@@ -269,7 +269,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                   readOnly
                   disabled={isGenerating || !shareLink}
                   aria-label="Project share link"
-                  className="bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-sm font-mono text-gray-900 dark:text-neutral-100"
+                  className="bg-panel dark:bg-surface border-border dark:border-border text-sm font-mono text-foreground dark:text-foreground"
                 />
                 <Button
                   type="button"
@@ -277,7 +277,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                   variant="outline"
                   disabled={isGenerating || !shareLink}
                   aria-label={copied === "link" ? "Project link copied" : "Copy project link"}
-                  className="border-gray-300 dark:border-neutral-700 bg-white dark:bg-neutral-900 hover:bg-gray-50 dark:hover:bg-neutral-800 shrink-0"
+                  className="border-border dark:border-border bg-panel dark:bg-surface hover:bg-surface dark:hover:bg-surface shrink-0"
                 >
                   {copied === "link" ? <Check className="w-4 h-4 text-green-600 dark:text-green-400" /> : <Copy className="w-4 h-4" />}
                 </Button>
@@ -288,13 +288,13 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
               type="button"
               onClick={handleNativeShare}
               disabled={!canNativeShare || isGenerating || !shareLink}
-              className="w-full gap-2 bg-gray-900 dark:bg-neutral-100 hover:bg-gray-800 dark:hover:bg-neutral-200 text-white dark:text-gray-900 border-0 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full gap-2 bg-foreground dark:bg-foreground hover:bg-foreground/90 dark:hover:bg-foreground/90 text-foreground dark:text-background border-0 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Share2 className="w-4 h-4" aria-hidden="true" />
               Share via...
             </Button>
 
-            <div className="bg-gray-50 dark:bg-neutral-900/50 rounded-lg p-4 text-sm text-gray-600 dark:text-neutral-400">
+            <div className="bg-surface dark:bg-surface rounded-lg p-4 text-sm text-muted-foreground dark:text-muted-foreground">
               <p>
                 Smaller projects are encoded directly in the link. Larger projects use temporary storage and expire after 7 days.
               </p>
@@ -303,7 +303,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
 
           <TabsContent value="embed" className="mt-4 space-y-4">
             <div className="space-y-2">
-              <span id="embed-size-label" className="block text-sm font-medium text-gray-600 dark:text-neutral-400">Embed Size</span>
+              <span id="embed-size-label" className="block text-sm font-medium text-muted-foreground dark:text-muted-foreground">Embed Size</span>
               <div className="flex gap-2" role="group" aria-labelledby="embed-size-label">
                 {(Object.keys(embedSizes) as Array<keyof typeof embedSizes>).map((key) => (
                   <Button
@@ -315,8 +315,8 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                     onClick={() => setEmbedSize(key)}
                     className={
                       embedSize === key
-                        ? "bg-gray-900 dark:bg-neutral-100 text-white dark:text-gray-900"
-                        : "bg-white dark:bg-neutral-900 border-gray-300 dark:border-neutral-700 text-gray-700 dark:text-neutral-300 hover:bg-gray-50 dark:hover:bg-neutral-800"
+                        ? "bg-foreground dark:bg-foreground text-foreground dark:text-background"
+                        : "bg-panel dark:bg-surface border-border dark:border-border text-foreground dark:text-foreground hover:bg-surface dark:hover:bg-surface"
                     }
                   >
                     {key.charAt(0).toUpperCase() + key.slice(1)}
@@ -329,12 +329,12 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
             </div>
 
             <div className="space-y-2">
-              <span className="block text-sm font-medium text-gray-600 dark:text-neutral-400">Embed Code</span>
+              <span className="block text-sm font-medium text-muted-foreground dark:text-muted-foreground">Embed Code</span>
               <div className="relative overflow-hidden min-w-0">
                 <pre
                   tabIndex={0}
                   aria-label="Embed code"
-                  className="bg-white dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg p-3 pr-12 text-xs font-mono text-gray-900 dark:text-neutral-100 break-all whitespace-pre-wrap w-full overflow-x-auto max-w-full min-h-20"
+                  className="bg-panel dark:bg-surface border border-border dark:border-border rounded-lg p-3 pr-12 text-xs font-mono text-foreground dark:text-foreground break-all whitespace-pre-wrap w-full overflow-x-auto max-w-full min-h-20"
                 >
                   {shareError
                     ? "Embed code is unavailable because a share link could not be created."
@@ -348,7 +348,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                   size="sm"
                   disabled={!embedCode}
                   aria-label={copied === "embed" ? "Embed code copied" : "Copy embed code"}
-                  className="absolute top-2 right-2 h-7 bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 z-10"
+                  className="absolute top-2 right-2 h-7 bg-surface dark:bg-surface hover:bg-surface dark:hover:bg-surface z-10"
                 >
                   {copied === "embed" ? <Check className="w-3 h-3 text-green-600 dark:text-green-400" /> : <Copy className="w-3 h-3" />}
                 </Button>
@@ -356,8 +356,8 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
             </div>
 
             <div className="space-y-2">
-              <span className="block text-sm font-medium text-gray-600 dark:text-neutral-400">Preview</span>
-              <div className="bg-gray-50 dark:bg-neutral-900 border border-gray-300 dark:border-neutral-700 rounded-lg overflow-hidden w-full">
+              <span className="block text-sm font-medium text-muted-foreground dark:text-muted-foreground">Preview</span>
+              <div className="bg-surface dark:bg-surface border border-border dark:border-border rounded-lg overflow-hidden w-full">
                 <div
                   className="relative w-full"
                   style={{
@@ -381,7 +381,7 @@ export function ShareModal({ open, onOpenChange }: ShareModalProps) {
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center px-4 text-center">
-                      <span className="text-gray-500 dark:text-neutral-500 text-sm">
+                      <span className="text-muted-foreground dark:text-muted-foreground text-sm">
                         {shareError ? "Preview unavailable because a share link could not be created." : "Loading preview..."}
                       </span>
                     </div>

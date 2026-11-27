@@ -54,7 +54,7 @@ function CustomDropdown({
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <div className="text-sm text-zinc-400 flex items-center gap-2 mb-2">
+      <div className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
         {icon}
         {label}
       </div>
@@ -68,12 +68,12 @@ function CustomDropdown({
         )}
       >
         <CornerMarkers />
-        <span className="text-sm font-serif font-semibold text-gray-900 dark:text-neutral-100 underline decoration-gray-500 dark:decoration-neutral-400/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-gray-700 dark:group-hover:decoration-neutral-300">
+        <span className="text-sm font-serif font-semibold text-foreground dark:text-foreground underline decoration-line-soft dark:decoration-line-soft underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-accent dark:group-hover:decoration-accent">
           {selectedOption?.label}
         </span>
         <ChevronDown
           className={cn(
-            "w-4 h-4 text-gray-900 dark:text-neutral-100 transition-transform duration-300",
+            "w-4 h-4 text-foreground dark:text-foreground transition-transform duration-300",
             isOpen && "rotate-180"
           )}
         />
@@ -81,7 +81,7 @@ function CustomDropdown({
 
       {isOpen && (
         <div className="absolute left-0 right-0 mt-2 z-50 animate-[slideFadeUp_0.2s_ease-out]">
-          <div className="relative group bg-black">
+          <div className="relative group bg-preview-canvas">
             {/* Dot grid background pattern */}
             <div
               className="absolute inset-0 opacity-20"
@@ -104,7 +104,7 @@ function CustomDropdown({
                     "group flex items-center gap-2 w-full",
                     "relative transition-all duration-300 ease-out px-3 py-2",
                     "hover:translate-x-[-2px]",
-                    option.value === value && "bg-zinc-800/50"
+                    option.value === value && "bg-accent-soft"
                   )}
                 >
                   <span className="text-sm font-medium text-white underline decoration-white/50 underline-offset-4 transition-all duration-300 group-hover:underline-offset-[6px] group-hover:decoration-white relative z-10">
@@ -226,11 +226,11 @@ export default function RenderOptions() {
             onChange={(event) =>
               setExportSettings({ burnCaptions: event.target.checked })
             }
-            className="mt-1 h-4 w-4 accent-pink-500"
+            className="mt-1 h-4 w-4 accent-accent"
           />
           <span>
-            <span className="block text-sm text-zinc-300">Burn captions into video</span>
-            <span className="block text-xs text-zinc-500 mt-1">
+            <span className="block text-sm text-foreground">Burn captions into video</span>
+            <span className="block text-xs text-muted-foreground mt-1">
               Off by default. SRT/VTT sidecars are generated either way when text scenes exist.
             </span>
           </span>
@@ -239,7 +239,7 @@ export default function RenderOptions() {
 
       {/* FPS Control */}
       <div>
-        <label className="text-sm text-zinc-400 flex items-center gap-2 mb-2">
+        <label className="text-sm text-muted-foreground flex items-center gap-2 mb-2">
           <Film className="w-3.5 h-3.5" />
           Output FPS: {exportSettings.fps || 30}
         </label>
@@ -252,9 +252,9 @@ export default function RenderOptions() {
           onChange={(e) =>
             setExportSettings({ fps: Number.parseInt(e.target.value, 10) })
           }
-          className="w-full h-2 bg-zinc-800 rounded-lg appearance-none cursor-pointer"
+          className="w-full h-2 bg-panel-raised rounded-lg appearance-none cursor-pointer"
         />
-        <p className="text-xs text-zinc-500 mt-1">
+        <p className="text-xs text-muted-foreground mt-1">
           Higher FPS = smoother video, longer render time
         </p>
       </div>

@@ -88,7 +88,7 @@ export function Controls() {
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 bg-white dark:bg-neutral-950 border-t border-gray-200 dark:border-neutral-800">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 bg-panel dark:bg-panel border-t border-border dark:border-border">
       {/* Playback controls */}
       <div className="flex items-center gap-1">
         <button
@@ -97,8 +97,8 @@ export function Controls() {
           aria-label="Skip back 3 seconds"
           title="Skip back 3 seconds"
           className={cn(
-            "h-8 w-8 flex items-center justify-center text-gray-600 dark:text-neutral-400",
-            "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            "h-8 w-8 flex items-center justify-center text-muted-foreground dark:text-muted-foreground",
+            "hover:text-foreground dark:hover:text-foreground hover:bg-surface dark:hover:bg-surface rounded transition-colors"
           )}
         >
           <SkipBack className="w-4 h-4" aria-hidden="true" />
@@ -110,8 +110,8 @@ export function Controls() {
           aria-label={isPlaying ? "Pause" : "Play"}
           title={isPlaying ? "Pause" : "Play"}
           className={cn(
-            "h-10 w-10 flex items-center justify-center text-gray-900 dark:text-neutral-100",
-            "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            "h-10 w-10 flex items-center justify-center text-foreground dark:text-foreground",
+            "hover:bg-surface dark:hover:bg-surface rounded transition-colors"
           )}
         >
           {isPlaying ? (
@@ -127,8 +127,8 @@ export function Controls() {
           aria-label="Skip forward 3 seconds"
           title="Skip forward 3 seconds"
           className={cn(
-            "h-8 w-8 flex items-center justify-center text-gray-600 dark:text-neutral-400",
-            "hover:text-gray-900 dark:hover:text-neutral-100 hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+            "h-8 w-8 flex items-center justify-center text-muted-foreground dark:text-muted-foreground",
+            "hover:text-foreground dark:hover:text-foreground hover:bg-surface dark:hover:bg-surface rounded transition-colors"
           )}
         >
           <SkipForward className="w-4 h-4" aria-hidden="true" />
@@ -143,8 +143,8 @@ export function Controls() {
             title={isPreviewMusicMuted ? "Unmute preview music" : "Mute preview music"}
             className={cn(
               "h-8 w-8 flex items-center justify-center",
-              "text-gray-600 dark:text-neutral-400 hover:text-gray-900 dark:hover:text-neutral-100",
-              "hover:bg-gray-100 dark:hover:bg-neutral-800 rounded transition-colors"
+              "text-muted-foreground dark:text-muted-foreground hover:text-foreground dark:hover:text-foreground",
+              "hover:bg-surface dark:hover:bg-surface rounded transition-colors"
             )}
           >
             {isPreviewMusicMuted ? (
@@ -157,24 +157,24 @@ export function Controls() {
       </div>
 
       {/* Time display */}
-      <div className="font-mono text-sm text-gray-900 dark:text-neutral-100 min-w-[100px]">
+      <div className="font-mono text-sm text-foreground dark:text-foreground min-w-[100px]">
         <span>{formatTime(currentTime)}</span>
-        <span className="text-gray-500 dark:text-neutral-500">/</span>
-        <span className="text-gray-500 dark:text-neutral-500">{formatTime(totalDuration)}</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">/</span>
+        <span className="text-muted-foreground dark:text-muted-foreground">{formatTime(totalDuration)}</span>
       </div>
 
       {/* Playback speed */}
       <div className="ml-auto flex items-center gap-2">
         <LocalePicker />
-        <span className="text-xs text-gray-600 dark:text-neutral-400">Speed</span>
+        <span className="text-xs text-muted-foreground dark:text-muted-foreground">Speed</span>
         <select
           aria-label="Playback speed"
           value={playbackSpeed}
           onChange={(e) => setPlaybackSpeed(Number(e.target.value))}
           className={cn(
-            "bg-white dark:bg-neutral-900 text-gray-900 dark:text-neutral-100 text-xs rounded px-2 py-1",
-            "border border-gray-300 dark:border-neutral-700",
-            "focus:outline-none focus:ring-1 focus:ring-gray-400 dark:focus:ring-neutral-600"
+            "bg-panel dark:bg-surface text-foreground dark:text-foreground text-xs rounded px-2 py-1",
+            "border border-border dark:border-border",
+            "focus:outline-none focus:ring-1 focus:ring-accent dark:focus:ring-accent"
           )}
         >
           <option value={0.5}>0.5x</option>

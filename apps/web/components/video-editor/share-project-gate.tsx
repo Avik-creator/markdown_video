@@ -141,9 +141,9 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
 
   if (decision === "checking") {
     return (
-      <main className="flex h-screen items-center justify-center bg-white text-gray-600 dark:bg-neutral-950 dark:text-neutral-400">
+      <main className="flex h-screen items-center justify-center bg-panel text-muted-foreground dark:bg-panel dark:text-muted-foreground">
         <div className="flex items-center gap-3 text-sm" role="status">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-gray-400 dark:bg-neutral-500" aria-hidden="true" />
+          <span className="h-2 w-2 animate-pulse rounded-full bg-line-strong dark:bg-line-strong" aria-hidden="true" />
           Checking shared project...
         </div>
       </main>
@@ -159,25 +159,25 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
   }
 
   return (
-    <main className="flex h-screen items-center justify-center bg-white text-gray-900 dark:bg-neutral-950 dark:text-neutral-100">
-      <p className="text-sm text-gray-500 dark:text-neutral-500">Shared project ready</p>
+    <main className="flex h-screen items-center justify-center bg-panel text-foreground dark:bg-panel dark:text-foreground">
+      <p className="text-sm text-muted-foreground dark:text-muted-foreground">Shared project ready</p>
       <Dialog
         open
         onOpenChange={(open) => {
           if (!open) keepLocalProject()
         }}
       >
-        <DialogContent className="border-gray-200 bg-white text-gray-900 dark:border-neutral-800 dark:bg-neutral-950 dark:text-neutral-100">
+        <DialogContent className="border-border bg-panel text-foreground dark:border-border dark:bg-panel dark:text-foreground">
           <DialogHeader>
             <DialogTitle className="font-serif text-xl font-semibold">Open shared project?</DialogTitle>
-            <DialogDescription className="text-gray-600 dark:text-neutral-400">
+            <DialogDescription className="text-muted-foreground dark:text-muted-foreground">
               A different project is already saved in this browser. Loading the shared project will replace that saved project.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="rounded-lg border border-gray-200 bg-gray-50 dark:border-neutral-800 dark:bg-neutral-900/60">
-              <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2 text-xs text-gray-500 dark:border-neutral-800 dark:text-neutral-500">
+            <div className="rounded-lg border border-border bg-surface dark:border-border dark:bg-surface">
+              <div className="flex items-center justify-between border-b border-border px-3 py-2 text-xs text-muted-foreground dark:border-border dark:text-muted-foreground">
                 <span className="font-medium uppercase tracking-wide">Shared preview</span>
                 <span>
                   {sharedSummary.lines} lines · {sharedSummary.characters.toLocaleString()} characters
@@ -186,14 +186,14 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
               <pre
                 tabIndex={0}
                 aria-label="Shared markdown preview"
-                className="max-h-36 overflow-auto whitespace-pre-wrap break-words p-3 font-mono text-xs leading-5 text-gray-700 dark:text-neutral-300"
+                className="max-h-36 overflow-auto whitespace-pre-wrap break-words p-3 font-mono text-xs leading-5 text-foreground dark:text-foreground"
               >
                 {sharedPreview}
               </pre>
             </div>
 
             {savedSummary && (
-              <p className="text-sm text-gray-600 dark:text-neutral-400">
+              <p className="text-sm text-muted-foreground dark:text-muted-foreground">
                 Your saved project has {savedSummary.lines} lines and {savedSummary.characters.toLocaleString()} characters.
               </p>
             )}
@@ -204,14 +204,14 @@ export function ShareProjectGate({ initialMarkdown, isEmbed = false }: ShareProj
               type="button"
               variant="outline"
               onClick={keepLocalProject}
-              className="border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              className="border-border bg-panel text-foreground hover:bg-surface dark:border-border dark:bg-surface dark:text-foreground dark:hover:bg-surface"
             >
               Keep my project
             </Button>
             <Button
               type="button"
               onClick={acceptSharedProject}
-              className="border-0 bg-gray-900 text-white hover:bg-gray-800 dark:bg-neutral-100 dark:text-gray-900 dark:hover:bg-neutral-200"
+              className="border-0 bg-foreground text-foreground hover:bg-foreground/90 dark:bg-foreground dark:text-background dark:hover:bg-foreground/90"
             >
               Load shared project
             </Button>

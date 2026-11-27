@@ -30,7 +30,7 @@ export function Hero() {
             </Reveal>
 
             <Reveal delay={0.06}>
-              <h1 className="landing-display-tight text-[clamp(4.15rem,9.8vw,9.5rem)] font-medium leading-[0.84] tracking-[-0.065em]">
+              <h1 className="landing-display-tight text-[clamp(3.7rem,8.5vw,7.6rem)] font-medium leading-[0.84] tracking-[-0.065em]">
                 write markdown.
                 <br />
                 <span className="text-[color:var(--landing-faint)]">render the video.</span>
@@ -48,13 +48,13 @@ export function Hero() {
               <div className="mt-10 flex flex-wrap items-center gap-x-7 gap-y-4">
                 <Link
                   href="/editor"
-                  className="inline-flex h-12 items-center rounded-full bg-[color:var(--landing-ink)] px-6 text-[15px] font-medium text-[color:var(--landing-paper)] landing-action-shadow transition-colors hover:bg-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+                  className="tool-button tool-button-primary h-9 px-4 text-[13px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
                 >
                   write in the editor
                 </Link>
                 <a
                   href="#mcp"
-                  className="group inline-flex min-h-11 items-center text-[15px] font-medium underline decoration-[color:var(--landing-line)] decoration-1 underline-offset-8 transition-colors hover:decoration-[color:var(--landing-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
+                  className="group inline-flex min-h-11 items-center text-[15px] font-medium underline decoration-[color:var(--landing-line)] decoration-1 underline-offset-[3px] transition-colors hover:decoration-[color:var(--landing-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-4 focus-visible:ring-offset-[color:var(--landing-paper)]"
                 >
                   let an agent render it
                   <span aria-hidden="true" className="ml-2 transition-transform group-hover:translate-x-1">
@@ -83,7 +83,7 @@ export function Hero() {
 
           <Reveal delay={0.16} className="relative lg:min-h-[590px]">
             <div className="relative lg:pl-14 lg:pt-16">
-              <figure className="landing-card relative z-10 overflow-hidden rounded-[20px] p-2 sm:p-3">
+              <figure className="landing-card relative z-10 overflow-hidden rounded-md p-2 sm:p-3">
                 <div className="overflow-hidden rounded-[13px]">
                   <LoopingVideo
                     src="/landing/hero-showcase.mp4"
@@ -98,7 +98,7 @@ export function Hero() {
                 </figcaption>
               </figure>
 
-              <div className="landing-dark-card absolute -left-3 top-0 z-20 hidden w-[330px] -rotate-2 rounded-[16px] p-4 text-[#f1ecdf] md:block lg:-left-1">
+              <div className="landing-dark-card absolute -left-3 top-0 z-20 hidden w-[330px] -rotate-2 rounded-md p-4 text-[color:var(--landing-dark-card-ink)] md:block lg:-left-1">
                 <div className="mb-3 flex items-center justify-between border-b border-white/10 pb-3">
                   <span className="font-mono text-[11px] text-white/46">source.md</span>
                   <span className="flex gap-1.5" aria-hidden="true">

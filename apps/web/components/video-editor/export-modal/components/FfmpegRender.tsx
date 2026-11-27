@@ -752,7 +752,7 @@ export default function FfmpegRender({
         <Button
           onClick={render}
           disabled={!loadFfmpeg || !exportValidation.valid}
-          className="w-full gap-2 bg-pink-500 hover:bg-pink-600 text-white"
+          className="w-full gap-2 bg-accent hover:bg-accent-deep text-foreground"
         >
           {!loadFfmpeg ? (
             <>
@@ -766,12 +766,12 @@ export default function FfmpegRender({
             </>
           )}
         </Button>
-        <p className="text-xs text-zinc-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           Keep this tab visible while exporting; frame capture uses browser
           animation frames and stalls in a background tab.
         </p>
         {!exportValidation.valid && exportValidation.reason && (
-          <p role="alert" className="text-xs text-amber-400 text-center">
+          <p role="alert" className="text-xs text-warning text-center">
             {exportValidation.reason}
           </p>
         )}
@@ -789,17 +789,17 @@ export default function FfmpegRender({
       <div className="py-6 space-y-6">
         <div className="flex flex-col items-center gap-4">
           <div className="relative">
-            <div className="w-16 h-16 rounded-full bg-pink-500/10 flex items-center justify-center">
-              <Loader2 className="w-8 h-8 text-pink-500 animate-spin" />
+            <div className="w-16 h-16 rounded-full bg-accent-soft flex items-center justify-center">
+              <Loader2 className="w-8 h-8 text-accent animate-spin" />
             </div>
           </div>
           <div className="text-center">
-            <p className="text-white font-medium">
+            <p className="text-foreground font-medium">
               {status === "preparing" && "Preparing..."}
               {status === "capturing" && "Capturing frames..."}
               {status === "encoding" && "Encoding video..."}
             </p>
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {status === "capturing" && `Frame ${currentFrame}/${totalFrames}`}
               {status === "encoding" && "Almost done..."}
             </p>
@@ -807,9 +807,9 @@ export default function FfmpegRender({
         </div>
 
         <div className="space-y-2">
-          <Progress value={progress} className="h-2 bg-zinc-800" />
-          <p className="text-xs text-zinc-500 text-center">{progress}%</p>
-          <p className="text-xs text-zinc-500 text-center">
+          <Progress value={progress} className="h-2 bg-panel-raised" />
+          <p className="text-xs text-muted-foreground text-center">{progress}%</p>
+          <p className="text-xs text-muted-foreground text-center">
             Keep this tab visible until encoding finishes.
           </p>
         </div>
@@ -817,7 +817,7 @@ export default function FfmpegRender({
         <Button
           onClick={handleReset}
           variant="outline"
-          className="w-full border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
+          className="w-full border-border text-foreground hover:bg-surface bg-transparent"
         >
           Cancel
         </Button>
@@ -834,15 +834,15 @@ export default function FfmpegRender({
             <CheckCircle2 className="w-8 h-8 text-green-400" />
           </div>
           <div className="text-center">
-            <p className="text-white font-medium">Export Complete!</p>
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-foreground font-medium">Export Complete!</p>
+            <p className="text-sm text-muted-foreground mt-1">
               Your video is ready to download
             </p>
           </div>
         </div>
 
         {/* Preview based on format */}
-        <div className="rounded-lg overflow-hidden border border-zinc-700">
+        <div className="rounded-lg overflow-hidden border border-border">
           {exportSettings.format === "gif" ? (
             <img
               src={previewUrl}
@@ -863,7 +863,7 @@ export default function FfmpegRender({
         <div className="flex gap-3">
           <Button
             asChild
-            className="flex-1 gap-2 bg-pink-500 hover:bg-pink-600 text-white"
+            className="flex-1 gap-2 bg-accent hover:bg-accent-deep text-foreground"
           >
             <a href={previewUrl} download={outputFileName}>
               <Download className="w-4 h-4" />
@@ -873,7 +873,7 @@ export default function FfmpegRender({
           <Button
             onClick={handleReset}
             variant="outline"
-            className="border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
+            className="border-border text-foreground hover:bg-surface bg-transparent"
           >
             <X className="w-4 h-4" />
           </Button>
@@ -881,14 +881,14 @@ export default function FfmpegRender({
 
         {captionUrls && (
           <div className="space-y-2">
-            <p className="text-xs text-zinc-400 text-center">
+            <p className="text-xs text-muted-foreground text-center">
               Caption sidecars generated from text scenes
             </p>
             <div className="flex gap-3">
               <Button
                 asChild
                 variant="outline"
-                className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
+                className="flex-1 border-border text-foreground hover:bg-surface bg-transparent"
               >
                 <a href={captionUrls.srt} download="video.srt">
                   <Download className="w-4 h-4" />
@@ -898,7 +898,7 @@ export default function FfmpegRender({
               <Button
                 asChild
                 variant="outline"
-                className="flex-1 border-zinc-700 text-zinc-300 hover:bg-zinc-800 bg-transparent"
+                className="flex-1 border-border text-foreground hover:bg-surface bg-transparent"
               >
                 <a href={captionUrls.vtt} download="video.vtt">
                   <Download className="w-4 h-4" />
@@ -917,18 +917,18 @@ export default function FfmpegRender({
     return (
       <div className="py-6 space-y-6">
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-red-500/10 flex items-center justify-center">
-            <AlertCircle className="w-8 h-8 text-red-400" />
+          <div className="w-16 h-16 rounded-full bg-destructive-soft flex items-center justify-center">
+            <AlertCircle className="w-8 h-8 text-destructive" />
           </div>
           <div className="text-center">
-            <p className="text-white font-medium">Export Failed</p>
-            <p className="text-sm text-red-400 mt-1">{errorMessage}</p>
+            <p className="text-foreground font-medium">Export Failed</p>
+            <p className="text-sm text-destructive mt-1">{errorMessage}</p>
           </div>
         </div>
 
         <Button
           onClick={handleReset}
-          className="w-full bg-zinc-800 hover:bg-zinc-700 text-white"
+          className="w-full bg-panel-raised hover:bg-surface text-foreground"
         >
           Try Again
         </Button>

@@ -29,7 +29,7 @@ export function LandingThemeToggle() {
       aria-label={label}
       aria-pressed={isDark}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[color:var(--landing-line)]/80 bg-[color:var(--landing-card)]/55 text-[color:var(--landing-ink)] transition-colors duration-300 hover:border-[color:var(--landing-accent)]/75 hover:text-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--landing-paper)]"
+      className="inline-flex size-8 shrink-0 items-center justify-center rounded-md border border-[color:var(--landing-line)]/80 bg-transparent text-[color:var(--landing-ink)] transition-colors duration-200 hover:border-[color:var(--landing-accent)]/75 hover:bg-[color:var(--surface)] hover:text-[color:var(--landing-accent-deep)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--landing-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[color:var(--landing-paper)]"
     >
       <span className="relative grid size-5 place-items-center" aria-hidden="true">
         <Sun className="size-[17px] transition-all duration-300 dark:-rotate-90 dark:scale-50 dark:opacity-0" />

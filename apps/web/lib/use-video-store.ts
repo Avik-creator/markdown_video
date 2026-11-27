@@ -369,7 +369,7 @@ export const useVideoStore = create<VideoStore>()(
             id: generateId(),
             time,
             label,
-            color: "#ec4899",
+            color: "var(--accent)",
           };
           set((state) => ({ markers: [...state.markers, marker] }));
         },
