@@ -22,6 +22,7 @@ export interface ExportArtifactNames {
   paletteFileName: string
   outputFileName: string
   musicFileName: string
+  webcodecsVideoFileName: string
   outputExtension: "mp4" | "gif"
 }
 
@@ -49,6 +50,7 @@ export function getExportArtifactNames(
     paletteFileName: `palette-${safeGeneration}.png`,
     outputFileName: `output-${safeGeneration}.${outputExtension}`,
     musicFileName: `music-${safeGeneration}`,
+    webcodecsVideoFileName: `webcodecs-video-${safeGeneration}.mp4`,
     outputExtension,
   }
 }
@@ -381,4 +383,49 @@ export function getBackgroundTabPauseMessage(
   visibilityState: string
 ): string | null {
   return visibilityState === "hidden" ? BACKGROUND_TAB_PAUSE_MESSAGE : null
+}
+
+export type ExportEncoderKind = "webcodecs" | "ffmpeg"
+
+/**
+ * Which encoder produces the output video stream. WebCodecs is only an option
+ * for MP4-family exports (mp4, reels, shorts — all H.264 in MP4) when the
+ * browser accepted a config; GIF keeps the two-pass ffmpeg.wasm pipeline.
+ */
+export function chooseExportEncoder({
+  format,
+  webCodecsConfig,
+}: {
+  format: string | undefined
+  webCodecsConfig: unknown
+}): ExportEncoderKind {
+  if (format !== "gif" && webCodecsConfig != null) return "webcodecs"
+  return "ffmpeg"
+}
+
+/** sessionStorage flag set when the WebCodecs encoder fails mid-export. */
+export const WEBCODECS_EXPORT_DISABLED_KEY =
+  "markdown-video:webcodecs-export-disabled"
+
+/**
+ * True once a WebCodecs encode has failed at runtime in this tab. Read before
+ * every export so Try Again falls back to the ffmpeg.wasm pipeline; scoped to
+ * the tab session so a fresh session is allowed to try the hardware again.
+ * Any storage error (private mode, disabled storage) means "not disabled".
+ */
+export function isWebCodecsExportDisabled(): boolean {
+  try {
+    return sessionStorage.getItem(WEBCODECS_EXPORT_DISABLED_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
+/** Remember a runtime WebCodecs failure for the rest of this tab session. */
+export function disableWebCodecsExport(): void {
+  try {
+    sessionStorage.setItem(WEBCODECS_EXPORT_DISABLED_KEY, "1")
+  } catch {
+    // Storage can be unavailable; the failure is still reported, the flag is best-effort.
+  }
 }

@@ -216,6 +216,24 @@ describe("buildExportEventProperties", () => {
     });
   });
 
+  it("folds the encoder into the settings composite once it is known", () => {
+    expect(buildExportEventProperties(input).settings).toBe(
+      "1080p/30fps/high/balanced"
+    );
+    expect(
+      buildExportEventProperties({ ...input, encoder: "webcodecs" }).settings
+    ).toBe("1080p/30fps/high/balanced/webcodecs");
+    expect(
+      buildExportEventProperties({ ...input, encoder: "ffmpeg" }).settings
+    ).toBe("1080p/30fps/high/balanced/ffmpeg");
+  });
+
+  it("keeps the payload at 7 properties so failure events can add phase", () => {
+    expect(
+      Object.keys(buildExportEventProperties({ ...input, encoder: "webcodecs" })).length
+    ).toBeLessThanOrEqual(7);
+  });
+
   it("stays within the Vercel Analytics limit of 8 properties per event", () => {
     const properties = buildExportEventProperties(input);
     expect(Object.keys(properties).length).toBeLessThanOrEqual(8);

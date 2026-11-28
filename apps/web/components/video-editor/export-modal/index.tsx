@@ -73,10 +73,10 @@ export function ExportModal({ open, onOpenChange }: ExportModalProps) {
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Film className="w-5 h-5 text-accent" />
-            Export Video with FFmpeg
+            Export Video
           </DialogTitle>
           <DialogDescription className="text-muted-foreground">
-            Configure and export your video using FFmpeg WASM
+            Rendered locally in your browser.
           </DialogDescription>
         </DialogHeader>
 

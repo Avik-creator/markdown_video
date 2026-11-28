@@ -31,16 +31,29 @@ import {
 import {
   RenderRunTracker,
   applyRenderLayoutToClone,
+  chooseExportEncoder,
   computeEncodeProgressPercent,
   copyFrameData,
   createFrameTimeEstimator,
+  disableWebCodecsExport,
   formatEta,
   getBackgroundTabPauseMessage,
   getBrowserVideoEncodingSettings,
   getExportArtifactNames,
+  isWebCodecsExportDisabled,
   withTimeout,
 } from "../utils/export-utils";
-import { fetchBrowserMusicData } from "../utils/export-media";
+import {
+  fetchBrowserMusicData,
+  buildWebCodecsMusicRemuxArgs,
+} from "../utils/export-media";
+import {
+  createWebCodecsMp4Encoder,
+  isWebCodecsExportSupported,
+  selectWebCodecsVideoConfig,
+  WebCodecsEncoderError,
+  type WebCodecsMp4Encoder,
+} from "../utils/webcodecs-export";
 import { warmBrowserAssetSources } from "@/lib/assets/asset-resolution";
 import {
   beginExportCaptionBurn,
@@ -67,6 +80,10 @@ type ActiveRun = {
   generation: number;
   controller: AbortController;
   phase: "preparing" | "capturing" | "encoding";
+  // True only while an ffmpeg.exec call is in flight. WebCodecs encodes
+  // without the wasm worker, so "encoding" alone no longer implies the
+  // worker is busy.
+  ffmpegBusy: boolean;
 };
 
 class RenderCancelledError extends Error {
@@ -220,10 +237,11 @@ export default function FfmpegRender({
     runTracker.cancelRun(activeRun.generation);
     activeRunRef.current = null;
 
-    // During capture each write is small and abortable, so the loaded worker
-    // can be reused. Encoding is long-running; terminating is the only way to
-    // stop ffmpeg.wasm's CPU work promptly. Reloading is necessary only here.
-    if (activeRun.phase === "encoding") {
+    // Terminate only when an ffmpeg.exec call is actually in flight: it is
+    // long-running CPU work that abort alone cannot stop promptly. On the
+    // WebCodecs path aborting rejects the encoder directly, and cancelling
+    // during capture or finalize must never terminate the shared worker.
+    if (activeRun.ffmpegBusy) {
       try {
         ffmpeg.terminate();
       } catch (error) {
@@ -247,9 +265,9 @@ export default function FfmpegRender({
         activeRunRef.current = null;
 
         // The parent intentionally keeps an idle worker warm across modal
-        // closes, so encoding must be stopped here before it can continue as
-        // detached CPU work in that reusable worker.
-        if (activeRun.phase === "encoding") {
+        // closes, so an in-flight exec must be stopped here before it can
+        // continue as detached CPU work in that reusable worker.
+        if (activeRun.ffmpegBusy) {
           try {
             ffmpeg.terminate();
           } catch {
@@ -335,6 +353,7 @@ export default function FfmpegRender({
       generation,
       controller,
       phase: "preparing",
+      ffmpegBusy: false,
     };
     activeRunRef.current = activeRun;
 
@@ -391,7 +410,9 @@ export default function FfmpegRender({
 
     // Privacy-preserving usage analytics: export settings, output geometry,
     // and scene type counts only — never markdown, scene content, or URLs.
-    const exportEventProperties = buildExportEventProperties({
+    // The encoder property is filled in after WebCodecs config selection,
+    // before the started event fires.
+    const exportAnalyticsBase = {
       format,
       resolution: exportSettings.resolution,
       quality: exportSettings.quality,
@@ -403,12 +424,13 @@ export default function FfmpegRender({
       durationSeconds: totalDuration,
       totalFrames: totalFrameCount,
       scenes: state.scenes,
-    });
-    trackExportEvent(EXPORT_EVENT_NAMES.started, exportEventProperties);
+    };
+    let exportEventProperties = buildExportEventProperties(exportAnalyticsBase);
 
     let frameDirectory = "";
     let frameExtension = "jpg";
     let framesAttempted = 0;
+    let mp4Encoder: WebCodecsMp4Encoder | null = null;
 
     try {
       // Ensure all fonts are loaded before capture
@@ -419,6 +441,28 @@ export default function FfmpegRender({
       throwIfNotCurrent();
 
       frameExtension = renderPlan.frameExtension;
+
+      // WebCodecs is only an MP4-family option. GIF keeps the ffmpeg.wasm
+      // pipeline regardless of encoder support.
+      const webCodecsConfig =
+        format !== "gif" &&
+        isWebCodecsExportSupported() &&
+        !isWebCodecsExportDisabled()
+          ? await selectWebCodecsVideoConfig({
+              width: renderPlan.width,
+              height: renderPlan.height,
+              fps: outputFps,
+              quality: exportSettings.quality,
+            })
+          : null;
+      throwIfNotCurrent();
+      const encoderKind = chooseExportEncoder({ format, webCodecsConfig });
+      exportEventProperties = buildExportEventProperties({
+        ...exportAnalyticsBase,
+        encoder: encoderKind,
+      });
+      trackExportEvent(EXPORT_EVENT_NAMES.started, exportEventProperties);
+
       const params = getBrowserVideoEncodingSettings(
         exportSettings.quality,
         exportSettings.speed
@@ -426,9 +470,18 @@ export default function FfmpegRender({
 
       setTotalFrames(totalFrameCount);
 
-      frameDirectory = artifactNames.frameDirectory;
-      await ffmpeg.createDir(frameDirectory, { signal: controller.signal });
-      throwIfNotCurrent();
+      if (encoderKind === "webcodecs" && webCodecsConfig) {
+        mp4Encoder = createWebCodecsMp4Encoder({
+          config: webCodecsConfig,
+          fps: outputFps,
+          totalFrames: totalFrameCount,
+          signal: controller.signal,
+        });
+      } else {
+        frameDirectory = artifactNames.frameDirectory;
+        await ffmpeg.createDir(frameDirectory, { signal: controller.signal });
+        throwIfNotCurrent();
+      }
 
       if (music) {
         const musicData = await fetchBrowserMusicData(music.src, controller.signal);
@@ -479,6 +532,12 @@ export default function FfmpegRender({
       };
       let { canvas: frameCanvas, context: frameContext } = createFrameCanvas();
 
+      // WebCodecs needs no JPEG bytes, so the repeat-last-frame fallback keeps
+      // a pixel copy instead: lastGood mirrors the frame canvas after every
+      // successful capture.
+      const lastGood = mp4Encoder ? createFrameCanvas() : null;
+      let hasLastGoodFrame = false;
+
       for (let frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
         throwIfNotCurrent();
         framesAttempted = frameIndex + 1;
@@ -501,7 +560,7 @@ export default function FfmpegRender({
           frameContext.setTransform(1, 0, 0, 1, 0, 0);
           frameContext.clearRect(0, 0, renderPlan.width, renderPlan.height);
 
-          const blob = await withTimeout(
+          const captured = await withTimeout(
             (async () => {
               const capturedCanvas = await html2canvas(previewElement, {
                 canvas: frameCanvas,
@@ -532,6 +591,11 @@ export default function FfmpegRender({
               });
               throwIfNotCurrent();
 
+              // The watchdog covers only the rasterize. On the WebCodecs path
+              // the canvas itself is the frame; JPEG encoding only exists for
+              // the ffmpeg image-sequence input.
+              if (mp4Encoder) return capturedCanvas;
+
               return new Promise<Blob>((resolve, reject) => {
                 capturedCanvas.toBlob(
                   (b) => {
@@ -548,25 +612,45 @@ export default function FfmpegRender({
           );
           throwIfNotCurrent();
 
-          const arrayBuffer = await blob.arrayBuffer();
-          const frameData = new Uint8Array(arrayBuffer);
-          // writeFile transfers (and therefore empties) frameData.buffer.
-          // Keep an independent copy for the repeat-last-frame fallback.
-          const fallbackFrame = copyFrameData(frameData);
-          const fileName = getFrameFileName(
-            frameIndex,
-            renderPlan.frameExtension
-          );
-          await ffmpeg.writeFile(
-            `${frameDirectory}/${fileName}`,
-            frameData,
-            { signal: controller.signal }
-          );
-          lastFrame = fallbackFrame;
+          if (mp4Encoder) {
+            // addFrame snapshots the canvas synchronously, so frameCanvas can
+            // be redrawn on the next iteration. The await is the encoder's
+            // backpressure signal and intentionally sits outside the watchdog.
+            await mp4Encoder.addFrame(captured as HTMLCanvasElement, frameIndex);
+            throwIfNotCurrent();
+            lastGood?.context.drawImage(
+              captured as HTMLCanvasElement,
+              0,
+              0
+            );
+            hasLastGoodFrame = true;
+          } else if (captured instanceof Blob) {
+            const arrayBuffer = await captured.arrayBuffer();
+            const frameData = new Uint8Array(arrayBuffer);
+            // writeFile transfers (and therefore empties) frameData.buffer.
+            // Keep an independent copy for the repeat-last-frame fallback.
+            const fallbackFrame = copyFrameData(frameData);
+            const fileName = getFrameFileName(
+              frameIndex,
+              renderPlan.frameExtension
+            );
+            await ffmpeg.writeFile(
+              `${frameDirectory}/${fileName}`,
+              frameData,
+              { signal: controller.signal }
+            );
+            lastFrame = fallbackFrame;
+          }
           consecutiveCaptureFailures = 0;
         } catch (error) {
           if (!isCurrentRun()) {
             throw new RenderCancelledError();
+          }
+
+          // Encoder failures are not capture faults; no frame fallback can
+          // recover a dead encoder, so surface them to the run-level catch.
+          if (error instanceof WebCodecsEncoderError) {
+            throw error;
           }
 
           // A timed-out html2canvas may still be drawing into the canvas it
@@ -590,24 +674,32 @@ export default function FfmpegRender({
             );
           }
           // FFmpeg's image sequence input stops at the first missing file, so a
-          // gap would silently cut the video short. Repeat the previous frame
-          // for an isolated/transient capture fault only; the consecutive
-          // failure ceiling above prevents this recovery path from hiding a
+          // gap would silently cut the video short — and WebCodecs requires a
+          // complete, ordered sequence. Repeat the previous frame for an
+          // isolated/transient capture fault only; the consecutive failure
+          // ceiling above prevents this recovery path from hiding a
           // persistently broken scene.
-          if (!lastFrame) {
-            throw new Error("Could not capture the first frame");
+          if (mp4Encoder) {
+            if (!hasLastGoodFrame || !lastGood) {
+              throw new Error("Could not capture the first frame");
+            }
+            await mp4Encoder.addFrame(lastGood.canvas, frameIndex);
+          } else {
+            if (!lastFrame) {
+              throw new Error("Could not capture the first frame");
+            }
+            const fileName = getFrameFileName(
+              frameIndex,
+              renderPlan.frameExtension
+            );
+            // Copy again: writeFile would otherwise neuter lastFrame on the
+            // first fallback write and every later fallback would be empty.
+            await ffmpeg.writeFile(
+              `${frameDirectory}/${fileName}`,
+              copyFrameData(lastFrame),
+              { signal: controller.signal }
+            );
           }
-          const fileName = getFrameFileName(
-            frameIndex,
-            renderPlan.frameExtension
-          );
-          // Copy again: writeFile would otherwise neuter lastFrame on the
-          // first fallback write and every later fallback would be empty.
-          await ffmpeg.writeFile(
-            `${frameDirectory}/${fileName}`,
-            copyFrameData(lastFrame),
-            { signal: controller.signal }
-          );
         }
 
         throwIfNotCurrent();
@@ -623,7 +715,9 @@ export default function FfmpegRender({
       throwIfNotCurrent();
       activeRun.phase = "encoding";
       setStatus("encoding");
-      setProgress(0);
+      // WebCodecs encodes during capture, so only the flush remains: jump the
+      // bar to 99 until the finalize/remux work resolves to 100.
+      setProgress(mp4Encoder ? 99 : 0);
       encodeStartedAtRef.current = Date.now();
       setEncodeElapsedSec(0);
 
@@ -644,6 +738,7 @@ export default function FfmpegRender({
           setProgress(mapProgressPercent ? mapProgressPercent(percent) : percent);
         };
         ffmpeg.on("progress", handleProgress);
+        activeRun.ffmpegBusy = true;
         try {
           const exitCode = await ffmpeg.exec(args, -1, {
             signal: controller.signal,
@@ -653,11 +748,49 @@ export default function FfmpegRender({
             throw new Error(`${description} failed with exit code ${exitCode}`);
           }
         } finally {
+          activeRun.ffmpegBusy = false;
           ffmpeg.off("progress", handleProgress);
         }
       };
 
-      if (format === "gif") {
+      if (mp4Encoder) {
+        // Encoding happened alongside capture; finalize is only the encoder
+        // flush plus the muxer's fast-start moov write.
+        const mp4Bytes = await mp4Encoder.finalize();
+        throwIfNotCurrent();
+
+        if (music) {
+          // Stream-copy the encoded H.264 and let ffmpeg.wasm build the AAC
+          // track with the same filter graph as the libx264 path.
+          await ffmpeg.writeFile(artifactNames.webcodecsVideoFileName, mp4Bytes, {
+            signal: controller.signal,
+          });
+          throwIfNotCurrent();
+          setProgress(0);
+          await execFfmpeg(
+            buildWebCodecsMusicRemuxArgs({
+              videoPath: artifactNames.webcodecsVideoFileName,
+              musicPath: artifactNames.musicFileName,
+              music,
+              totalDuration,
+              outputPath: artifactNames.outputFileName,
+            }),
+            "Music mux"
+          );
+          const remuxedData = await ffmpeg.readFile(
+            artifactNames.outputFileName,
+            "binary",
+            { signal: controller.signal }
+          );
+          throwIfNotCurrent();
+          outputBlob = new Blob([remuxedData as BlobPart], {
+            type: "video/mp4",
+          });
+        } else {
+          outputBlob = new Blob([mp4Bytes as BlobPart], { type: "video/mp4" });
+        }
+        nextOutputFileName = "video.mp4";
+      } else if (format === "gif") {
         // Reduce FPS for GIF to keep file size small (max 10fps for GIFs)
         const gifFps = Math.min(outputFps, 10);
 
@@ -803,8 +936,15 @@ export default function FfmpegRender({
           ...exportEventProperties,
           phase: activeRun.phase,
         });
-        const message =
+        // A WebCodecs encoder can fail at runtime (GPU driver resets, codec
+        // reclamation) even when isConfigSupported said yes. Disable it for
+        // the rest of this tab session so Try Again uses the ffmpeg path.
+        let message =
           err instanceof Error ? err.message : "Failed to render video";
+        if (mp4Encoder && err instanceof WebCodecsEncoderError) {
+          disableWebCodecsExport();
+          message = `Hardware video encoding failed in this browser (${err.message}). Try Again will use the compatibility encoder.`;
+        }
         setErrorMessage(message);
         setStatus("error");
         toast.error(message);
@@ -819,21 +959,27 @@ export default function FfmpegRender({
       // cleanup means a cancelled run cannot clear a newer run's state.
       endExportCaptionBurn(captionSidecars.cues);
 
+      // Idempotent and safe whether finalize completed, failed, or the run
+      // was cancelled mid-capture.
+      mp4Encoder?.close();
+
       // Frames, palettes, and encoded outputs are all generation-specific,
       // so this asynchronous cleanup cannot delete artifacts belonging to a
       // newer render. If the worker was terminated the MEMFS is already gone;
       // errors are ignored.
       const directoryToClean = frameDirectory;
       const frameCountToClean = framesAttempted;
-      if (directoryToClean && ffmpeg.loaded) {
+      if ((directoryToClean || mp4Encoder) && ffmpeg.loaded) {
         void (async () => {
-          for (let frameIndex = 0; frameIndex < frameCountToClean; frameIndex++) {
-            try {
-              await ffmpeg.deleteFile(
-                `${directoryToClean}/${getFrameFileName(frameIndex, frameExtension)}`
-              );
-            } catch {
-              // Ignore missing files and cleanup races.
+          if (directoryToClean) {
+            for (let frameIndex = 0; frameIndex < frameCountToClean; frameIndex++) {
+              try {
+                await ffmpeg.deleteFile(
+                  `${directoryToClean}/${getFrameFileName(frameIndex, frameExtension)}`
+                );
+              } catch {
+                // Ignore missing files and cleanup races.
+              }
             }
           }
           try {
@@ -846,8 +992,13 @@ export default function FfmpegRender({
             await ffmpeg.deleteFile(artifactNames.musicFileName);
           } catch {}
           try {
-            await ffmpeg.deleteDir(directoryToClean);
+            await ffmpeg.deleteFile(artifactNames.webcodecsVideoFileName);
           } catch {}
+          if (directoryToClean) {
+            try {
+              await ffmpeg.deleteDir(directoryToClean);
+            } catch {}
+          }
         })();
       }
     }

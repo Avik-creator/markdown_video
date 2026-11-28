@@ -26,6 +26,7 @@ describe("generation-scoped artifact names", () => {
       paletteFileName: "palette-7.png",
       outputFileName: "output-7.gif",
       musicFileName: "music-7",
+      webcodecsVideoFileName: "webcodecs-video-7.mp4",
       outputExtension: "gif",
     });
     expect(getExportArtifactNames(7, "reels")).toEqual({
@@ -33,6 +34,7 @@ describe("generation-scoped artifact names", () => {
       paletteFileName: "palette-7.png",
       outputFileName: "output-7.mp4",
       musicFileName: "music-7",
+      webcodecsVideoFileName: "webcodecs-video-7.mp4",
       outputExtension: "mp4",
     });
   });
