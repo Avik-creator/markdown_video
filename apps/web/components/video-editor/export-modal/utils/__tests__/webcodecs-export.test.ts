@@ -845,3 +845,48 @@ describe("repairAvcDecoderConfigurationRecord", () => {
     expect(repairAvcDecoderConfigurationRecord(notVersion1)).toBe(notVersion1);
   });
 });
+
+describe("createWebCodecsMp4Encoder audio track", () => {
+  // jsdom has no AudioEncoder, so Mediabunny's AudioBufferSource.add is
+  // stubbed at the prototype: the muxer, track wiring and finalize ordering
+  // are still real.
+  const fakeAudioBuffer = { duration: 2 } as AudioBuffer;
+
+  it("adds an AAC track, awaits source.add before finalizing, and returns a valid MP4", async () => {
+    const mediabunny = await import("mediabunny");
+    const addSpy = vi
+      .spyOn(mediabunny.AudioBufferSource.prototype, "add")
+      .mockResolvedValue();
+    const encoder = createWebCodecsMp4Encoder({
+      config: config1080p,
+      fps: 30,
+      totalFrames: 2,
+      audio: { buffer: fakeAudioBuffer, bitrate: 128_000 },
+    });
+    const canvas = makeCanvas();
+    await encoder.addFrame(canvas, 0);
+    await encoder.addFrame(canvas, 1);
+    const mp4 = await readMp4(await encoder.finalize());
+    expect(addSpy).toHaveBeenCalledWith(fakeAudioBuffer);
+    expect(mp4.packets.map((packet) => packet.timestamp * 30)).toEqual([0, 1]);
+  });
+
+  it("turns an audio encoding failure into a WebCodecsEncoderError on finalize", async () => {
+    const mediabunny = await import("mediabunny");
+    let rejectAdd!: (error: unknown) => void;
+    vi.spyOn(mediabunny.AudioBufferSource.prototype, "add").mockImplementation(
+      () => new Promise<void>((_resolve, reject) => { rejectAdd = reject; })
+    );
+    const encoder = createWebCodecsMp4Encoder({
+      config: config1080p,
+      fps: 30,
+      totalFrames: 1,
+      audio: { buffer: fakeAudioBuffer, bitrate: 128_000 },
+    });
+    await encoder.addFrame(makeCanvas(), 0);
+    rejectAdd(new Error("no AudioEncoder here"));
+    await expect(encoder.finalize()).rejects.toThrow(
+      "WebCodecs AAC audio encoding failed: no AudioEncoder here"
+    );
+  });
+});

@@ -16,11 +16,16 @@
 //   export tab was in the background) is recreated, but only when no frames
 //   were in flight. Otherwise it fails loudly.
 //
+// An optional pre-rendered AudioBuffer (document music, see
+// webcodecs-audio.ts) is muxed as an AAC track through Mediabunny's
+// AudioBufferSource, so MP4-with-music exports need no ffmpeg remux.
+//
 // Mediabunny is large (its full minified bundle is about 750 KB), so it is
 // loaded with a dynamic import when an encoder is created. Feature detection
 // and config selection add nothing to the editor bundle.
 
 import type {
+  AudioBufferSource,
   BufferTarget,
   EncodedPacket,
   EncodedVideoPacketSource,
@@ -361,6 +366,11 @@ export interface CreateWebCodecsMp4EncoderOptions {
   totalFrames: number;
   /** Aborting closes the encoder and rejects pending and future calls with an AbortError. */
   signal?: AbortSignal;
+  /**
+   * Pre-rendered music to mux as an AAC track at start timestamp 0. Encoding
+   * starts as soon as the muxer output is open; finalize awaits it.
+   */
+  audio?: { buffer: AudioBuffer; bitrate: number };
 }
 
 export interface WebCodecsMp4Encoder {
@@ -390,6 +400,7 @@ export function createWebCodecsMp4Encoder({
   fps,
   totalFrames,
   signal,
+  audio,
 }: CreateWebCodecsMp4EncoderOptions): WebCodecsMp4Encoder {
   if (!config || typeof config.codec !== "string" || config.codec.length === 0) {
     throw new TypeError("A VideoEncoderConfig with a codec string is required");
@@ -421,6 +432,8 @@ export function createWebCodecsMp4Encoder({
 
   let output: Output<Mp4OutputFormat, BufferTarget> | null = null;
   let videoSource: EncodedVideoPacketSource | null = null;
+  let audioSource: AudioBufferSource | null = null;
+  let audioAddPromise: Promise<void> | null = null;
   let PacketClass: typeof EncodedPacket | null = null;
   let muxTail: Promise<void> = Promise.resolve();
   let addTail: Promise<void> = Promise.resolve();
@@ -488,10 +501,34 @@ export function createWebCodecsMp4Encoder({
     // frameRate makes the track timescale equal to the frame rate, so every
     // index-derived timestamp lands exactly on a tick.
     nextOutput.addVideoTrack(source, { frameRate: fps });
+    let nextAudioSource: AudioBufferSource | null = null;
+    if (audio) {
+      nextAudioSource = new mediabunny.AudioBufferSource({
+        codec: "aac",
+        bitrate: audio.bitrate,
+      });
+      nextOutput.addAudioTrack(nextAudioSource);
+    }
     output = nextOutput;
     videoSource = source;
+    audioSource = nextAudioSource;
     PacketClass = mediabunny.EncodedPacket;
     await nextOutput.start();
+    if (audioSource && audio) {
+      // Audio encodes in parallel with frame capture; finalize awaits it.
+      audioAddPromise = audioSource.add(audio.buffer).then(
+        () => {},
+        (error: unknown) => {
+          fail(
+            new WebCodecsEncoderError(
+              `WebCodecs AAC audio encoding failed: ${describeError(error)}`,
+              "mp4a.40.2",
+              { cause: error }
+            )
+          );
+        }
+      );
+    }
     if (failure) cancelOutput();
   })().catch((error: unknown) => {
     fail(
@@ -732,6 +769,10 @@ export function createWebCodecsMp4Encoder({
         }
         await muxTail;
         if (failure) throw failure;
+        if (audioAddPromise) {
+          await audioAddPromise;
+          if (failure) throw failure;
+        }
 
         const currentOutput = output;
         if (!currentOutput) throw encoderError("has no muxer output");

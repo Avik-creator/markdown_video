@@ -1,10 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import type { FFmpeg } from "@ffmpeg/ffmpeg";
 import FfmpegRender from "./FfmpegRender";
 import RenderOptions from "./RenderOptions";
-import { toast } from "sonner";
 import {
   createWarmResourceLifecycle,
   type WarmResourceLease,
@@ -149,90 +148,66 @@ async function loadFFmpegCore(instance: FFmpeg) {
 }
 
 export default function Ffmpeg() {
-  const [loadFfmpeg, setLoadedFfmpeg] = useState(false);
-  const [ffmpeg, setFfmpeg] = useState<FFmpeg | null>(null);
   const ffmpegLeaseRef = useRef<WarmResourceLease<FFmpeg> | null>(null);
   const mountedRef = useRef(false);
   const loadGenerationRef = useRef(0);
   const loadRequestRef = useRef<{
     generation: number;
-    promise: Promise<void>;
+    promise: Promise<FFmpeg>;
   } | null>(null);
 
-  const loadFFmpegFunction = useCallback(async () => {
-    const existingFFmpeg = ffmpegLeaseRef.current?.resource;
-    if (existingFFmpeg?.loaded) {
-      if (mountedRef.current) {
-        setFfmpeg(existingFFmpeg);
-        setLoadedFfmpeg(true);
-      }
-      return;
-    }
-
+  // The 32 MB ffmpeg core is loaded on demand only: MP4 exports on the
+  // WebCodecs path (with or without music) never need it. Callers are
+  // serialized on a single in-flight load per modal mount; the resolved
+  // instance is warm-leased and reused across runs and modal reopens.
+  const ensureFFmpeg = useCallback(async (): Promise<FFmpeg> => {
     const generation = loadGenerationRef.current;
     const existingRequest = loadRequestRef.current;
     if (existingRequest?.generation === generation) {
-      await existingRequest.promise;
-      return;
+      return existingRequest.promise;
     }
 
-    setLoadedFfmpeg(false);
     const request = {} as {
       generation: number;
-      promise: Promise<void>;
+      promise: Promise<FFmpeg>;
     };
 
-    const promise = (async () => {
-      try {
-        let ffmpegInstance = ffmpegLeaseRef.current?.resource;
-        if (!ffmpegInstance) {
-          const FFmpegConstructor = await loadFFmpegConstructor();
+    const promise = (async (): Promise<FFmpeg> => {
+      let ffmpegInstance = ffmpegLeaseRef.current?.resource;
+      if (!ffmpegInstance) {
+        const FFmpegConstructor = await loadFFmpegConstructor();
 
-          // The modal can close while the control module is still loading.
-          // Do not create an ownerless worker wrapper in that case.
-          if (!mountedRef.current || generation !== loadGenerationRef.current) {
-            return;
-          }
-
-          if (!ffmpegLeaseRef.current) {
-            ffmpegLeaseRef.current = acquireFFmpegLease(FFmpegConstructor);
-          }
-          ffmpegInstance = ffmpegLeaseRef.current.resource;
-          setFfmpeg(ffmpegInstance);
-        }
-
-        await loadFFmpegCore(ffmpegInstance);
-
+        // The modal can close while the control module is still loading.
+        // Do not create an ownerless worker wrapper in that case.
         if (!mountedRef.current || generation !== loadGenerationRef.current) {
-          return;
+          throw new Error("Export dialog closed while FFmpeg was loading");
         }
 
-        setFfmpeg(ffmpegInstance);
-        setLoadedFfmpeg(true);
-        toast.success("FFmpeg loaded successfully");
-      } catch (error) {
-        if (mountedRef.current && generation === loadGenerationRef.current) {
-          console.error("Failed to load FFmpeg:", error);
-          toast.error("Failed to load FFmpeg");
-          setLoadedFfmpeg(false);
+        if (!ffmpegLeaseRef.current) {
+          ffmpegLeaseRef.current = acquireFFmpegLease(FFmpegConstructor);
         }
-      } finally {
-        if (loadRequestRef.current === request) {
-          loadRequestRef.current = null;
-        }
+        ffmpegInstance = ffmpegLeaseRef.current.resource;
       }
+
+      await loadFFmpegCore(ffmpegInstance);
+      return ffmpegInstance;
     })();
 
     request.generation = generation;
     request.promise = promise;
     loadRequestRef.current = request;
-    await promise;
+    try {
+      return await promise;
+    } finally {
+      if (loadRequestRef.current === request) {
+        loadRequestRef.current = null;
+      }
+    }
   }, []);
 
   useEffect(() => {
     mountedRef.current = true;
     loadGenerationRef.current += 1;
-    void loadFFmpegFunction();
 
     return () => {
       mountedRef.current = false;
@@ -246,18 +221,12 @@ export default function Ffmpeg() {
       ffmpegLeaseRef.current = null;
       lease?.release();
     };
-  }, [loadFFmpegFunction]);
+  }, []);
 
   return (
     <div className="flex flex-col justify-center items-center py-2">
       <RenderOptions />
-      {ffmpeg && (
-        <FfmpegRender
-          loadFunction={loadFFmpegFunction}
-          loadFfmpeg={loadFfmpeg}
-          ffmpeg={ffmpeg}
-        />
-      )}
+      <FfmpegRender ensureFFmpeg={ensureFFmpeg} />
     </div>
   );
 }

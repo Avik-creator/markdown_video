@@ -75,6 +75,22 @@ const html2canvasMock = vi.hoisted(() =>
 
 vi.mock("html2canvas-pro", () => ({ default: html2canvasMock }));
 
+
+vi.mock(
+  "@/components/video-editor/export-modal/utils/webcodecs-audio",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/components/video-editor/export-modal/utils/webcodecs-audio")
+      >();
+    return {
+      ...actual,
+      selectWebCodecsAudioCodec: vi.fn(async () => null),
+      renderMusicAudioBuffer: vi.fn(async () => ({}) as AudioBuffer),
+    };
+  }
+);
+
 vi.mock("@/lib/assets/asset-resolution", () => ({
   warmBrowserAssetSources: vi.fn(async () => {}),
 }));
@@ -137,9 +153,7 @@ describe("FfmpegRender snapdom chunk-load failure", { timeout: 20_000 }, () => {
     };
     render(
       <FfmpegRender
-        loadFunction={vi.fn(async () => {})}
-        loadFfmpeg={true}
-        ffmpeg={ffmpeg as never}
+        ensureFFmpeg={vi.fn(async () => ffmpeg as never)}
       />
     );
     fireEvent.click(screen.getByText("Start Rendering"));

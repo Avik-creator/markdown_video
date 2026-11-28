@@ -28,6 +28,7 @@
     "@lezer/highlight": "1.2.5",
     "@markdown-video/core": "workspace:*",
     "@markdown-video/scenes": "workspace:*",
+    "@mediabunny/aac-encoder": "1.66.2",
     "@modelcontextprotocol/sdk": "1.32.2",
     "@neondatabase/serverless": "1.2.1",
     "@radix-ui/react-dialog": "1.1.4",
