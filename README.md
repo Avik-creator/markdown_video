@@ -10,7 +10,7 @@ Transform your Markdown into animated videos with a custom syntax that brings yo
 
 - **Custom Markdown Syntax**: Write videos using an intuitive extended Markdown syntax with custom directives
 - **Rich Scene Types**: Support for text, code, images, terminal, diffs, charts, mockups, QR codes, countdowns, progress bars, and more
-- **FFmpeg.wasm Export**: Render and download MP4 videos or animated GIFs in the browser
+- **In-browser Export**: Render and download MP4 videos or animated GIFs locally — MP4 uses hardware-accelerated WebCodecs H.264 where the browser supports it, with FFmpeg.wasm for GIF, music muxing, and as the compatibility fallback
 - **Real-time Preview**: See your video content as you edit it with live scene previews
 - **Errors as you type**: Unknown directives and invalid values are marked on the line that caused them, with one-click fixes for typos
 - **Autocomplete**: Directive names after `!`, and allowed values for properties like `transition`, `animation:` and `type:`
@@ -70,7 +70,7 @@ flowchart LR
     PARSE["lib/parser<br/>index + code, chart,<br/>diff, terminal parsers"]
     STORE["lib/use-video-store<br/>Zustand"]
     MCP["/api/mcp<br/>12 tools: authoring + rendering"]
-    FF["@ffmpeg/ffmpeg<br/>wasm, in the browser"]
+    FF["WebCodecs H.264 + Mediabunny<br/>(ffmpeg.wasm for GIF, music,<br/>fallback) — in the browser"]
     MP4["MP4 or GIF download"]
     DB[("Postgres or Redis<br/>shares, rate limits,<br/>temporary mp4 artifacts")]
     WORKER["render-worker container<br/>Chromium + native ffmpeg<br/>(self-hosted)"]
@@ -93,7 +93,7 @@ flowchart LR
 ```
 
 Interactive editing and manual export remain client-side: the parser produces scenes, the preview draws them,
-and FFmpeg compiles the same scenes to MP4 or GIF in the browser. The editor's Assets panel can store music and images in browser-local IndexedDB and reference them as `./filename`; those bytes never leave the browser during editing/export and are not included in share links. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
+and the browser encodes the same scenes to MP4 (WebCodecs, encoding while frames are captured) or GIF (FFmpeg.wasm). The editor's Assets panel can store music and images in browser-local IndexedDB and reference them as `./filename`; those bytes never leave the browser during editing/export and are not included in share links. The MCP rendering tools are the deliberate exception: they send markdown to `apps/render-worker`, a separate authenticated Chromium + native-ffmpeg container, and store bounded temporary MP4 artifacts for one hour. Remote image URLs are blocked during worker rendering to prevent server-side request forgery/egress abuse.
 
 ## 🏗️ Project Structure
 
@@ -230,7 +230,7 @@ The tools are absent only in the sense that they return configuration tool error
 - **Styling**: [Tailwind CSS 4](https://tailwindcss.com/) - Utility-first CSS framework
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) - Lightweight state manager
 - **Markdown Parsing**: Custom parser with extended syntax support
-- **Video Rendering**: [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/) - Browser-based video encoding
+- **Video Rendering**: [WebCodecs](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API) + [Mediabunny](https://mediabunny.dev/) for hardware-accelerated MP4, and [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/) for GIF, music muxing, and fallback encoding
 - **Screenshot to Canvas**: [HTML2Canvas Pro](https://html2canvas.hertzen.com/) - DOM to canvas rendering
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) - React animation library
 - **Database**: [Neon Postgres](https://neon.com/) - Optional serverless Postgres backend for share links, rate limiting, and temporary render artifacts (Upstash Redis remains supported as a fallback)
@@ -287,6 +287,7 @@ Built with amazing open-source libraries:
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Zustand](https://zustand-demo.pmnd.rs/)
 - [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/)
+- [Mediabunny](https://mediabunny.dev/)
 - [Framer Motion](https://www.framer.com/motion/)
 
 ## 📧 Support

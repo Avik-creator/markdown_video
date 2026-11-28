@@ -283,7 +283,7 @@ describe("selectWebCodecsVideoConfig", () => {
     MockVideoEncoder.supportedCodecs = new Set(["avc1.640033", "avc1.640028", "avc1.4D4028"]);
     const config = await selectWebCodecsVideoConfig({ width: 1920, height: 1080, fps: 30, quality: "high" });
     expect(config).toEqual({
-      codec: "avc1.640033",
+      codec: "avc1.640028",
       width: 1920,
       height: 1080,
       bitrate: 6_220_800,
@@ -292,7 +292,7 @@ describe("selectWebCodecsVideoConfig", () => {
       hardwareAcceleration: "no-preference",
       avc: { format: "avc" },
     });
-    expect(requested()).toEqual(["avc1.640033"]);
+    expect(requested()).toEqual(["avc1.640028"]);
   });
 
   it("falls through unsupported and throwing candidates in preference order", async () => {
@@ -302,22 +302,22 @@ describe("selectWebCodecsVideoConfig", () => {
     });
     const config = await selectWebCodecsVideoConfig({ width: 1280, height: 720, fps: 30, quality: "medium" });
     expect(config?.codec).toBe("avc1.4D4028");
-    expect(requested()).toEqual(["avc1.640033", "avc1.64002A", "avc1.640028", "avc1.4D4028"]);
+    expect(requested()).toEqual(["avc1.640028", "avc1.64002A", "avc1.640033", "avc1.4D4028"]);
   });
 
   it("never offers Baseline@3.1 for 1080p and only High@5.1 for 4K", async () => {
     await expect(
       selectWebCodecsVideoConfig({ width: 1920, height: 1080, fps: 30, quality: "high" })
     ).resolves.toBeNull();
-    expect(requested()).toEqual(["avc1.640033", "avc1.64002A", "avc1.640028", "avc1.4D4028"]);
+    expect(requested()).toEqual(["avc1.640028", "avc1.64002A", "avc1.640033", "avc1.4D4028"]);
 
     MockVideoEncoder.isConfigSupported.mockClear();
     await selectWebCodecsVideoConfig({ width: 1080, height: 1920, fps: 30, quality: "high" });
-    expect(requested()).toEqual(["avc1.640033", "avc1.64002A", "avc1.640028", "avc1.4D4028"]);
+    expect(requested()).toEqual(["avc1.640028", "avc1.64002A", "avc1.640033", "avc1.4D4028"]);
 
     MockVideoEncoder.isConfigSupported.mockClear();
     await selectWebCodecsVideoConfig({ width: 1920, height: 1080, fps: 60, quality: "high" });
-    expect(requested()).toEqual(["avc1.640033", "avc1.64002A"]);
+    expect(requested()).toEqual(["avc1.64002A", "avc1.640033"]);
 
     MockVideoEncoder.isConfigSupported.mockClear();
     await selectWebCodecsVideoConfig({ width: 3840, height: 2160, fps: 30, quality: "ultra" });
@@ -326,9 +326,9 @@ describe("selectWebCodecsVideoConfig", () => {
     MockVideoEncoder.isConfigSupported.mockClear();
     await selectWebCodecsVideoConfig({ width: 1280, height: 720, fps: 30, quality: "high" });
     expect(requested()).toEqual([
-      "avc1.640033",
-      "avc1.64002A",
       "avc1.640028",
+      "avc1.64002A",
+      "avc1.640033",
       "avc1.4D4028",
       "avc1.42001F",
     ]);
@@ -402,7 +402,7 @@ describe("selectWebCodecsVideoConfig", () => {
       getEligibleWebCodecsH264Candidates({ width: 1920, height: 1080, fps: 30, quality: "ultra" }).map(
         (candidate) => candidate.codec
       )
-    ).toEqual(["avc1.640033", "avc1.64002A", "avc1.640028", "avc1.4D4028"]);
+    ).toEqual(["avc1.640028", "avc1.64002A", "avc1.640033", "avc1.4D4028"]);
   });
 });
 

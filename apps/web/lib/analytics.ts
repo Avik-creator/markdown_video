@@ -128,6 +128,8 @@ export interface ExportAnalyticsInput {
   resolution?: string;
   quality?: string;
   speed?: string;
+  /** Which encoder produced the video stream; a fixed enum, folded into `settings`. */
+  encoder?: "webcodecs" | "ffmpeg";
   fps?: number;
   aspectRatio?: string;
   width?: number;
@@ -144,7 +146,7 @@ export interface ExportAnalyticsInput {
  * under 255 characters.
  *
  * Composite properties:
- * - settings: "<resolution>/<fps>fps/<quality>/<speed>"
+ * - settings: "<resolution>/<fps>fps/<quality>/<speed>[/encoder]"
  * - output:   "<aspectRatio>/<width>x<height>"
  * - scenes:   "<type>:<count>,..." sorted by type, or "none"
  */
@@ -157,11 +159,14 @@ export function buildExportEventProperties(
   const sceneTypeCounts = countSceneTypes(input.scenes);
   const sceneCount = input.scenes?.length ?? 0;
 
+  // The encoder is only known after config selection, so its segment is
+  // appended only when set; a fixed enum, never content.
+  const encoder = input.encoder ? `/${normalizeToken(input.encoder)}` : "";
   return {
     format: normalizeToken(input.format),
     settings: `${normalizeToken(input.resolution)}/${fps}fps/${normalizeToken(
       input.quality
-    )}/${normalizeToken(input.speed)}`,
+    )}/${normalizeToken(input.speed)}${encoder}`,
     output: `${normalizeToken(input.aspectRatio)}/${width}x${height}`,
     duration: toNonNegativeSeconds(input.durationSeconds),
     frames: toNonNegativeInteger(input.totalFrames),

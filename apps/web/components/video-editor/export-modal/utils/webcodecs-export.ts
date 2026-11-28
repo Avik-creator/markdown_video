@@ -80,11 +80,14 @@ export interface WebCodecsH264Candidate {
   level: WebCodecsH264Level;
 }
 
-/** Codec strings tried, in order of preference. */
+// Codec strings tried, in order of preference: the lowest level that can
+// carry the output wins, so the encoded stream claims no more capability than
+// it needs. High@4.0 covers 1080p30, High@4.2 covers 1080p60, and only
+// 1440p/4K outputs fall through to High@5.1.
 export const WEBCODECS_H264_CANDIDATES: readonly WebCodecsH264Candidate[] = Object.freeze([
-  { codec: "avc1.640033", profile: "high", level: "5.1" },
-  { codec: "avc1.64002A", profile: "high", level: "4.2" },
   { codec: "avc1.640028", profile: "high", level: "4.0" },
+  { codec: "avc1.64002A", profile: "high", level: "4.2" },
+  { codec: "avc1.640033", profile: "high", level: "5.1" },
   { codec: "avc1.4D4028", profile: "main", level: "4.0" },
   { codec: "avc1.42001F", profile: "baseline", level: "3.1" },
 ]);

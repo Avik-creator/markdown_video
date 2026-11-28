@@ -2,6 +2,7 @@ import { describe, expect, it, vi, afterEach } from "vitest";
 import { getVideoEncodingSettings } from "@markdown-video/core";
 import {
   BACKGROUND_TAB_PAUSE_MESSAGE,
+  chooseExportEncoder,
   computeEncodeProgressPercent,
   createFrameTimeEstimator,
   formatEta,
@@ -159,5 +160,22 @@ describe("getBackgroundTabPauseMessage", () => {
     );
     expect(getBackgroundTabPauseMessage("visible")).toBeNull();
     expect(getBackgroundTabPauseMessage("prerender")).toBeNull();
+  });
+});
+
+describe("chooseExportEncoder", () => {
+  it("uses WebCodecs for MP4-family formats only when a config was selected", () => {
+    const config = { codec: "avc1.640028" };
+    expect(chooseExportEncoder({ format: "mp4", webCodecsConfig: config })).toBe("webcodecs");
+    expect(chooseExportEncoder({ format: "reels", webCodecsConfig: config })).toBe("webcodecs");
+    expect(chooseExportEncoder({ format: "shorts", webCodecsConfig: config })).toBe("webcodecs");
+    expect(chooseExportEncoder({ format: undefined, webCodecsConfig: config })).toBe("webcodecs");
+  });
+
+  it("keeps GIF and config-less exports on the ffmpeg path", () => {
+    const config = { codec: "avc1.640028" };
+    expect(chooseExportEncoder({ format: "gif", webCodecsConfig: config })).toBe("ffmpeg");
+    expect(chooseExportEncoder({ format: "mp4", webCodecsConfig: null })).toBe("ffmpeg");
+    expect(chooseExportEncoder({ format: "mp4", webCodecsConfig: undefined })).toBe("ffmpeg");
   });
 });
