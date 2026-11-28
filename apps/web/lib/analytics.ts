@@ -130,6 +130,8 @@ export interface ExportAnalyticsInput {
   speed?: string;
   /** Which encoder produced the video stream; a fixed enum, folded into `settings`. */
   encoder?: "webcodecs" | "ffmpeg";
+  /** Which rasterizer captured the frames; a fixed enum, folded into `settings`. */
+  capture?: "snapdom" | "html2canvas";
   fps?: number;
   aspectRatio?: string;
   width?: number;
@@ -146,7 +148,7 @@ export interface ExportAnalyticsInput {
  * under 255 characters.
  *
  * Composite properties:
- * - settings: "<resolution>/<fps>fps/<quality>/<speed>[/encoder]"
+ * - settings: "<resolution>/<fps>fps/<quality>/<speed>[/encoder][/capture]"
  * - output:   "<aspectRatio>/<width>x<height>"
  * - scenes:   "<type>:<count>,..." sorted by type, or "none"
  */
@@ -160,13 +162,15 @@ export function buildExportEventProperties(
   const sceneCount = input.scenes?.length ?? 0;
 
   // The encoder is only known after config selection, so its segment is
-  // appended only when set; a fixed enum, never content.
+  // appended only when set; the capture engine (a disjoint enum) follows it.
+  // Fixed enums, never content.
   const encoder = input.encoder ? `/${normalizeToken(input.encoder)}` : "";
+  const capture = input.capture ? `/${normalizeToken(input.capture)}` : "";
   return {
     format: normalizeToken(input.format),
     settings: `${normalizeToken(input.resolution)}/${fps}fps/${normalizeToken(
       input.quality
-    )}/${normalizeToken(input.speed)}${encoder}`,
+    )}/${normalizeToken(input.speed)}${encoder}${capture}`,
     output: `${normalizeToken(input.aspectRatio)}/${width}x${height}`,
     duration: toNonNegativeSeconds(input.durationSeconds),
     frames: toNonNegativeInteger(input.totalFrames),
