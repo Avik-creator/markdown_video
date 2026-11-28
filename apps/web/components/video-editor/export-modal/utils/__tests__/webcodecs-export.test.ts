@@ -17,8 +17,10 @@ import {
   getWebCodecsFrameDurationUs,
   getWebCodecsFrameTimestampUs,
   getWebCodecsKeyFrameInterval,
+  getWebCodecsLatencyMode,
   h264LevelSupports,
   isWebCodecsExportSupported,
+  isWebKitEngine,
   repairAvcDecoderConfigurationRecord,
   selectWebCodecsVideoConfig,
 } from "../webcodecs-export";
@@ -280,6 +282,10 @@ describe("selectWebCodecsVideoConfig", () => {
   const requested = () => MockVideoEncoder.isConfigSupported.mock.calls.map(([config]) => config.codec);
 
   it("returns the first supported candidate with the full encoder config", async () => {
+    // jsdom's UA matches the WebKit heuristic; pin Chrome to check quality.
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    );
     MockVideoEncoder.supportedCodecs = new Set(["avc1.640033", "avc1.640028", "avc1.4D4028"]);
     const config = await selectWebCodecsVideoConfig({ width: 1920, height: 1080, fps: 30, quality: "high" });
     expect(config).toEqual({
@@ -403,6 +409,50 @@ describe("selectWebCodecsVideoConfig", () => {
         (candidate) => candidate.codec
       )
     ).toEqual(["avc1.640028", "avc1.64002A", "avc1.640033", "avc1.4D4028"]);
+  });
+});
+
+
+describe("isWebKitEngine / getWebCodecsLatencyMode", () => {
+  const cases: [string, boolean][] = [
+    // Safari macOS
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15", true],
+    // Safari iOS
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1", true],
+    // Playwright WebKit (no Version token at all)
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Safari/537.36", true],
+    // Chrome
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36", false],
+    // Edge
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0", false],
+    // Chromium
+    ["Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chromium/131.0.0.0 Safari/537.36", false],
+    // Firefox (no AppleWebKit token)
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0", false],
+  ];
+
+  for (const [ua, expected] of cases) {
+    it(`${expected ? "detects" : "rejects"} ${ua.slice(0, 60)}`, () => {
+      expect(isWebKitEngine(ua)).toBe(expected);
+      expect(getWebCodecsLatencyMode(ua)).toBe(
+        expected ? "realtime" : "quality"
+      );
+    });
+  }
+
+  it("selects latencyMode realtime under a WebKit UA and quality under Chrome", async () => {
+    MockVideoEncoder.supportedCodecs = new Set(["avc1.640028"]);
+    const params = { width: 1920, height: 1080, fps: 30, quality: "high" };
+
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15"
+    );
+    expect((await selectWebCodecsVideoConfig(params))?.latencyMode).toBe("realtime");
+
+    vi.spyOn(window.navigator, "userAgent", "get").mockReturnValue(
+      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
+    );
+    expect((await selectWebCodecsVideoConfig(params))?.latencyMode).toBe("quality");
   });
 });
 
@@ -699,6 +749,26 @@ describe("createWebCodecsMp4Encoder", () => {
     behavior.shiftTimestamps = true;
     const bytes = await encodeAll(30, 90);
     const mp4 = await readMp4(bytes);
+    expect(mp4.packets).toHaveLength(90);
+    mp4.packets.forEach((packet, frameIndex) => {
+      expect(packet.timestamp).toBeCloseTo(frameIndex / 30, 9);
+    });
+  });
+
+  it("matches WebKit's ±1µs-quantized frame timestamps by actual timestamp", async () => {
+    // WebKit coerces the VideoFrame constructor timestamp by ±1µs (observed:
+    // requested 4033333µs → frame reports 4033332µs) and chunks echo the
+    // quantized value, so matching must use frame.timestamp, not the request.
+    class QuantizedFrame extends MockVideoFrame {
+      constructor(source: unknown, init: VideoFrameInit) {
+        super(source, init);
+        if (MockVideoFrame.instances.length % 3 === 0) {
+          Object.defineProperty(this, "timestamp", { value: (init.timestamp ?? 0) - 1 });
+        }
+      }
+    }
+    vi.stubGlobal("VideoFrame", QuantizedFrame);
+    const mp4 = await readMp4(await encodeAll(30, 90));
     expect(mp4.packets).toHaveLength(90);
     mp4.packets.forEach((packet, frameIndex) => {
       expect(packet.timestamp).toBeCloseTo(frameIndex / 30, 9);
