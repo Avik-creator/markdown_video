@@ -2,6 +2,12 @@
 // in the user's browser (never in the shared worker): cross-origin music is
 // HTTPS-only and relies on normal CORS permission. Document-relative uploads
 // are supplied from IndexedDB before static-path fetching is attempted.
+import {
+  buildMusicAudioFilter,
+  buildMusicInputArgs,
+  buildMusicOutputArgs,
+  type MusicTrack,
+} from "@markdown-video/core";
 import { resolveBrowserAssetSource } from "@/lib/assets/asset-resolution";
 
 export const MAX_BROWSER_MUSIC_BYTES = 32 * 1024 * 1024;
@@ -95,4 +101,48 @@ export async function fetchBrowserMusicData(
     throw new Error("Music download did not return an audio content type");
   }
   return readLimitedArrayBuffer(response, MAX_BROWSER_MUSIC_BYTES, "Music");
+}
+
+export interface WebCodecsMusicRemuxArgsOptions {
+  /** MP4 written by the WebCodecs encoder (H.264 video only). */
+  videoPath: string;
+  /** Music bytes from fetchBrowserMusicData, written to ffmpeg's MEMFS. */
+  musicPath: string;
+  music: Pick<MusicTrack, "volume" | "fade" | "loop">;
+  totalDuration: number;
+  outputPath: string;
+}
+
+/**
+ * ffmpeg argv that adds document music to a WebCodecs-encoded MP4.
+ *
+ * Video is stream-copied (`-c:v copy`), so the only work left for ffmpeg.wasm
+ * is encoding the AAC track. Music uses the same shared core fragments as the
+ * libx264 export (`-stream_loop` input option, then volume, atrim, asetpts and
+ * afade with the same `-map`), so volume, fade and loop behave identically on
+ * both paths. `-movflags +faststart` keeps the remuxed file progressively
+ * playable, like the encoder's own output.
+ */
+export function buildWebCodecsMusicRemuxArgs({
+  videoPath,
+  musicPath,
+  music,
+  totalDuration,
+  outputPath,
+}: WebCodecsMusicRemuxArgsOptions): string[] {
+  return [
+    "-v",
+    "error",
+    "-i",
+    videoPath,
+    ...buildMusicInputArgs(music, musicPath),
+    ...buildMusicOutputArgs(buildMusicAudioFilter(music, totalDuration)),
+    "-c:v",
+    "copy",
+    "-t",
+    totalDuration.toFixed(3),
+    "-movflags",
+    "+faststart",
+    outputPath,
+  ];
 }
