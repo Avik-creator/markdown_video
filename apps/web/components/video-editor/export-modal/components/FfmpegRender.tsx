@@ -25,15 +25,20 @@ import {
   createRenderPlan,
   generateCaptionSidecars,
   getFrameFileName,
-  getVideoEncodingSettings,
   validateBrowserExportInput,
   type Scene,
 } from "@markdown-video/core";
 import {
   RenderRunTracker,
   applyRenderLayoutToClone,
+  computeEncodeProgressPercent,
   copyFrameData,
+  createFrameTimeEstimator,
+  formatEta,
+  getBackgroundTabPauseMessage,
+  getBrowserVideoEncodingSettings,
   getExportArtifactNames,
+  withTimeout,
 } from "../utils/export-utils";
 import { fetchBrowserMusicData } from "../utils/export-media";
 import { warmBrowserAssetSources } from "@/lib/assets/asset-resolution";
@@ -71,6 +76,13 @@ class RenderCancelledError extends Error {
   }
 }
 
+class FrameCaptureTimeoutError extends Error {
+  constructor() {
+    super("Frame capture timed out");
+    this.name = "FrameCaptureTimeoutError";
+  }
+}
+
 // html2canvas-pro interprets imageTimeout as milliseconds. A finite budget is
 // important because zero disables image-load timeouts entirely: one stalled
 // image request could otherwise leave capture forever indistinguishable from a
@@ -78,6 +90,11 @@ class RenderCancelledError extends Error {
 // without making a genuinely stuck resource unbounded.
 export const CAPTURE_IMAGE_TIMEOUT_MS = 15_000;
 export const MAX_CONSECUTIVE_FRAME_CAPTURE_FAILURES = 3;
+// Hard ceiling for one frame's rasterize+encode. The timer starts only after
+// the requestAnimationFrame waits so a throttled background tab stalls before
+// it, not inside it — this guards against a genuinely hung html2canvas, not
+// against the page being hidden.
+export const FRAME_CAPTURE_TIMEOUT_MS = 30_000;
 
 export function describeFrameCaptureContext(
   scenes: readonly Pick<Scene, "duration" | "type">[],
@@ -140,12 +157,16 @@ export default function FfmpegRender({
   const [captionUrls, setCaptionUrls] = useState<{ srt: string; vtt: string } | null>(null);
   const [outputFileName, setOutputFileName] = useState("video.mp4");
   const [errorMessage, setErrorMessage] = useState("");
+  const [captureEta, setCaptureEta] = useState<string | null>(null);
+  const [encodeElapsedSec, setEncodeElapsedSec] = useState(0);
+  const [hiddenPaused, setHiddenPaused] = useState(false);
 
   const [runTracker] = useState(() => new RenderRunTracker());
   const activeRunRef = useRef<ActiveRun | null>(null);
   const mountedRef = useRef(true);
   const previewUrlRef = useRef<string | null>(null);
   const captionUrlsRef = useRef<{ srt: string; vtt: string } | null>(null);
+  const encodeStartedAtRef = useRef<number | null>(null);
 
   const totalDuration = useVideoStore((state) => state.totalDuration);
   const sceneCount = useVideoStore((state) => state.scenes.length);
@@ -184,6 +205,9 @@ export default function FfmpegRender({
     setCurrentFrame(0);
     setTotalFrames(0);
     setErrorMessage("");
+    setCaptureEta(null);
+    setEncodeElapsedSec(0);
+    setHiddenPaused(false);
     replacePreviewUrl(null);
     replaceCaptionUrls(null);
   }, [replacePreviewUrl, replaceCaptionUrls]);
@@ -246,6 +270,34 @@ export default function FfmpegRender({
     };
   }, [ffmpeg, runTracker]);
 
+  // Capture waits on requestAnimationFrame, which background tabs throttle to
+  // a halt. Surface that as an explicit "paused" message instead of letting
+  // frozen progress look like a hang.
+  useEffect(() => {
+    if (status !== "preparing" && status !== "capturing") return;
+    const handleVisibilityChange = () => {
+      setHiddenPaused(
+        getBackgroundTabPauseMessage(document.visibilityState) !== null
+      );
+    };
+    handleVisibilityChange();
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [status]);
+
+  useEffect(() => {
+    if (status !== "encoding") return;
+    const timer = setInterval(() => {
+      if (encodeStartedAtRef.current !== null) {
+        setEncodeElapsedSec(
+          Math.floor((Date.now() - encodeStartedAtRef.current) / 1000)
+        );
+      }
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [status]);
+
   const handleReset = () => {
     cancelActiveRun();
     resetRenderState();
@@ -302,6 +354,9 @@ export default function FfmpegRender({
     setCurrentFrame(0);
     setTotalFrames(0);
     setErrorMessage("");
+    setCaptureEta(null);
+    setEncodeElapsedSec(0);
+    setHiddenPaused(false);
     replacePreviewUrl(null);
     replaceCaptionUrls(null);
 
@@ -364,7 +419,7 @@ export default function FfmpegRender({
       throwIfNotCurrent();
 
       frameExtension = renderPlan.frameExtension;
-      const params = getVideoEncodingSettings(
+      const params = getBrowserVideoEncodingSettings(
         exportSettings.quality,
         exportSettings.speed
       );
@@ -411,17 +466,23 @@ export default function FfmpegRender({
 
       let lastFrame: Uint8Array | null = null;
       let consecutiveCaptureFailures = 0;
-      const frameCanvas = document.createElement("canvas");
-      frameCanvas.width = renderPlan.width;
-      frameCanvas.height = renderPlan.height;
-      const frameContext = frameCanvas.getContext("2d");
-      if (!frameContext) {
-        throw new Error("Could not get 2D context");
-      }
+      const frameTimeEstimator = createFrameTimeEstimator();
+      const createFrameCanvas = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = renderPlan.width;
+        canvas.height = renderPlan.height;
+        const context = canvas.getContext("2d");
+        if (!context) {
+          throw new Error("Could not get 2D context");
+        }
+        return { canvas, context };
+      };
+      let { canvas: frameCanvas, context: frameContext } = createFrameCanvas();
 
       for (let frameIndex = 0; frameIndex < totalFrameCount; frameIndex++) {
         throwIfNotCurrent();
         framesAttempted = frameIndex + 1;
+        const frameStartedAt = performance.now();
 
         const currentTime = frameIndex / outputFps;
         seekTo(Math.min(currentTime, totalDuration));
@@ -440,45 +501,51 @@ export default function FfmpegRender({
           frameContext.setTransform(1, 0, 0, 1, 0, 0);
           frameContext.clearRect(0, 0, renderPlan.width, renderPlan.height);
 
-          const capturedCanvas = await html2canvas(previewElement, {
-            canvas: frameCanvas,
-            backgroundColor: "#000000",
-            scale: renderPlan.captureScale,
-            logging: false,
-            useCORS: true,
-            allowTaint: true,
-            removeContainer: true,
-            imageTimeout: CAPTURE_IMAGE_TIMEOUT_MS,
-            width: renderPlan.layoutWidth,
-            height: renderPlan.layoutHeight,
-            windowWidth: renderPlan.layoutWidth,
-            windowHeight: Math.ceil(renderPlan.layoutHeight),
-            scrollX: 0,
-            scrollY: 0,
-            onclone: (clonedDoc, clonedElement) => {
-              const applied = applyRenderLayoutToClone({
-                clonedDoc,
-                clonedElement: clonedElement as HTMLElement | null,
-                renderPlan,
+          const blob = await withTimeout(
+            (async () => {
+              const capturedCanvas = await html2canvas(previewElement, {
+                canvas: frameCanvas,
+                backgroundColor: "#000000",
+                scale: renderPlan.captureScale,
+                logging: false,
+                useCORS: true,
+                allowTaint: true,
+                removeContainer: true,
+                imageTimeout: CAPTURE_IMAGE_TIMEOUT_MS,
+                width: renderPlan.layoutWidth,
+                height: renderPlan.layoutHeight,
+                windowWidth: renderPlan.layoutWidth,
+                windowHeight: Math.ceil(renderPlan.layoutHeight),
+                scrollX: 0,
+                scrollY: 0,
+                onclone: (clonedDoc, clonedElement) => {
+                  const applied = applyRenderLayoutToClone({
+                    clonedDoc,
+                    clonedElement: clonedElement as HTMLElement | null,
+                    renderPlan,
+                  });
+
+                  if (!applied) {
+                    throw new Error("Scene preview missing in export clone");
+                  }
+                },
               });
+              throwIfNotCurrent();
 
-              if (!applied) {
-                throw new Error("Scene preview missing in export clone");
-              }
-            },
-          });
-          throwIfNotCurrent();
-
-          const blob = await new Promise<Blob>((resolve, reject) => {
-            capturedCanvas.toBlob(
-              (b) => {
-                if (b) resolve(b);
-                else reject(new Error("Failed to create frame blob"));
-              },
-              renderPlan.frameMimeType,
-              renderPlan.frameQuality
-            );
-          });
+              return new Promise<Blob>((resolve, reject) => {
+                capturedCanvas.toBlob(
+                  (b) => {
+                    if (b) resolve(b);
+                    else reject(new Error("Failed to create frame blob"));
+                  },
+                  renderPlan.frameMimeType,
+                  renderPlan.frameQuality
+                );
+              });
+            })(),
+            FRAME_CAPTURE_TIMEOUT_MS,
+            () => new FrameCaptureTimeoutError()
+          );
           throwIfNotCurrent();
 
           const arrayBuffer = await blob.arrayBuffer();
@@ -500,6 +567,15 @@ export default function FfmpegRender({
         } catch (error) {
           if (!isCurrentRun()) {
             throw new RenderCancelledError();
+          }
+
+          // A timed-out html2canvas may still be drawing into the canvas it
+          // was given. Give the next frame a fresh canvas so the orphaned
+          // work cannot corrupt it.
+          if (error instanceof FrameCaptureTimeoutError) {
+            const fresh = createFrameCanvas();
+            frameCanvas = fresh.canvas;
+            frameContext = fresh.context;
           }
 
           consecutiveCaptureFailures += 1;
@@ -535,26 +611,49 @@ export default function FfmpegRender({
         }
 
         throwIfNotCurrent();
+        frameTimeEstimator.addFrame(performance.now() - frameStartedAt);
         setCurrentFrame(frameIndex + 1);
         setProgress(Math.round(((frameIndex + 1) / totalFrameCount) * 100));
+        const remainingMs = frameTimeEstimator.estimateRemainingMs(
+          totalFrameCount - (frameIndex + 1)
+        );
+        setCaptureEta(remainingMs === null ? null : formatEta(remainingMs));
       }
 
       throwIfNotCurrent();
       activeRun.phase = "encoding";
       setStatus("encoding");
       setProgress(0);
+      encodeStartedAtRef.current = Date.now();
+      setEncodeElapsedSec(0);
 
       let outputBlob: Blob;
       let nextOutputFileName: string;
       const inputPattern = `${frameDirectory}/${renderPlan.inputPattern}`;
 
-      const execFfmpeg = async (args: string[], description: string) => {
-        const exitCode = await ffmpeg.exec(args, -1, {
-          signal: controller.signal,
-        });
-        throwIfNotCurrent();
-        if (exitCode !== 0) {
-          throw new Error(`${description} failed with exit code ${exitCode}`);
+      const execFfmpeg = async (
+        args: string[],
+        description: string,
+        mapProgressPercent?: (encodePercent: number) => number
+      ) => {
+        // Subscribed only for the duration of the exec call so a cancelled or
+        // finished run leaves no listener behind on the reused ffmpeg worker.
+        const handleProgress = ({ time }: { progress: number; time: number }) => {
+          if (!isCurrentRun()) return;
+          const percent = computeEncodeProgressPercent(time, totalDuration);
+          setProgress(mapProgressPercent ? mapProgressPercent(percent) : percent);
+        };
+        ffmpeg.on("progress", handleProgress);
+        try {
+          const exitCode = await ffmpeg.exec(args, -1, {
+            signal: controller.signal,
+          });
+          throwIfNotCurrent();
+          if (exitCode !== 0) {
+            throw new Error(`${description} failed with exit code ${exitCode}`);
+          }
+        } finally {
+          ffmpeg.off("progress", handleProgress);
         }
       };
 
@@ -576,7 +675,13 @@ export default function FfmpegRender({
           artifactNames.paletteFileName,
         ];
 
-        await execFfmpeg(paletteArgs, "GIF palette generation");
+        // Two-pass encode: palette generation covers 0–30%, the actual GIF
+        // encode covers 30–100%.
+        await execFfmpeg(
+          paletteArgs,
+          "GIF palette generation",
+          (percent) => Math.floor(percent * 0.3)
+        );
 
         // Encode GIF using the palette with aggressive dithering
         const gifArgs = [
@@ -596,7 +701,9 @@ export default function FfmpegRender({
           artifactNames.outputFileName,
         ];
 
-        await execFfmpeg(gifArgs, "GIF encoding");
+        await execFfmpeg(gifArgs, "GIF encoding", (percent) =>
+          Math.min(99, 30 + Math.floor(percent * 0.7))
+        );
         const gifData = await ffmpeg.readFile(
           artifactNames.outputFileName,
           "binary",
@@ -674,6 +781,7 @@ export default function FfmpegRender({
 
       replacePreviewUrl(objectUrl);
       setOutputFileName(nextOutputFileName);
+      setProgress(100);
       setStatus("complete");
       trackExportEvent(EXPORT_EVENT_NAMES.finished, exportEventProperties);
       toast.success(`${format.toUpperCase()} exported successfully!`);
@@ -800,8 +908,20 @@ export default function FfmpegRender({
               {status === "encoding" && "Encoding video..."}
             </p>
             <p className="text-sm text-muted-foreground mt-1">
-              {status === "capturing" && `Frame ${currentFrame}/${totalFrames}`}
-              {status === "encoding" && "Almost done..."}
+              {hiddenPaused &&
+                status !== "encoding" &&
+                getBackgroundTabPauseMessage("hidden")}
+              {!hiddenPaused && status === "capturing" &&
+                `Frame ${currentFrame}/${totalFrames}` +
+                  (captureEta ? ` · ~${captureEta} remaining` : "")}
+              {status === "encoding" &&
+                `Encoding… ${progress}%` +
+                  ` · ${formatEta(encodeElapsedSec * 1000)} elapsed` +
+                  (progress >= 3
+                    ? ` · ~${formatEta(
+                        (encodeElapsedSec * 1000 * (100 - progress)) / progress
+                      )} remaining`
+                    : "")}
             </p>
           </div>
         </div>

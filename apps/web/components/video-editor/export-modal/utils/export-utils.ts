@@ -2,7 +2,11 @@
 // frame-encoding planning live in @markdown-video/core so the headless CLI can
 // share them; this module keeps only capture/ffmpeg/browser lifecycle concerns.
 
-import type { RenderPlan } from "@markdown-video/core"
+import {
+  getVideoEncodingSettings,
+  type RenderPlan,
+  type VideoEncodingSettings,
+} from "@markdown-video/core"
 
 /**
  * ffmpeg.writeFile transfers Uint8Array buffers to its worker, which neuters
@@ -241,4 +245,140 @@ export class RenderRunTracker {
   isCurrent(generation: number) {
     return generation === this.generation
   }
+}
+
+// The shared preset scale in @markdown-video/core assumes a native,
+// multi-threaded x264. The browser runs a single-threaded wasm build where a
+// "slow" preset can take tens of minutes on a 30-second clip, so the browser
+// scale is shifted two steps faster while keeping the same CRF for each
+// quality level. Native CLI encodes keep the unshifted table.
+const BROWSER_PRESET_BY_SPEED: Record<string, string> = {
+  fastest: "ultrafast",
+  fast: "superfast",
+  balanced: "veryfast",
+  slow: "faster",
+  slowest: "fast",
+}
+
+export function getBrowserVideoEncodingSettings(
+  quality: string,
+  speed: string
+): VideoEncodingSettings {
+  return {
+    preset: BROWSER_PRESET_BY_SPEED[speed] ?? BROWSER_PRESET_BY_SPEED.balanced,
+    crf: getVideoEncodingSettings(quality, speed).crf,
+  }
+}
+
+/**
+ * ffmpeg.wasm reports encode progress as an output timestamp in microseconds.
+ * Deriving the percent from that output timestamp rather than the reported
+ * `progress` fraction keeps it honest for image-sequence inputs, whose input
+ * duration metadata is unreliable. Clamped to 99 while running; callers set
+ * 100 only after the exec call resolves.
+ */
+export function computeEncodeProgressPercent(
+  timeUs: number,
+  totalDurationSec: number
+): number {
+  if (
+    !Number.isFinite(timeUs) ||
+    !Number.isFinite(totalDurationSec) ||
+    totalDurationSec <= 0
+  ) {
+    return 0
+  }
+  const percent = (timeUs / 1_000_000 / totalDurationSec) * 100
+  if (percent < 0) return 0
+  return Math.min(99, Math.floor(percent))
+}
+
+/** Compact remaining-time label: "45s", "3m 10s", "1h 2m". */
+export function formatEta(ms: number): string {
+  if (!Number.isFinite(ms) || ms < 0) return ""
+  const totalSeconds = Math.round(ms / 1000)
+  if (totalSeconds < 60) return `${totalSeconds}s`
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = totalSeconds % 60
+  if (minutes < 60) {
+    return seconds === 0 ? `${minutes}m` : `${minutes}m ${seconds}s`
+  }
+  const hours = Math.floor(minutes / 60)
+  return `${hours}h ${minutes % 60}m`
+}
+
+/**
+ * Per-frame capture timing. Keeps a bounded recent window so the ETA tracks
+ * scene-to-scene cost changes instead of averaging the whole run. Returns no
+ * estimate until `minSamples` frames have completed so the first seconds of a
+ * run do not show a meaningless ETA.
+ */
+export function createFrameTimeEstimator({
+  windowSize = 20,
+  minSamples = 5,
+}: {
+  windowSize?: number
+  minSamples?: number
+} = {}) {
+  const frameTimes: number[] = []
+
+  return {
+    addFrame(durationMs: number) {
+      if (!Number.isFinite(durationMs) || durationMs < 0) return
+      frameTimes.push(durationMs)
+      if (frameTimes.length > windowSize) {
+        frameTimes.splice(0, frameTimes.length - windowSize)
+      }
+    },
+    estimateRemainingMs(remainingFrames: number): number | null {
+      if (
+        frameTimes.length < minSamples ||
+        !Number.isFinite(remainingFrames) ||
+        remainingFrames <= 0
+      ) {
+        return null
+      }
+      const average =
+        frameTimes.reduce((sum, value) => sum + value, 0) / frameTimes.length
+      return average * remainingFrames
+    },
+    get sampleCount() {
+      return frameTimes.length
+    },
+  }
+}
+
+/**
+ * Races a promise against a watchdog deadline. Used for per-frame capture:
+ * a frame that exceeds the budget counts as a capture failure and feeds the
+ * existing consecutive-failure ceiling. The timer is cleared on settle so the
+ * watchdog cannot fire after the work already finished.
+ */
+export function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  createError: () => Error
+): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(createError()), timeoutMs)
+    promise.then(
+      (value) => {
+        clearTimeout(timer)
+        resolve(value)
+      },
+      (error) => {
+        clearTimeout(timer)
+        reject(error)
+      }
+    )
+  })
+}
+
+export const BACKGROUND_TAB_PAUSE_MESSAGE =
+  "Paused — this tab is in the background. Return to it to continue."
+
+export function getBackgroundTabPauseMessage(
+  visibilityState: string
+): string | null {
+  return visibilityState === "hidden" ? BACKGROUND_TAB_PAUSE_MESSAGE : null
 }
