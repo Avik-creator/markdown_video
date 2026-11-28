@@ -58,6 +58,11 @@ import {
   WebCodecsEncoderError,
   type WebCodecsMp4Encoder,
 } from "../utils/webcodecs-export";
+import {
+  renderMusicAudioBuffer,
+  selectWebCodecsAudioCodec,
+  WEBCODECS_AUDIO_BITRATE,
+} from "../utils/webcodecs-audio";
 import { warmBrowserAssetSources } from "@/lib/assets/asset-resolution";
 import {
   beginExportCaptionBurn,
@@ -67,9 +72,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
 interface FileUploaderProps {
-  loadFunction: () => Promise<void>;
-  loadFfmpeg: boolean;
-  ffmpeg: FFmpeg;
+  /** Lazily loads the shared ffmpeg.wasm core; only runs that need it call it. */
+  ensureFFmpeg: () => Promise<FFmpeg>;
 }
 
 type RenderStatus =
@@ -84,6 +88,9 @@ type ActiveRun = {
   generation: number;
   controller: AbortController;
   phase: "preparing" | "capturing" | "encoding";
+  // The ffmpeg instance this run loaded via ensureFFmpeg, or null when the
+  // run never needed the compatibility encoder (WebCodecs MP4 path).
+  ffmpeg: FFmpeg | null;
   // True only while an ffmpeg.exec call is in flight. WebCodecs encodes
   // without the wasm worker, so "encoding" alone no longer implies the
   // worker is busy.
@@ -177,11 +184,7 @@ function sleep(ms: number, signal: AbortSignal) {
   });
 }
 
-export default function FfmpegRender({
-  loadFunction,
-  loadFfmpeg,
-  ffmpeg,
-}: FileUploaderProps) {
+export default function FfmpegRender({ ensureFFmpeg }: FileUploaderProps) {
   const [status, setStatus] = useState<RenderStatus>("idle");
   const [progress, setProgress] = useState(0);
   const [currentFrame, setCurrentFrame] = useState(0);
@@ -193,6 +196,7 @@ export default function FfmpegRender({
   const [captureEta, setCaptureEta] = useState<string | null>(null);
   const [encodeElapsedSec, setEncodeElapsedSec] = useState(0);
   const [hiddenPaused, setHiddenPaused] = useState(false);
+  const [ffmpegLoading, setFfmpegLoading] = useState(false);
 
   const [runTracker] = useState(() => new RenderRunTracker());
   const activeRunRef = useRef<ActiveRun | null>(null);
@@ -244,6 +248,7 @@ export default function FfmpegRender({
     setCaptureEta(null);
     setEncodeElapsedSec(0);
     setHiddenPaused(false);
+    setFfmpegLoading(false);
     replacePreviewUrl(null);
     replaceCaptionUrls(null);
   }, [replacePreviewUrl, replaceCaptionUrls]);
@@ -265,17 +270,16 @@ export default function FfmpegRender({
     // long-running CPU work that abort alone cannot stop promptly. On the
     // WebCodecs path aborting rejects the encoder directly, and cancelling
     // during capture or finalize must never terminate the shared worker.
-    if (activeRun.ffmpegBusy) {
+    if (activeRun.ffmpegBusy && activeRun.ffmpeg) {
       try {
-        ffmpeg.terminate();
+        activeRun.ffmpeg.terminate();
       } catch (error) {
         console.error("Failed to terminate FFmpeg:", error);
       }
-      void loadFunction();
     }
 
     return true;
-  }, [ffmpeg, loadFunction, runTracker]);
+  }, [runTracker]);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -291,9 +295,9 @@ export default function FfmpegRender({
         // The parent intentionally keeps an idle worker warm across modal
         // closes, so an in-flight exec must be stopped here before it can
         // continue as detached CPU work in that reusable worker.
-        if (activeRun.ffmpegBusy) {
+        if (activeRun.ffmpegBusy && activeRun.ffmpeg) {
           try {
-            ffmpeg.terminate();
+            activeRun.ffmpeg.terminate();
           } catch {
             // Termination is best-effort during unmount.
           }
@@ -313,7 +317,7 @@ export default function FfmpegRender({
         captionUrlsRef.current = null;
       }
     };
-  }, [ffmpeg, runTracker]);
+  }, [runTracker]);
 
   // Capture waits on requestAnimationFrame, which background tabs throttle to
   // a halt. Surface that as an explicit "paused" message instead of letting
@@ -349,11 +353,6 @@ export default function FfmpegRender({
   };
 
   const render = async (options?: { autoRetry?: boolean }) => {
-    if (!loadFfmpeg) {
-      toast.error("FFmpeg is not loaded yet");
-      return;
-    }
-
     if (!exportValidation.valid) {
       toast.error(exportValidation.reason ?? "Export is not available");
       return;
@@ -380,6 +379,7 @@ export default function FfmpegRender({
       generation,
       controller,
       phase: "preparing",
+      ffmpeg: null,
       ffmpegBusy: false,
     };
     activeRunRef.current = activeRun;
@@ -468,6 +468,10 @@ export default function FfmpegRender({
     let frameExtension = "jpg";
     let framesAttempted = 0;
     let mp4Encoder: WebCodecsMp4Encoder | null = null;
+    // The ffmpeg instance this run loaded via ensureFFmpeg (null when the run
+    // took the WebCodecs path with no ffmpeg work). Mirrored on activeRun for
+    // cancel/unmount terminate and the finally MEMFS cleanup.
+    let runFfmpeg: FFmpeg | null = null;
     // Run-local restore: cancelActiveRun/unmount invoke it through the ref;
     // this run's finally calls it directly (a no-op if already restored).
     let restorePreviewLayout: (() => void) | null = null;
@@ -514,11 +518,51 @@ export default function FfmpegRender({
           : null;
       throwIfNotCurrent();
       const encoderKind = chooseExportEncoder({ format, webCodecsConfig });
+
+      // On the WebCodecs path with music, an available AAC encoder means the
+      // track is muxed in the same pass — no ffmpeg remux, no MEMFS write.
+      let webCodecsAudioPath: "native" | "wasm" | null = null;
+      if (music && encoderKind === "webcodecs" && webCodecsConfig) {
+        webCodecsAudioPath = await selectWebCodecsAudioCodec();
+        throwIfNotCurrent();
+      }
+      const audioEngine = !music
+        ? "none"
+        : webCodecsAudioPath === "native"
+          ? "aac-webcodecs"
+          : webCodecsAudioPath === "wasm"
+            ? "aac-wasm"
+            : "aac-ffmpeg";
       exportEventProperties = buildExportEventProperties({
         ...exportAnalyticsBase,
         encoder: encoderKind,
+        audio: audioEngine,
       });
       trackExportEvent(EXPORT_EVENT_NAMES.started, exportEventProperties);
+
+      // The 32 MB ffmpeg core is loaded only by runs that need it: GIF, the
+      // legacy encoder path, or music on the remux fallback. The loading
+      // message is part of the preparing phase.
+      const needsFfmpeg =
+        encoderKind !== "webcodecs" ||
+        (music !== undefined && webCodecsAudioPath === null);
+      if (needsFfmpeg) {
+        setFfmpegLoading(true);
+        try {
+          runFfmpeg = await ensureFFmpeg();
+        } catch (error) {
+          throw new Error(
+            `Could not load the compatibility encoder (${
+              error instanceof Error ? error.message : String(error)
+            }).`
+          );
+        } finally {
+          setFfmpegLoading(false);
+        }
+        activeRun.ffmpeg = runFfmpeg;
+        throwIfNotCurrent();
+      }
+      const ffmpeg = runFfmpeg as FFmpeg;
 
       const params = getBrowserVideoEncodingSettings(
         exportSettings.quality,
@@ -527,25 +571,40 @@ export default function FfmpegRender({
 
       setTotalFrames(totalFrameCount);
 
+      let musicAudioBuffer: AudioBuffer | null = null;
+      if (music) {
+        const musicData = await fetchBrowserMusicData(music.src, controller.signal);
+        throwIfNotCurrent();
+        if (webCodecsAudioPath) {
+          // Render the whole music track once, offline, with volume+fade as a
+          // Web Audio gain schedule — the same shape as the ffmpeg filters.
+          musicAudioBuffer = await renderMusicAudioBuffer({
+            musicData,
+            music,
+            totalDuration,
+          });
+          throwIfNotCurrent();
+        } else {
+          await ffmpeg.writeFile(artifactNames.musicFileName, musicData, {
+            signal: controller.signal,
+          });
+          throwIfNotCurrent();
+        }
+      }
+
       if (encoderKind === "webcodecs" && webCodecsConfig) {
         mp4Encoder = createWebCodecsMp4Encoder({
           config: webCodecsConfig,
           fps: outputFps,
           totalFrames: totalFrameCount,
           signal: controller.signal,
+          audio: musicAudioBuffer
+            ? { buffer: musicAudioBuffer, bitrate: WEBCODECS_AUDIO_BITRATE }
+            : undefined,
         });
       } else {
         frameDirectory = artifactNames.frameDirectory;
         await ffmpeg.createDir(frameDirectory, { signal: controller.signal });
-        throwIfNotCurrent();
-      }
-
-      if (music) {
-        const musicData = await fetchBrowserMusicData(music.src, controller.signal);
-        throwIfNotCurrent();
-        await ffmpeg.writeFile(artifactNames.musicFileName, musicData, {
-          signal: controller.signal,
-        });
         throwIfNotCurrent();
       }
 
@@ -925,9 +984,10 @@ export default function FfmpegRender({
         const mp4Bytes = await mp4Encoder.finalize();
         throwIfNotCurrent();
 
-        if (music) {
-          // Stream-copy the encoded H.264 and let ffmpeg.wasm build the AAC
-          // track with the same filter graph as the libx264 path.
+        if (music && !webCodecsAudioPath) {
+          // Remux fallback (no AAC encoder in this browser): stream-copy the
+          // encoded H.264 and let ffmpeg.wasm build the AAC track with the
+          // same filter graph as the libx264 path.
           await ffmpeg.writeFile(artifactNames.webcodecsVideoFileName, mp4Bytes, {
             signal: controller.signal,
           });
@@ -1175,12 +1235,13 @@ export default function FfmpegRender({
       // errors are ignored.
       const directoryToClean = frameDirectory;
       const frameCountToClean = framesAttempted;
-      if ((directoryToClean || mp4Encoder) && ffmpeg.loaded) {
+      const ffmpegToClean = activeRun.ffmpeg;
+      if ((directoryToClean || mp4Encoder) && ffmpegToClean?.loaded) {
         void (async () => {
           if (directoryToClean) {
             for (let frameIndex = 0; frameIndex < frameCountToClean; frameIndex++) {
               try {
-                await ffmpeg.deleteFile(
+                await ffmpegToClean.deleteFile(
                   `${directoryToClean}/${getFrameFileName(frameIndex, frameExtension)}`
                 );
               } catch {
@@ -1189,20 +1250,20 @@ export default function FfmpegRender({
             }
           }
           try {
-            await ffmpeg.deleteFile(artifactNames.paletteFileName);
+            await ffmpegToClean.deleteFile(artifactNames.paletteFileName);
           } catch {}
           try {
-            await ffmpeg.deleteFile(artifactNames.outputFileName);
+            await ffmpegToClean.deleteFile(artifactNames.outputFileName);
           } catch {}
           try {
-            await ffmpeg.deleteFile(artifactNames.musicFileName);
+            await ffmpegToClean.deleteFile(artifactNames.musicFileName);
           } catch {}
           try {
-            await ffmpeg.deleteFile(artifactNames.webcodecsVideoFileName);
+            await ffmpegToClean.deleteFile(artifactNames.webcodecsVideoFileName);
           } catch {}
           if (directoryToClean) {
             try {
-              await ffmpeg.deleteDir(directoryToClean);
+              await ffmpegToClean.deleteDir(directoryToClean);
             } catch {}
           }
         })();
@@ -1216,20 +1277,11 @@ export default function FfmpegRender({
       <div className="space-y-2">
         <Button
           onClick={() => render()}
-          disabled={!loadFfmpeg || !exportValidation.valid}
+          disabled={!exportValidation.valid}
           className="w-full gap-2 bg-accent hover:bg-accent-deep text-foreground"
         >
-          {!loadFfmpeg ? (
-            <>
-              <Loader2 className="w-4 h-4 animate-spin" />
-              Loading FFmpeg...
-            </>
-          ) : (
-            <>
-              <Film className="w-4 h-4" />
-              Start Rendering
-            </>
-          )}
+          <Film className="w-4 h-4" />
+          Start Rendering
         </Button>
         <p className="text-xs text-muted-foreground text-center">
           Keep this tab visible while exporting; frame capture uses browser
@@ -1260,7 +1312,10 @@ export default function FfmpegRender({
           </div>
           <div className="text-center">
             <p className="text-foreground font-medium">
-              {status === "preparing" && "Preparing..."}
+              {status === "preparing" &&
+                (ffmpegLoading
+                  ? "Preparing… · Loading compatibility encoder"
+                  : "Preparing...")}
               {status === "capturing" && "Capturing frames..."}
               {status === "encoding" && "Encoding video..."}
             </p>

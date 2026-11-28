@@ -80,6 +80,22 @@ vi.mock("html2canvas-pro", () => ({
   })),
 }));
 
+
+vi.mock(
+  "@/components/video-editor/export-modal/utils/webcodecs-audio",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("@/components/video-editor/export-modal/utils/webcodecs-audio")
+      >();
+    return {
+      ...actual,
+      selectWebCodecsAudioCodec: vi.fn(async () => null),
+      renderMusicAudioBuffer: vi.fn(async () => ({}) as AudioBuffer),
+    };
+  }
+);
+
 vi.mock("@/lib/assets/asset-resolution", () => ({
   warmBrowserAssetSources: vi.fn(async () => {}),
 }));
@@ -114,9 +130,7 @@ function renderExport(ffmpeg = createFfmpegMock()) {
   document.body.appendChild(preview);
   render(
     <FfmpegRender
-      loadFunction={vi.fn(async () => {})}
-      loadFfmpeg={true}
-      ffmpeg={ffmpeg as never}
+      ensureFFmpeg={vi.fn(async () => ffmpeg as never)}
     />
   );
   return { ffmpeg, preview };

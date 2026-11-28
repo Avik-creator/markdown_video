@@ -132,6 +132,8 @@ export interface ExportAnalyticsInput {
   encoder?: "webcodecs" | "ffmpeg";
   /** Which rasterizer captured the frames; a fixed enum, folded into `settings`. */
   capture?: "snapdom" | "html2canvas";
+  /** How the audio track was produced; a fixed enum, folded into `settings`. */
+  audio?: "none" | "aac-webcodecs" | "aac-wasm" | "aac-ffmpeg";
   fps?: number;
   aspectRatio?: string;
   width?: number;
@@ -148,7 +150,7 @@ export interface ExportAnalyticsInput {
  * under 255 characters.
  *
  * Composite properties:
- * - settings: "<resolution>/<fps>fps/<quality>/<speed>[/encoder][/capture]"
+ * - settings: "<resolution>/<fps>fps/<quality>/<speed>[/encoder][/capture][/audio]"
  * - output:   "<aspectRatio>/<width>x<height>"
  * - scenes:   "<type>:<count>,..." sorted by type, or "none"
  */
@@ -166,11 +168,12 @@ export function buildExportEventProperties(
   // Fixed enums, never content.
   const encoder = input.encoder ? `/${normalizeToken(input.encoder)}` : "";
   const capture = input.capture ? `/${normalizeToken(input.capture)}` : "";
+  const audio = input.audio ? `/${normalizeToken(input.audio)}` : "";
   return {
     format: normalizeToken(input.format),
     settings: `${normalizeToken(input.resolution)}/${fps}fps/${normalizeToken(
       input.quality
-    )}/${normalizeToken(input.speed)}${encoder}${capture}`,
+    )}/${normalizeToken(input.speed)}${encoder}${capture}${audio}`,
     output: `${normalizeToken(input.aspectRatio)}/${width}x${height}`,
     duration: toNonNegativeSeconds(input.durationSeconds),
     frames: toNonNegativeInteger(input.totalFrames),

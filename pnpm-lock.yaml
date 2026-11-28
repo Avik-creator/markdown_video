@@ -170,6 +170,9 @@ importers:
       '@markdown-video/scenes':
         specifier: workspace:*
         version: link:../../packages/scenes
+      '@mediabunny/aac-encoder':
+        specifier: 1.66.2
+        version: 1.66.2(mediabunny@1.66.2)
       '@modelcontextprotocol/sdk':
         specifier: 1.32.2
         version: 1.32.2(zod@4.6.7)
@@ -1148,6 +1151,11 @@ packages:
 
   '@marijn/find-cluster-break@1.0.4':
     resolution: {integrity: sha512-Wy0V7+SGUjnF9/TkiM1hKVDPj7jKXduPNboMVtHTA8dySMURWqfg/JZ9E2Sq8JgSJmkl7k7Qe9FLeMSrSraWmQ==}
+
+  '@mediabunny/aac-encoder@1.66.2':
+    resolution: {integrity: sha512-4OLUxYFkUAF3Q1/1mhZ/uBUTU6dLw9y0Cw9Ln9+jGGtrIN6vDjrYm+DAu18hlp5EMOTPjwdbsxWKs2RKO86Y4g==}
+    peerDependencies:
+      mediabunny: ^1.0.0
 
   '@modelcontextprotocol/sdk@1.32.2':
     resolution: {integrity: sha512-SWsVtH/0vULSQStoZ6xxH2K09Li8fXYTMC64ZeogCdpZ3XSi1eCPOByV1OpuJxuI3OcmHhosDWYyii07tpPsLw==}
@@ -5328,6 +5336,10 @@ snapshots:
       '@lezer/highlight': 1.2.5
 
   '@marijn/find-cluster-break@1.0.4': {}
+
+  '@mediabunny/aac-encoder@1.66.2(mediabunny@1.66.2)':
+    dependencies:
+      mediabunny: 1.66.2
 
   '@modelcontextprotocol/sdk@1.32.2(zod@4.6.7)':
     dependencies:
