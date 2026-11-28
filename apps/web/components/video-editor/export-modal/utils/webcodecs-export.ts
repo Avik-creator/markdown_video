@@ -162,6 +162,20 @@ function assertPositiveFinite(value: number, label: string) {
   }
 }
 
+/** True for WebKit-family browsers (Safari and Playwright WebKit). */
+export function isWebKitEngine(userAgent: string): boolean {
+  return /AppleWebKit\//.test(userAgent) && !/(?:Chrome|Chromium|Edg)\//.test(userAgent);
+}
+
+/**
+ * WebKit's quality encoder can buffer more frames than its message queue
+ * accepts, deadlocking before the first packet. Realtime mode avoids that
+ * queue deadlock, so WebKit encodes in realtime; other engines keep quality.
+ */
+export function getWebCodecsLatencyMode(userAgent: string): "realtime" | "quality" {
+  return isWebKitEngine(userAgent) ? "realtime" : "quality";
+}
+
 /**
  * Pick the first H.264 config that the browser's VideoEncoder supports. Codec
  * strings whose level cannot carry the output are skipped without asking the
@@ -189,7 +203,9 @@ export async function selectWebCodecsVideoConfig(
       height,
       bitrate,
       framerate: fps,
-      latencyMode: "quality",
+      latencyMode: getWebCodecsLatencyMode(
+        typeof navigator === "undefined" ? "" : navigator.userAgent
+      ),
       hardwareAcceleration: "no-preference",
       avc: { format: "avc" },
     };
@@ -608,7 +624,7 @@ export function createWebCodecsMp4Encoder({
       wakeups.add(done);
     });
 
-  const encodeFrame = async (frame: VideoFrame, frameIndex: number, timestamp: number) => {
+  const encodeFrame = async (frame: VideoFrame, frameIndex: number) => {
     await ready;
     for (;;) {
       // finalize() may already be waiting on this frame, so "finalizing" is fine here.
@@ -619,6 +635,9 @@ export function createWebCodecsMp4Encoder({
     }
     const instance = ensureEncoder();
     const keyFrame = forceNextKeyFrame || frameIndex % keyFrameInterval === 0;
+    // WebKit quantizes VideoFrame timestamps by ±1µs; match chunks against the
+    // timestamp the constructed frame actually reports, not the requested one.
+    const timestamp = frame.timestamp;
     pendingFrames.set(timestamp, frameIndex);
     firstTimestampOfInstance ??= timestamp;
     try {
@@ -674,7 +693,7 @@ export function createWebCodecsMp4Encoder({
       });
       try {
         await previous;
-        await encodeFrame(frame, frameIndex, timestamp);
+        await encodeFrame(frame, frameIndex);
       } catch (error) {
         // Past this point every error is fatal: the encoder's frame sequence
         // can no longer be trusted.
