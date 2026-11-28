@@ -2,7 +2,11 @@
 
 import { describe, expect, it } from "vitest";
 import { createRenderPlan } from "@markdown-video/core";
-import { applyRenderLayoutToClone } from "../export-utils";
+import {
+  applyRenderLayoutToClone,
+  applyRenderLayoutToElement,
+  ensureRenderLayout,
+} from "../export-utils";
 
 function createCloneDocument(withPreview = true) {
   const clonedDoc = document.implementation.createHTMLDocument("export clone");
@@ -100,5 +104,105 @@ describe("applyRenderLayoutToClone", () => {
         renderPlan: plan,
       })
     ).toBe(false);
+  });
+});
+
+describe("applyRenderLayoutToElement", () => {
+  function livePreview() {
+    const el = document.createElement("div");
+    el.setAttribute("data-scene-preview", "true");
+    el.style.transform = "matrix(0.466667, 0, 0, 0.466667, 0, 0)";
+    el.style.width = "1920px";
+    el.style.height = "1080px";
+    el.style.aspectRatio = "16 / 9";
+    el.style.maxWidth = "56rem";
+    el.style.maxHeight = "20rem";
+    el.style.flexShrink = "1";
+    el.style.fontSize = "14px";
+    el.style.borderRadius = "8px";
+    el.style.visibility = "hidden";
+    document.body.appendChild(el);
+    return el;
+  }
+
+  it("pins the live element to the render plan and restores the exact previous inline styles", () => {
+    const el = livePreview();
+    const plan = createRenderPlan({ resolution: "1080p", format: "mp4" });
+    const styleKeys = [
+      "transform","width","height","aspectRatio","maxWidth","maxHeight",
+      "flexShrink","fontSize","borderRadius","visibility",
+    ] as const;
+    const before = Object.fromEntries(
+      styleKeys.map((key) => [
+        key,
+        el.style.getPropertyValue(key) || String(el.style[key as never]),
+      ])
+    );
+
+    const restore = applyRenderLayoutToElement(el, plan);
+
+    expect(el.style.transform).toBe("none");
+    expect(el.style.width).toBe("1920px");
+    expect(el.style.height).toBe("1080px");
+    expect(el.style.aspectRatio).toBe("auto");
+    expect(el.style.maxWidth).toBe("none");
+    expect(el.style.maxHeight).toBe("none");
+    expect(el.style.flexShrink).toBe("0");
+    expect(el.style.fontSize).toBe(`${plan.logicalFontSizePx}px`);
+    expect(el.style.borderRadius).toBe("0");
+    expect(el.style.visibility).toBe("visible");
+
+    restore();
+    for (const key of styleKeys) {
+      expect(el.style.getPropertyValue(key) || el.style[key as never]).toBe(
+        before[key] ?? ""
+      );
+    }
+    expect(el.style.transform).toContain("0.466667");
+    expect(el.style.visibility).toBe("hidden");
+    el.remove();
+  });
+
+  it("applies the 9:16 logical geometry for reels", () => {
+    const el = livePreview();
+    const plan = createRenderPlan({
+      resolution: "1080p",
+      projectAspectRatio: "16:9",
+      format: "reels",
+    });
+    applyRenderLayoutToElement(el, plan);
+    expect(el.style.width).toBe("1080px");
+    expect(el.style.height).toBe("1920px");
+    el.remove();
+  });
+
+  it("restore is idempotent", () => {
+    const el = livePreview();
+    const restore = applyRenderLayoutToElement(
+      el,
+      createRenderPlan({ resolution: "720p", format: "mp4" })
+    );
+    restore();
+    restore();
+    expect(el.style.transform).toContain("0.466667");
+    el.remove();
+  });
+});
+
+describe("ensureRenderLayout", () => {
+  it("is a no-op while the layout holds and re-applies on drift", () => {
+    const el = document.createElement("div");
+    el.setAttribute("data-scene-preview", "true");
+    document.body.appendChild(el);
+    const plan = createRenderPlan({ resolution: "1080p", format: "mp4" });
+    applyRenderLayoutToElement(el, plan);
+
+    expect(ensureRenderLayout(el, plan)).toBe(false);
+
+    el.style.transform = "scale(0.5)";
+    expect(ensureRenderLayout(el, plan)).toBe(true);
+    expect(el.style.transform).toBe("none");
+    expect(el.style.width).toBe("1920px");
+    el.remove();
   });
 });

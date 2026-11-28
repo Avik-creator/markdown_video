@@ -31,15 +31,19 @@ import {
 import {
   RenderRunTracker,
   applyRenderLayoutToClone,
+  applyRenderLayoutToElement,
+  ensureRenderLayout,
   chooseExportEncoder,
   computeEncodeProgressPercent,
   copyFrameData,
   createFrameTimeEstimator,
+  disableSnapdomCapture,
   disableWebCodecsExport,
   formatEta,
   getBackgroundTabPauseMessage,
   getBrowserVideoEncodingSettings,
   getExportArtifactNames,
+  isSnapdomCaptureDisabled,
   isWebCodecsExportDisabled,
   withTimeout,
 } from "../utils/export-utils";
@@ -97,6 +101,18 @@ class FrameCaptureTimeoutError extends Error {
   constructor() {
     super("Frame capture timed out");
     this.name = "FrameCaptureTimeoutError";
+  }
+}
+
+// Marks a run's failure as originating in frame capture (the repeated-failure
+// ceiling or an unrecoverable first frame), so the run-level catch can flip
+// the snapdom compatibility flag. `detail` carries the underlying cause.
+export class FrameCaptureError extends Error {
+  detail: string;
+  constructor(message: string, detail: string) {
+    super(message);
+    this.name = "FrameCaptureError";
+    this.detail = detail;
   }
 }
 
@@ -181,6 +197,9 @@ export default function FfmpegRender({
   const [runTracker] = useState(() => new RenderRunTracker());
   const activeRunRef = useRef<ActiveRun | null>(null);
   const mountedRef = useRef(true);
+  // Restores the live preview's styles if a snapdom run ends while it still
+  // holds the render layout (cancel, error, unmount).
+  const previewLayoutRestoreRef = useRef<(() => void) | null>(null);
   const previewUrlRef = useRef<string | null>(null);
   const captionUrlsRef = useRef<{ srt: string; vtt: string } | null>(null);
   const encodeStartedAtRef = useRef<number | null>(null);
@@ -237,6 +256,11 @@ export default function FfmpegRender({
     runTracker.cancelRun(activeRun.generation);
     activeRunRef.current = null;
 
+    // Restore the live preview now: a new run can start immediately after
+    // this cancel, and it must read the original styles, not render layout.
+    previewLayoutRestoreRef.current?.();
+    previewLayoutRestoreRef.current = null;
+
     // Terminate only when an ffmpeg.exec call is actually in flight: it is
     // long-running CPU work that abort alone cannot stop promptly. On the
     // WebCodecs path aborting rejects the encoder directly, and cancelling
@@ -275,6 +299,9 @@ export default function FfmpegRender({
           }
         }
       }
+
+      previewLayoutRestoreRef.current?.();
+      previewLayoutRestoreRef.current = null;
 
       if (previewUrlRef.current) {
         URL.revokeObjectURL(previewUrlRef.current);
@@ -321,7 +348,7 @@ export default function FfmpegRender({
     resetRenderState();
   };
 
-  const render = async () => {
+  const render = async (options?: { autoRetry?: boolean }) => {
     if (!loadFfmpeg) {
       toast.error("FFmpeg is not loaded yet");
       return;
@@ -425,19 +452,49 @@ export default function FfmpegRender({
       totalFrames: totalFrameCount,
       scenes: state.scenes,
     };
-    let exportEventProperties = buildExportEventProperties(exportAnalyticsBase);
+    // snapdom is the export capture path; html2canvas stays as the
+    // compatibility renderer after a runtime capture failure in this tab.
+    const useSnapdom = !isSnapdomCaptureDisabled();
+    const captureEngine: "snapdom" | "html2canvas" = useSnapdom
+      ? "snapdom"
+      : "html2canvas";
+
+    let exportEventProperties = buildExportEventProperties({
+      ...exportAnalyticsBase,
+      capture: captureEngine,
+    });
 
     let frameDirectory = "";
     let frameExtension = "jpg";
     let framesAttempted = 0;
     let mp4Encoder: WebCodecsMp4Encoder | null = null;
+    // Run-local restore: cancelActiveRun/unmount invoke it through the ref;
+    // this run's finally calls it directly (a no-op if already restored).
+    let restorePreviewLayout: (() => void) | null = null;
 
     try {
       // Ensure all fonts are loaded before capture
       await document.fonts.ready;
       throwIfNotCurrent();
 
-      const html2canvas = (await import("html2canvas-pro")).default;
+      const html2canvas = useSnapdom
+        ? null
+        : (await import("html2canvas-pro")).default;
+      let snapdom: typeof import("@zumer/snapdom").snapdom | null = null;
+      if (useSnapdom) {
+        try {
+          snapdom = (await import("@zumer/snapdom")).snapdom;
+        } catch (error) {
+          // A failed chunk load (deploy skew, offline) is a capture-start
+          // failure: take the flag + compatibility-renderer path.
+          throw new FrameCaptureError(
+            "Frame capture could not start",
+            `snapdom failed to load: ${
+              error instanceof Error ? error.message : String(error)
+            }`
+          );
+        }
+      }
       throwIfNotCurrent();
 
       frameExtension = renderPlan.frameExtension;
@@ -514,6 +571,36 @@ export default function FfmpegRender({
       await sleep(500, controller.signal);
       throwIfNotCurrent();
 
+      // snapdom measures the live element's box before cloning, so the
+      // html2canvas onclone trick cannot fix its geometry — the preview itself
+      // takes the render layout for the run (the export dialog covers it).
+      // Restored by cancelActiveRun/the unmount cleanup via the ref, or by
+      // this run's own finally; whichever runs first wins, so an overlapped
+      // cancel-then-restart can never restore stale styles.
+      if (useSnapdom) {
+        const restoreElement = applyRenderLayoutToElement(
+          previewElement,
+          renderPlan
+        );
+        // The unscaled 1920x1080 frame overflows the editor pane; hide the
+        // overflow on the preview's parent rather than letting it scroll.
+        const layoutParent = previewElement.parentElement;
+        const savedParentOverflow = layoutParent?.style.overflow;
+        if (layoutParent) {
+          layoutParent.style.overflow = "hidden";
+        }
+        let restored = false;
+        restorePreviewLayout = () => {
+          if (restored) return;
+          restored = true;
+          if (layoutParent) {
+            layoutParent.style.overflow = savedParentOverflow ?? "";
+          }
+          restoreElement();
+        };
+        previewLayoutRestoreRef.current = restorePreviewLayout;
+      }
+
       activeRun.phase = "capturing";
       setStatus("capturing");
 
@@ -547,11 +634,30 @@ export default function FfmpegRender({
         seekTo(Math.min(currentTime, totalDuration));
 
         // Scenes render from sceneTime, so a frame is ready once React has
-        // committed and effects have run. A few animation frames cover that;
-        // a fixed sleep here only added 100 ms to every frame.
-        for (let i = 0; i < 3; i++) {
-          await new Promise((resolve) => requestAnimationFrame(resolve));
+        // committed and effects have run. snapdom was measured pixel-identical
+        // with a single animation frame; html2canvas keeps the conservative
+        // three. A fixed sleep here only added 100 ms to every frame.
+        const rafWaits = useSnapdom ? 1 : 3;
+        for (let i = 0; i < rafWaits; i++) {
+          if (document.visibilityState === "visible") {
+            // A fully occluded window can stop firing rAF while staying
+            // "visible"; cap the wait so capture cannot hang silently.
+            await Promise.race([
+              new Promise((resolve) => requestAnimationFrame(resolve)),
+              new Promise((resolve) => setTimeout(resolve, 1000)),
+            ]);
+          } else {
+            // Hidden tabs genuinely cannot paint; keep the original
+            // wait-for-paint behavior (the "Paused" UI covers it).
+            await new Promise((resolve) => requestAnimationFrame(resolve));
+          }
           throwIfNotCurrent();
+        }
+
+        // React or a resize can rewrite the preview's inline styles between
+        // frames; re-assert the render layout only when it drifted.
+        if (useSnapdom) {
+          ensureRenderLayout(previewElement, renderPlan);
         }
 
         try {
@@ -562,33 +668,60 @@ export default function FfmpegRender({
 
           const captured = await withTimeout(
             (async () => {
-              const capturedCanvas = await html2canvas(previewElement, {
-                canvas: frameCanvas,
-                backgroundColor: "#000000",
-                scale: renderPlan.captureScale,
-                logging: false,
-                useCORS: true,
-                allowTaint: true,
-                removeContainer: true,
-                imageTimeout: CAPTURE_IMAGE_TIMEOUT_MS,
-                width: renderPlan.layoutWidth,
-                height: renderPlan.layoutHeight,
-                windowWidth: renderPlan.layoutWidth,
-                windowHeight: Math.ceil(renderPlan.layoutHeight),
-                scrollX: 0,
-                scrollY: 0,
-                onclone: (clonedDoc, clonedElement) => {
-                  const applied = applyRenderLayoutToClone({
-                    clonedDoc,
-                    clonedElement: clonedElement as HTMLElement | null,
-                    renderPlan,
-                  });
+              let capturedCanvas: HTMLCanvasElement;
+              if (snapdom) {
+                capturedCanvas = await snapdom.toCanvas(previewElement, {
+                  canvas: frameCanvas,
+                  width: renderPlan.width,
+                  height: renderPlan.height,
+                  dpr: 1,
+                  backgroundColor: "#000000",
+                  engine: "svg",
+                  cache: "disabled",
+                });
+              } else {
+                capturedCanvas = await html2canvas!(previewElement, {
+                  canvas: frameCanvas,
+                  backgroundColor: "#000000",
+                  scale: renderPlan.captureScale,
+                  logging: false,
+                  useCORS: true,
+                  allowTaint: true,
+                  removeContainer: true,
+                  imageTimeout: CAPTURE_IMAGE_TIMEOUT_MS,
+                  width: renderPlan.layoutWidth,
+                  height: renderPlan.layoutHeight,
+                  windowWidth: renderPlan.layoutWidth,
+                  windowHeight: Math.ceil(renderPlan.layoutHeight),
+                  scrollX: 0,
+                  scrollY: 0,
+                  // Cloning the whole editor page is wasted work; keep only
+                  // the preview subtree, its ancestors and document styles.
+                  // (~30% faster, pixel-identical.)
+                  // NOTE: on this fallback path a `filter: drop-shadow` under
+                  // a camera transform still rasterizes through a composited
+                  // 1x surface and blurs zoomed text; snapdom avoids it.
+                  ignoreElements: (el: Element) =>
+                    !(
+                      previewElement.contains(el) ||
+                      el.contains(previewElement) ||
+                      el.closest("head") ||
+                      el.tagName === "STYLE" ||
+                      el.tagName === "LINK"
+                    ),
+                  onclone: (clonedDoc, clonedElement) => {
+                    const applied = applyRenderLayoutToClone({
+                      clonedDoc,
+                      clonedElement: clonedElement as HTMLElement | null,
+                      renderPlan,
+                    });
 
-                  if (!applied) {
-                    throw new Error("Scene preview missing in export clone");
-                  }
-                },
-              });
+                    if (!applied) {
+                      throw new Error("Scene preview missing in export clone");
+                    }
+                  },
+                });
+              }
               throwIfNotCurrent();
 
               // The watchdog covers only the rasterize. On the WebCodecs path
@@ -615,8 +748,17 @@ export default function FfmpegRender({
           if (mp4Encoder) {
             // addFrame snapshots the canvas synchronously, so frameCanvas can
             // be redrawn on the next iteration. The await is the encoder's
-            // backpressure signal and intentionally sits outside the watchdog.
-            await mp4Encoder.addFrame(captured as HTMLCanvasElement, frameIndex);
+            // backpressure signal; cap it so a wedged encoder fails over to
+            // the compatibility path instead of hanging the run.
+            await withTimeout(
+              mp4Encoder.addFrame(captured as HTMLCanvasElement, frameIndex),
+              30_000,
+              () =>
+                new WebCodecsEncoderError(
+                  "WebCodecs H.264 encoder stopped responding",
+                  webCodecsConfig?.codec ?? "unknown"
+                )
+            );
             throwIfNotCurrent();
             lastGood?.context.drawImage(
               captured as HTMLCanvasElement,
@@ -667,11 +809,18 @@ export default function FfmpegRender({
           if (
             consecutiveCaptureFailures >= MAX_CONSECUTIVE_FRAME_CAPTURE_FAILURES
           ) {
-            throw createRepeatedFrameCaptureError(
+            const repeatedError = createRepeatedFrameCaptureError(
               state.scenes,
               frameIndex,
               outputFps,
             );
+            if (useSnapdom) {
+              throw new FrameCaptureError(
+                repeatedError.message,
+                error instanceof Error ? error.message : String(error)
+              );
+            }
+            throw repeatedError;
           }
           // FFmpeg's image sequence input stops at the first missing file, so a
           // gap would silently cut the video short — and WebCodecs requires a
@@ -679,14 +828,31 @@ export default function FfmpegRender({
           // isolated/transient capture fault only; the consecutive failure
           // ceiling above prevents this recovery path from hiding a
           // persistently broken scene.
+          const firstFrameError = () => {
+            const message = "Could not capture the first frame";
+            return useSnapdom
+              ? new FrameCaptureError(
+                  message,
+                  error instanceof Error ? error.message : String(error)
+                )
+              : new Error(message);
+          };
           if (mp4Encoder) {
             if (!hasLastGoodFrame || !lastGood) {
-              throw new Error("Could not capture the first frame");
+              throw firstFrameError();
             }
-            await mp4Encoder.addFrame(lastGood.canvas, frameIndex);
+            await withTimeout(
+              mp4Encoder.addFrame(lastGood.canvas, frameIndex),
+              30_000,
+              () =>
+                new WebCodecsEncoderError(
+                  "WebCodecs H.264 encoder stopped responding",
+                  webCodecsConfig?.codec ?? "unknown"
+                )
+            );
           } else {
             if (!lastFrame) {
-              throw new Error("Could not capture the first frame");
+              throw firstFrameError();
             }
             const fileName = getFrameFileName(
               frameIndex,
@@ -936,23 +1102,63 @@ export default function FfmpegRender({
           ...exportEventProperties,
           phase: activeRun.phase,
         });
-        // A WebCodecs encoder can fail at runtime (GPU driver resets, codec
-        // reclamation) even when isConfigSupported said yes. Disable it for
-        // the rest of this tab session so Try Again uses the ffmpeg path.
+        // A capture or hardware-encoder failure gets one automatic retry on
+        // the compatibility path: the flag flips below, the retry then runs
+        // a fresh render. Anything else (and the retry itself) shows the
+        // error as before.
+        const canAutoRetry =
+          !options?.autoRetry &&
+          mountedRef.current &&
+          ((useSnapdom && err instanceof FrameCaptureError) ||
+            (mp4Encoder !== null && err instanceof WebCodecsEncoderError));
+
         let message =
           err instanceof Error ? err.message : "Failed to render video";
-        if (mp4Encoder && err instanceof WebCodecsEncoderError) {
+        if (useSnapdom && err instanceof FrameCaptureError) {
+          // Capture itself failed: remember it so the retry (or a manual
+          // Try Again) uses the html2canvas compatibility renderer.
+          disableSnapdomCapture();
+          if (canAutoRetry) {
+            toast.info("Switching to the compatibility renderer.");
+          } else {
+            message = `Frame capture failed in this browser (${err.detail}). Try Again will use the compatibility renderer.`;
+          }
+        } else if (mp4Encoder && err instanceof WebCodecsEncoderError) {
           disableWebCodecsExport();
-          message = `Hardware video encoding failed in this browser (${err.message}). Try Again will use the compatibility encoder.`;
+          if (canAutoRetry) {
+            toast.info(
+              "Hardware encoding isn't available here — switching to the compatibility encoder."
+            );
+          } else {
+            message = `Hardware video encoding failed in this browser (${err.message}). Try Again will use the compatibility encoder.`;
+          }
         }
-        setErrorMessage(message);
-        setStatus("error");
-        toast.error(message);
+        if (canAutoRetry) {
+          // Start the retry only after this run's finally has cleaned up
+          // (activeRunRef cleared, preview layout restored).
+          setTimeout(() => {
+            if (mountedRef.current && !activeRunRef.current) {
+              void render({ autoRetry: true });
+            }
+          }, 0);
+        } else {
+          setErrorMessage(message);
+          setStatus("error");
+          toast.error(message);
+        }
         console.error("Failed to render video:", err);
       }
     } finally {
       if (activeRunRef.current === activeRun) {
         activeRunRef.current = null;
+      }
+
+      // Put the live preview back before anything else that repaints. A
+      // later run may already own the ref, so only clear it when it still
+      // points at this run's restore.
+      restorePreviewLayout?.();
+      if (previewLayoutRestoreRef.current === restorePreviewLayout) {
+        previewLayoutRestoreRef.current = null;
       }
 
       // The overlay must never outlive its capture run: reference-matched
@@ -1009,7 +1215,7 @@ export default function FfmpegRender({
     return (
       <div className="space-y-2">
         <Button
-          onClick={render}
+          onClick={() => render()}
           disabled={!loadFfmpeg || !exportValidation.valid}
           className="w-full gap-2 bg-accent hover:bg-accent-deep text-foreground"
         >

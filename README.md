@@ -10,7 +10,7 @@ Transform your Markdown into animated videos with a custom syntax that brings yo
 
 - **Custom Markdown Syntax**: Write videos using an intuitive extended Markdown syntax with custom directives
 - **Rich Scene Types**: Support for text, code, images, terminal, diffs, charts, mockups, QR codes, countdowns, progress bars, and more
-- **In-browser Export**: Render and download MP4 videos or animated GIFs locally — MP4 uses hardware-accelerated WebCodecs H.264 where the browser supports it, with FFmpeg.wasm for GIF, music muxing, and as the compatibility fallback
+- **In-browser Export**: Render and download MP4 videos or animated GIFs locally — frames are captured with snapdom (the browser paints each frame), MP4 uses hardware-accelerated WebCodecs H.264 where the browser supports it, and FFmpeg.wasm handles GIF, music muxing, and the compatibility fallback
 - **Real-time Preview**: See your video content as you edit it with live scene previews
 - **Errors as you type**: Unknown directives and invalid values are marked on the line that caused them, with one-click fixes for typos
 - **Autocomplete**: Directive names after `!`, and allowed values for properties like `transition`, `animation:` and `type:`
@@ -231,7 +231,7 @@ The tools are absent only in the sense that they return configuration tool error
 - **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) - Lightweight state manager
 - **Markdown Parsing**: Custom parser with extended syntax support
 - **Video Rendering**: [WebCodecs](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API) + [Mediabunny](https://mediabunny.dev/) for hardware-accelerated MP4, and [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/) for GIF, music muxing, and fallback encoding
-- **Screenshot to Canvas**: [HTML2Canvas Pro](https://html2canvas.hertzen.com/) - DOM to canvas rendering
+- **Frame Capture**: [snapdom](https://snapdom.dev/) - DOM to canvas via the browser's own renderer, with [HTML2Canvas Pro](https://html2canvas.hertzen.com/) as the compatibility fallback
 - **Animations**: [Framer Motion](https://www.framer.com/motion/) - React animation library
 - **Database**: [Neon Postgres](https://neon.com/) - Optional serverless Postgres backend for share links, rate limiting, and temporary render artifacts (Upstash Redis remains supported as a fallback)
 - **Icons**: [Lucide React](https://lucide.dev/) - SVG icon library
@@ -288,6 +288,7 @@ Built with amazing open-source libraries:
 - [Zustand](https://zustand-demo.pmnd.rs/)
 - [FFmpeg.wasm](https://ffmpeg.org/ffmpeg.js/)
 - [Mediabunny](https://mediabunny.dev/)
+- [snapdom](https://snapdom.dev/)
 - [Framer Motion](https://www.framer.com/motion/)
 
 ## 📧 Support

@@ -5,6 +5,22 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { useVideoStore } from "@/lib/use-video-store";
 import FfmpegRender from "../FfmpegRender";
 
+vi.mock("@zumer/snapdom", () => ({
+  snapdom: {
+    toCanvas: vi.fn(async (_el: unknown, opts: { canvas: unknown }) =>
+      // jsdom canvases have no toBlob; the ffmpeg frame-write path needs one.
+      Object.assign(opts.canvas as object, {
+        toBlob: (callback: (blob: Blob | null) => void) =>
+          callback(
+            Object.assign(new Blob([new Uint8Array([1])]), {
+              arrayBuffer: async () => new Uint8Array([1]).buffer,
+            })
+          ),
+      })
+    ),
+  },
+}));
+
 vi.mock("html2canvas-pro", () => ({
   default: vi.fn(async () => ({
     toBlob: (callback: (blob: Blob | null) => void) =>

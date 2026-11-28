@@ -52,6 +52,22 @@ vi.mock(
   }
 );
 
+vi.mock("@zumer/snapdom", () => ({
+  snapdom: {
+    toCanvas: vi.fn(async (_el: unknown, opts: { canvas: unknown }) =>
+      // jsdom canvases have no toBlob; the ffmpeg frame-write path needs one.
+      Object.assign(opts.canvas as object, {
+        toBlob: (callback: (blob: Blob | null) => void) =>
+          callback(
+            Object.assign(new Blob([new Uint8Array([1])]), {
+              arrayBuffer: async () => new Uint8Array([1]).buffer,
+            })
+          ),
+      })
+    ),
+  },
+}));
+
 vi.mock("html2canvas-pro", () => ({
   default: vi.fn(async () => ({
     toBlob: (callback: (blob: Blob | null) => void) =>
@@ -208,7 +224,7 @@ describe("FfmpegRender WebCodecs path", () => {
   });
 
 
-  it("falls back to the ffmpeg path after a runtime WebCodecs failure", async () => {
+  it("auto-retries on the ffmpeg path after a runtime WebCodecs failure", async () => {
     webcodecsMock.addFrame.mockRejectedValue(
       new webcodecsMock.WebCodecsEncoderError(
         "WebCodecs H.264 encoder (avc1.640028) failed: EncodingError: GPU process crashed"
@@ -218,23 +234,14 @@ describe("FfmpegRender WebCodecs path", () => {
     const { ffmpeg } = renderExport();
     fireEvent.click(screen.getByText("Start Rendering"));
 
-    await screen.findByText(/Hardware video encoding failed in this browser/, undefined, {
-      timeout: 10_000,
-    });
-    expect(
-      screen.getByText(/Try Again will use the compatibility encoder/)
-    ).toBeTruthy();
-    expect(sessionStorage.getItem("markdown-video:webcodecs-export-disabled")).toBe("1");
-
-    // Try Again returns to idle; the next run never probes WebCodecs.
-    fireEvent.click(screen.getByText("Try Again"));
-    webcodecsMock.selectConfig.mockClear();
-    webcodecsMock.addFrame.mockClear();
-    const renderBtn = await screen.findByText("Start Rendering");
-    fireEvent.click(renderBtn);
+    // The compat retry starts automatically — no error UI, no Try Again.
     await screen.findByText("Your video is ready to download", undefined, {
       timeout: 10_000,
     });
+    expect(screen.queryByText("Export Failed")).toBeNull();
+    expect(sessionStorage.getItem("markdown-video:webcodecs-export-disabled")).toBe("1");
+    webcodecsMock.selectConfig.mockClear();
+    webcodecsMock.addFrame.mockClear();
 
     expect(webcodecsMock.selectConfig).not.toHaveBeenCalled();
     expect(webcodecsMock.addFrame).not.toHaveBeenCalled();

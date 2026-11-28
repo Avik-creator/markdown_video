@@ -83,26 +83,92 @@ export function applyRenderLayoutToClone({
 
   if (!clonedPreview) return false
 
-  const logicalFontSize = `${renderPlan.logicalFontSizePx}px`
-  clonedDoc.documentElement.style.fontSize = logicalFontSize
+  clonedDoc.documentElement.style.fontSize = `${renderPlan.logicalFontSizePx}px`
+  writeRenderLayoutStyles(clonedPreview, renderPlan)
 
-  clonedPreview.style.transform = "none"
-  clonedPreview.style.width = `${renderPlan.layoutWidth}px`
-  clonedPreview.style.height = `${renderPlan.layoutHeight}px`
-  clonedPreview.style.aspectRatio = "auto"
-  clonedPreview.style.maxWidth = "none"
-  clonedPreview.style.maxHeight = "none"
-  clonedPreview.style.flexShrink = "0"
-  clonedPreview.style.fontSize = logicalFontSize
+  return true
+}
+
+/**
+ * The pinned styles applyRenderLayoutToClone and applyRenderLayoutToElement
+ * share, so the html2canvas clone and the live snapdom capture target can
+ * never drift apart.
+ */
+function writeRenderLayoutStyles(element: HTMLElement, renderPlan: RenderPlan) {
+  const logicalFontSize = `${renderPlan.logicalFontSizePx}px`
+  element.style.transform = "none"
+  element.style.width = `${renderPlan.layoutWidth}px`
+  element.style.height = `${renderPlan.layoutHeight}px`
+  element.style.aspectRatio = "auto"
+  element.style.maxWidth = "none"
+  element.style.maxHeight = "none"
+  element.style.flexShrink = "0"
+  element.style.fontSize = logicalFontSize
   // JPEG frames have no alpha channel. Keep the rounded-corner visual on
-  // screen, but square the clone so the exported corners are scene pixels
+  // screen, but square the frame so the exported corners are scene pixels
   // rather than black matte.
-  clonedPreview.style.borderRadius = "0"
+  element.style.borderRadius = "0"
   // Before the first preview fit measurement the live logical frame is hidden
   // to avoid a one-frame broken layout. That transient state must never make
   // an export blank if capture starts during the same commit window.
-  clonedPreview.style.visibility = "visible"
+  element.style.visibility = "visible"
+}
 
+const RENDER_LAYOUT_STYLE_KEYS = [
+  "transform",
+  "width",
+  "height",
+  "aspectRatio",
+  "maxWidth",
+  "maxHeight",
+  "flexShrink",
+  "fontSize",
+  "borderRadius",
+  "visibility",
+] as const
+
+/**
+ * Apply the deterministic logical layout to the live preview element.
+ *
+ * snapdom measures the real element's box before cloning, so the html2canvas
+ * onclone trick cannot fix its geometry — the live preview itself must take
+ * the logical layout for the run. The export dialog covers the preview
+ * meanwhile. Returns a restore function that puts back the exact previous
+ * inline styles (idempotent).
+ */
+export function applyRenderLayoutToElement(
+  element: HTMLElement,
+  renderPlan: RenderPlan
+): () => void {
+  const saved = {} as Record<(typeof RENDER_LAYOUT_STYLE_KEYS)[number], string>
+  for (const key of RENDER_LAYOUT_STYLE_KEYS) saved[key] = element.style[key]
+  writeRenderLayoutStyles(element, renderPlan)
+  let restored = false
+  return () => {
+    if (restored) return
+    restored = true
+    for (const key of RENDER_LAYOUT_STYLE_KEYS) element.style[key] = saved[key]
+  }
+}
+
+/**
+ * Re-assert the logical layout on the live preview if React or a resize
+ * overwrote it between frames. A cheap compare of the three properties the
+ * editor's fit code touches; the full style set is rewritten only on drift.
+ * Returns true when it re-applied.
+ */
+export function ensureRenderLayout(
+  element: HTMLElement,
+  renderPlan: RenderPlan
+): boolean {
+  if (
+    element.style.transform === "none" &&
+    element.style.width === `${renderPlan.layoutWidth}px` &&
+    element.style.height === `${renderPlan.layoutHeight}px`
+  ) {
+    return false
+  }
+  writeRenderLayoutStyles(element, renderPlan)
   return true
 }
 
@@ -425,6 +491,33 @@ export function isWebCodecsExportDisabled(): boolean {
 export function disableWebCodecsExport(): void {
   try {
     sessionStorage.setItem(WEBCODECS_EXPORT_DISABLED_KEY, "1")
+  } catch {
+    // Storage can be unavailable; the failure is still reported, the flag is best-effort.
+  }
+}
+
+/** sessionStorage flag set when snapdom frame capture fails mid-export. */
+export const SNAPDOM_CAPTURE_DISABLED_KEY =
+  "markdown-video:snapdom-capture-disabled"
+
+/**
+ * True once snapdom capture has failed at runtime in this tab. Read before
+ * every export so Try Again falls back to the html2canvas renderer; scoped to
+ * the tab session so a fresh session is allowed to try snapdom again.
+ * Any storage error (private mode, disabled storage) means "not disabled".
+ */
+export function isSnapdomCaptureDisabled(): boolean {
+  try {
+    return sessionStorage.getItem(SNAPDOM_CAPTURE_DISABLED_KEY) === "1"
+  } catch {
+    return false
+  }
+}
+
+/** Remember a runtime snapdom capture failure for the rest of this tab session. */
+export function disableSnapdomCapture(): void {
+  try {
+    sessionStorage.setItem(SNAPDOM_CAPTURE_DISABLED_KEY, "1")
   } catch {
     // Storage can be unavailable; the failure is still reported, the flag is best-effort.
   }

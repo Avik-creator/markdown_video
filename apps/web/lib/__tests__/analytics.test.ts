@@ -228,9 +228,38 @@ describe("buildExportEventProperties", () => {
     ).toBe("1080p/30fps/high/balanced/ffmpeg");
   });
 
+  it("folds the capture engine into the settings composite after the encoder", () => {
+    expect(buildExportEventProperties(input).settings).toBe(
+      "1080p/30fps/high/balanced"
+    );
+    expect(
+      buildExportEventProperties({ ...input, capture: "snapdom" }).settings
+    ).toBe("1080p/30fps/high/balanced/snapdom");
+    expect(
+      buildExportEventProperties({
+        ...input,
+        encoder: "webcodecs",
+        capture: "snapdom",
+      }).settings
+    ).toBe("1080p/30fps/high/balanced/webcodecs/snapdom");
+    expect(
+      buildExportEventProperties({
+        ...input,
+        encoder: "ffmpeg",
+        capture: "html2canvas",
+      }).settings
+    ).toBe("1080p/30fps/high/balanced/ffmpeg/html2canvas");
+  });
+
   it("keeps the payload at 7 properties so failure events can add phase", () => {
     expect(
-      Object.keys(buildExportEventProperties({ ...input, encoder: "webcodecs" })).length
+      Object.keys(
+        buildExportEventProperties({
+          ...input,
+          encoder: "webcodecs",
+          capture: "snapdom",
+        })
+      ).length
     ).toBeLessThanOrEqual(7);
   });
 
